@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -38,12 +39,19 @@ import kotlin.math.sin
  * 3. Swiss Bauhaus Dossier (Architectural tabbed card layers, warm dot grid, poppy red & golden ochre)
  * 4. Terracotta Studio (Matte clay body, glossy obsidian OLED header, glass specular gleam)
  */
+private class StudioPathCache(
+    val leftPcb: Path = Path(),
+    val rightPcb: Path = Path(),
+    val folderTabPath: Path = Path()
+)
+
 @Composable
 fun StudioScreenBackground(
     theme: ThemePalette,
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "studio_theme_anim")
+    val studioCache = remember { StudioPathCache() }
 
     // Continuous smooth loop for flowing electrons and travelling wave scans (6s loop)
     val flowProgress = infiniteTransition.animateFloat(
@@ -87,10 +95,10 @@ fun StudioScreenBackground(
 
         when {
             theme.isRetroCircuit -> {
-                drawRetroCircuitAtmosphere(w, h, flow, pulse)
+                drawRetroCircuitAtmosphere(w, h, flow, pulse, studioCache)
             }
             theme.isNothingDossier -> {
-                drawNothingDossierAtmosphere(w, h, flow, pulse)
+                drawNothingDossierAtmosphere(w, h, flow, pulse, studioCache)
             }
             theme.isBauhausDossier -> {
                 drawBauhausDossierAtmosphere(w, h, flow, pulse)
@@ -110,7 +118,8 @@ private fun DrawScope.drawRetroCircuitAtmosphere(
     w: Float,
     h: Float,
     flow: Float,
-    pulse: Float
+    pulse: Float,
+    cache: StudioPathCache
 ) {
     // 1A. Full Unified Housing: Rich Imperial Vermilion-Crimson Chassis
     drawRect(
@@ -181,15 +190,14 @@ private fun DrawScope.drawRetroCircuitAtmosphere(
 
     // Left Margin PCB Bus
     val lx = 8.dp.toPx()
-    val leftPcb = Path().apply {
-        moveTo(lx, 32.dp.toPx())
-        lineTo(lx, h * 0.45f)
-        lineTo(lx + 5.dp.toPx(), h * 0.49f)
-        lineTo(lx + 5.dp.toPx(), h * 0.70f)
-        lineTo(lx, h * 0.74f)
-        lineTo(lx, h - 22.dp.toPx())
-    }
-    drawPath(leftPcb, traceColor, style = traceStroke)
+    cache.leftPcb.reset()
+    cache.leftPcb.moveTo(lx, 32.dp.toPx())
+    cache.leftPcb.lineTo(lx, h * 0.45f)
+    cache.leftPcb.lineTo(lx + 5.dp.toPx(), h * 0.49f)
+    cache.leftPcb.lineTo(lx + 5.dp.toPx(), h * 0.70f)
+    cache.leftPcb.lineTo(lx, h * 0.74f)
+    cache.leftPcb.lineTo(lx, h - 22.dp.toPx())
+    drawPath(cache.leftPcb, traceColor, style = traceStroke)
 
     // Left micro-vias / solder pads with gold plating
     val leftPads = listOf(
@@ -205,15 +213,14 @@ private fun DrawScope.drawRetroCircuitAtmosphere(
 
     // Right Margin PCB Bus
     val rx = w - 8.dp.toPx()
-    val rightPcb = Path().apply {
-        moveTo(rx, 34.dp.toPx())
-        lineTo(rx, h * 0.42f)
-        lineTo(rx - 5.dp.toPx(), h * 0.46f)
-        lineTo(rx - 5.dp.toPx(), h * 0.67f)
-        lineTo(rx, h * 0.71f)
-        lineTo(rx, h - 22.dp.toPx())
-    }
-    drawPath(rightPcb, traceColor, style = traceStroke)
+    cache.rightPcb.reset()
+    cache.rightPcb.moveTo(rx, 34.dp.toPx())
+    cache.rightPcb.lineTo(rx, h * 0.42f)
+    cache.rightPcb.lineTo(rx - 5.dp.toPx(), h * 0.46f)
+    cache.rightPcb.lineTo(rx - 5.dp.toPx(), h * 0.67f)
+    cache.rightPcb.lineTo(rx, h * 0.71f)
+    cache.rightPcb.lineTo(rx, h - 22.dp.toPx())
+    drawPath(cache.rightPcb, traceColor, style = traceStroke)
 
     // Right test pads
     val rightPads = listOf(
@@ -283,7 +290,8 @@ private fun DrawScope.drawNothingDossierAtmosphere(
     w: Float,
     h: Float,
     flow: Float,
-    pulse: Float
+    pulse: Float,
+    cache: StudioPathCache
 ) {
     // 2A. Deep Smoked Obsidian Background
     drawRect(
@@ -318,16 +326,15 @@ private fun DrawScope.drawNothingDossierAtmosphere(
 
     // 2C. Upper Header: Asymmetric Folder Tab Contour Framing Header
     val tabH = 34.dp.toPx()
-    val folderTabPath = Path().apply {
-        moveTo(12.dp.toPx(), 6.dp.toPx())
-        lineTo(w * 0.40f, 6.dp.toPx())
-        cubicTo(w * 0.44f, 6.dp.toPx(), w * 0.48f, tabH, w * 0.54f, tabH)
-        lineTo(w - 12.dp.toPx(), tabH)
-    }
+    cache.folderTabPath.reset()
+    cache.folderTabPath.moveTo(12.dp.toPx(), 6.dp.toPx())
+    cache.folderTabPath.lineTo(w * 0.40f, 6.dp.toPx())
+    cache.folderTabPath.cubicTo(w * 0.44f, 6.dp.toPx(), w * 0.48f, tabH, w * 0.54f, tabH)
+    cache.folderTabPath.lineTo(w - 12.dp.toPx(), tabH)
 
     // Tab accent stroke
     drawPath(
-        path = folderTabPath,
+        path = cache.folderTabPath,
         color = Color(0xFF262A32),
         style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round)
     )

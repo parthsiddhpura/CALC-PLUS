@@ -71,7 +71,7 @@ import kotlin.random.Random
 
 data class CalculatorUiState(
     val mode: CalculatorMode = CalculatorMode.STANDARD,
-    val currentThemeId: ThemeId = ThemeId.RETRO_CIRCUIT_RED,
+    val currentThemeId: ThemeId = ThemeId.BATMAN_DARK_KNIGHT,
     val customAccentColor: Long? = null,
     val customShapeType: ButtonShapeType? = null,
     val customDisplayFont: DisplayFontType? = null,
@@ -207,14 +207,21 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
 
     init {
         val savedThemeName = prefs.getString("saved_theme_id", null)
-        val initialTheme = if (savedThemeName != null) {
+        val hasAppliedDarkKnightDefault = prefs.getBoolean("has_applied_dark_knight_default_v9", false)
+        val initialTheme = if (!hasAppliedDarkKnightDefault) {
+            prefs.edit()
+                .putBoolean("has_applied_dark_knight_default_v9", true)
+                .putString("saved_theme_id", ThemeId.BATMAN_DARK_KNIGHT.name)
+                .apply()
+            ThemeId.BATMAN_DARK_KNIGHT
+        } else if (savedThemeName != null) {
             try {
                 ThemeId.valueOf(savedThemeName)
             } catch (e: Exception) {
-                ThemeId.RETRO_CIRCUIT_RED
+                ThemeId.BATMAN_DARK_KNIGHT
             }
         } else {
-            ThemeId.RETRO_CIRCUIT_RED
+            ThemeId.BATMAN_DARK_KNIGHT
         }
         val savedSound = prefs.getBoolean("saved_sound_enabled", true)
         val savedHaptics = prefs.getBoolean("saved_haptics_enabled", true)

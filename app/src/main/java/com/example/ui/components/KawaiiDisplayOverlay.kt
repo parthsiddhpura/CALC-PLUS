@@ -11,6 +11,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -34,12 +35,23 @@ import kotlin.math.sin
  * 3. Y2K Glossy Pop (Holographic gloss sweep, iridescent bubble orbs, 4-pointed radiant stars)
  * 4. Pico-Calc 8-Bit (Dithered retro starfield, phosphor scanline glow, pixel particles)
  */
+private class KawaiiPathCache(
+    val heartPath: Path = Path(),
+    val starPath: Path = Path(),
+    val earLeft: Path = Path(),
+    val earLeftInner: Path = Path(),
+    val earRight: Path = Path(),
+    val earRightInner: Path = Path(),
+    val purrPath: Path = Path()
+)
+
 @Composable
 fun KawaiiScreenBackground(
     theme: ThemePalette,
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "kawaii_ambient_anim")
+    val pathCache = remember { KawaiiPathCache() }
 
     // Harmonic multi-frequency animations for natural, non-repetitive organic motion
     val floatProgress = infiniteTransition.animateFloat(
@@ -99,7 +111,8 @@ fun KawaiiScreenBackground(
                     progress = progress,
                     pulse = pulse,
                     rot = rot,
-                    blink = blink
+                    blink = blink,
+                    cache = pathCache
                 )
             }
 
@@ -110,7 +123,8 @@ fun KawaiiScreenBackground(
                     h = h,
                     progress = progress,
                     pulse = pulse,
-                    isDark = theme.isDark
+                    isDark = theme.isDark,
+                    cache = pathCache
                 )
             }
 
@@ -121,7 +135,8 @@ fun KawaiiScreenBackground(
                     h = h,
                     progress = progress,
                     pulse = pulse,
-                    rot = rot
+                    rot = rot,
+                    cache = pathCache
                 )
             }
 
@@ -148,7 +163,8 @@ private fun DrawScope.drawGirlMathAtmosphere(
     progress: Float,
     pulse: Float,
     rot: Float,
-    blink: Float
+    blink: Float,
+    cache: KawaiiPathCache
 ) {
     // 1. Floating pastel hearts drifting upwards
     val heartPastels = listOf(
@@ -170,21 +186,20 @@ private fun DrawScope.drawGirlMathAtmosphere(
         val alpha = (sin(p * PI.toFloat()) * 0.42f).coerceIn(0f, 0.42f)
         val heartScale = (6.dp.toPx() + (i % 3) * 2.5.dp.toPx())
 
-        val heartPath = Path().apply {
-            moveTo(hx, hy)
-            cubicTo(
-                hx - heartScale, hy - heartScale,
-                hx - heartScale * 1.5f, hy + heartScale * 0.4f,
-                hx, hy + heartScale * 1.2f
-            )
-            cubicTo(
-                hx + heartScale * 1.5f, hy + heartScale * 0.4f,
-                hx + heartScale, hy - heartScale,
-                hx, hy
-            )
-            close()
-        }
-        drawPath(heartPath, color = heartPastels[i].copy(alpha = alpha))
+        cache.heartPath.reset()
+        cache.heartPath.moveTo(hx, hy)
+        cache.heartPath.cubicTo(
+            hx - heartScale, hy - heartScale,
+            hx - heartScale * 1.5f, hy + heartScale * 0.4f,
+            hx, hy + heartScale * 1.2f
+        )
+        cache.heartPath.cubicTo(
+            hx + heartScale * 1.5f, hy + heartScale * 0.4f,
+            hx + heartScale, hy - heartScale,
+            hx, hy
+        )
+        cache.heartPath.close()
+        drawPath(cache.heartPath, color = heartPastels[i].copy(alpha = alpha))
     }
 
     // 2. Radiant 4-point sparkle stars drifting & twinkling
@@ -202,15 +217,14 @@ private fun DrawScope.drawGirlMathAtmosphere(
         val sy = pos.second
         val starColor = if (index % 2 == 0) Color(0xFFFF85A1) else Color(0xFFFFD166)
 
-        val starPath = Path().apply {
-            moveTo(sx, sy - starSize)
-            cubicTo(sx, sy - starSize * 0.2f, sx + starSize * 0.2f, sy, sx + starSize, sy)
-            cubicTo(sx + starSize * 0.2f, sy, sx, sy + starSize * 0.2f, sx, sy + starSize)
-            cubicTo(sx, sy + starSize * 0.2f, sx - starSize * 0.2f, sy, sx - starSize, sy)
-            cubicTo(sx - starSize * 0.2f, sy, sx, sy - starSize * 0.2f, sx, sy - starSize)
-            close()
-        }
-        drawPath(starPath, color = starColor.copy(alpha = 0.45f * starPulse))
+        cache.starPath.reset()
+        cache.starPath.moveTo(sx, sy - starSize)
+        cache.starPath.cubicTo(sx, sy - starSize * 0.2f, sx + starSize * 0.2f, sy, sx + starSize, sy)
+        cache.starPath.cubicTo(sx + starSize * 0.2f, sy, sx, sy + starSize * 0.2f, sx, sy + starSize)
+        cache.starPath.cubicTo(sx, sy + starSize * 0.2f, sx - starSize * 0.2f, sy, sx - starSize, sy)
+        cache.starPath.cubicTo(sx - starSize * 0.2f, sy, sx, sy - starSize * 0.2f, sx, sy - starSize)
+        cache.starPath.close()
+        drawPath(cache.starPath, color = starColor.copy(alpha = 0.45f * starPulse))
         drawCircle(color = Color.White.copy(alpha = 0.8f * starPulse), radius = starSize * 0.22f, center = Offset(sx, sy))
     }
 
@@ -235,36 +249,34 @@ private fun DrawScope.drawGirlMathAtmosphere(
     )
 
     // Left Ear
-    val earLeft = Path().apply {
-        moveTo(kittyCenterX - r * 0.85f, kittyCenterY - r * 0.15f)
-        lineTo(kittyCenterX - r * 0.70f, kittyCenterY - r * 1.15f)
-        lineTo(kittyCenterX - r * 0.15f, kittyCenterY - r * 0.55f)
-        close()
-    }
-    drawPath(earLeft, color = Color.White)
-    val earLeftInner = Path().apply {
-        moveTo(kittyCenterX - r * 0.75f, kittyCenterY - r * 0.25f)
-        lineTo(kittyCenterX - r * 0.65f, kittyCenterY - r * 0.95f)
-        lineTo(kittyCenterX - r * 0.25f, kittyCenterY - r * 0.50f)
-        close()
-    }
-    drawPath(earLeftInner, color = Color(0xFFFF9EAA))
+    cache.earLeft.reset()
+    cache.earLeft.moveTo(kittyCenterX - r * 0.85f, kittyCenterY - r * 0.15f)
+    cache.earLeft.lineTo(kittyCenterX - r * 0.70f, kittyCenterY - r * 1.15f)
+    cache.earLeft.lineTo(kittyCenterX - r * 0.15f, kittyCenterY - r * 0.55f)
+    cache.earLeft.close()
+    drawPath(cache.earLeft, color = Color.White)
+
+    cache.earLeftInner.reset()
+    cache.earLeftInner.moveTo(kittyCenterX - r * 0.75f, kittyCenterY - r * 0.25f)
+    cache.earLeftInner.lineTo(kittyCenterX - r * 0.65f, kittyCenterY - r * 0.95f)
+    cache.earLeftInner.lineTo(kittyCenterX - r * 0.25f, kittyCenterY - r * 0.50f)
+    cache.earLeftInner.close()
+    drawPath(cache.earLeftInner, color = Color(0xFFFF9EAA))
 
     // Right Ear
-    val earRight = Path().apply {
-        moveTo(kittyCenterX + r * 0.15f, kittyCenterY - r * 0.55f)
-        lineTo(kittyCenterX + r * 0.70f, kittyCenterY - r * 1.15f)
-        lineTo(kittyCenterX + r * 0.85f, kittyCenterY - r * 0.15f)
-        close()
-    }
-    drawPath(earRight, color = Color.White)
-    val earRightInner = Path().apply {
-        moveTo(kittyCenterX + r * 0.25f, kittyCenterY - r * 0.50f)
-        lineTo(kittyCenterX + r * 0.65f, kittyCenterY - r * 0.95f)
-        lineTo(kittyCenterX + r * 0.75f, kittyCenterY - r * 0.25f)
-        close()
-    }
-    drawPath(earRightInner, color = Color(0xFFFF9EAA))
+    cache.earRight.reset()
+    cache.earRight.moveTo(kittyCenterX + r * 0.15f, kittyCenterY - r * 0.55f)
+    cache.earRight.lineTo(kittyCenterX + r * 0.70f, kittyCenterY - r * 1.15f)
+    cache.earRight.lineTo(kittyCenterX + r * 0.85f, kittyCenterY - r * 0.15f)
+    cache.earRight.close()
+    drawPath(cache.earRight, color = Color.White)
+
+    cache.earRightInner.reset()
+    cache.earRightInner.moveTo(kittyCenterX + r * 0.25f, kittyCenterY - r * 0.50f)
+    cache.earRightInner.lineTo(kittyCenterX + r * 0.65f, kittyCenterY - r * 0.95f)
+    cache.earRightInner.lineTo(kittyCenterX + r * 0.75f, kittyCenterY - r * 0.25f)
+    cache.earRightInner.close()
+    drawPath(cache.earRightInner, color = Color(0xFFFF9EAA))
 
     // Cute pink ribbon bow on left ear
     val bowX = kittyCenterX - r * 0.65f
@@ -379,7 +391,8 @@ private fun DrawScope.drawNekoMochiAtmosphere(
     h: Float,
     progress: Float,
     pulse: Float,
-    isDark: Boolean = false
+    isDark: Boolean = false,
+    cache: KawaiiPathCache
 ) {
     // 1. Drifting cute cat pawprints
     val pawColors = if (isDark) {
@@ -446,14 +459,13 @@ private fun DrawScope.drawNekoMochiAtmosphere(
             )
         }
     )
-    val purrPath = Path().apply {
-        moveTo(0f, purrY)
-        for (x in 0..w.toInt() step 8) {
-            val sineY = purrY + sin((x * 0.04f) + (progress * 12f)) * (2.5.dp.toPx() * pulse)
-            lineTo(x.toFloat(), sineY)
-        }
+    cache.purrPath.reset()
+    cache.purrPath.moveTo(0f, purrY)
+    for (x in 0..w.toInt() step 8) {
+        val sineY = purrY + sin((x * 0.04f) + (progress * 12f)) * (2.5.dp.toPx() * pulse)
+        cache.purrPath.lineTo(x.toFloat(), sineY)
     }
-    drawPath(purrPath, brush = purrBrush, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
+    drawPath(cache.purrPath, brush = purrBrush, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
 }
 
 /**
@@ -465,7 +477,8 @@ private fun DrawScope.drawY2kGlossyAtmosphere(
     h: Float,
     progress: Float,
     pulse: Float,
-    rot: Float
+    rot: Float,
+    cache: KawaiiPathCache
 ) {
     // 1. Diagonal Specular Sheen Sweep that glides smoothly across the background
     val sheenX = (progress * (w + 240.dp.toPx())) - 120.dp.toPx()
@@ -518,15 +531,14 @@ private fun DrawScope.drawY2kGlossyAtmosphere(
 
     // 3. Radiant 4-pointed Y2K Chrome Stars
     fun drawY2kStar(cx: Float, cy: Float, sizePx: Float, alpha: Float) {
-        val p = Path().apply {
-            moveTo(cx, cy - sizePx)
-            cubicTo(cx, cy - sizePx * 0.18f, cx + sizePx * 0.18f, cy, cx + sizePx, cy)
-            cubicTo(cx + sizePx * 0.18f, cy, cx, cy + sizePx * 0.18f, cx, cy + sizePx)
-            cubicTo(cx, cy + sizePx * 0.18f, cx - sizePx * 0.18f, cy, cx - sizePx, cy)
-            cubicTo(cx - sizePx * 0.18f, cy, cx, cy - sizePx * 0.18f, cx, cy - sizePx)
-            close()
-        }
-        drawPath(p, color = Color(0xFFA2E8DD).copy(alpha = alpha * 0.65f))
+        cache.starPath.reset()
+        cache.starPath.moveTo(cx, cy - sizePx)
+        cache.starPath.cubicTo(cx, cy - sizePx * 0.18f, cx + sizePx * 0.18f, cy, cx + sizePx, cy)
+        cache.starPath.cubicTo(cx + sizePx * 0.18f, cy, cx, cy + sizePx * 0.18f, cx, cy + sizePx)
+        cache.starPath.cubicTo(cx, cy + sizePx * 0.18f, cx - sizePx * 0.18f, cy, cx - sizePx, cy)
+        cache.starPath.cubicTo(cx - sizePx * 0.18f, cy, cx, cy - sizePx * 0.18f, cx, cy - sizePx)
+        cache.starPath.close()
+        drawPath(cache.starPath, color = Color(0xFFA2E8DD).copy(alpha = alpha * 0.65f))
         drawCircle(color = Color.White.copy(alpha = alpha), radius = sizePx * 0.28f, center = Offset(cx, cy))
     }
 

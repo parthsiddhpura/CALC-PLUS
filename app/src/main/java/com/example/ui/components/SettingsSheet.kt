@@ -98,6 +98,7 @@ import com.example.model.onCardColor
 import com.example.model.onCardSubtextColor
 import com.example.model.onSurfaceSubtextColor
 import com.example.model.onSurfaceTextColor
+import com.example.ui.theme.DisplayFontHelper
 import com.example.ui.theme.CalculatorThemes
 
 data class AccentColorPreset(
@@ -265,52 +266,15 @@ fun SettingsSheet(
                     }
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.testTag("btn_close_settings")
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = activeTheme.accentColor.copy(alpha = 0.12f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, activeTheme.accentColor.copy(alpha = 0.25f)),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                showResetConfirmDialog = true
-                            }
-                            .testTag("btn_reset_all_settings_header")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.RestartAlt,
-                                contentDescription = "Reset Defaults",
-                                tint = activeTheme.accentColor,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Text(
-                                text = "Reset",
-                                color = activeTheme.accentColor,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.testTag("btn_close_settings")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = sheetContentColor
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = sheetContentColor
+                    )
                 }
             }
 
@@ -836,36 +800,62 @@ fun SettingsSheet(
 
                                         Spacer(modifier = Modifier.height(8.dp))
 
-                                        // Mini Color Swatches
+                                        // Mini Color Swatches & Animated Badge
                                         Row(
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(14.dp)
-                                                    .clip(CircleShape)
-                                                    .background(themeItem.screenBackground)
-                                                    .border(0.5.dp, Color.Gray, CircleShape)
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(14.dp)
-                                                    .clip(CircleShape)
-                                                    .background(themeItem.accentColor)
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(14.dp)
-                                                    .clip(CircleShape)
-                                                    .background(themeItem.numberButtonBg)
-                                                    .border(0.5.dp, Color.Gray, CircleShape)
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(14.dp)
-                                                    .clip(CircleShape)
-                                                    .background(themeItem.operatorButtonBg)
-                                            )
+                                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(14.dp)
+                                                        .clip(CircleShape)
+                                                        .background(themeItem.screenBackground)
+                                                        .border(0.5.dp, Color.Gray, CircleShape)
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(14.dp)
+                                                        .clip(CircleShape)
+                                                        .background(themeItem.accentColor)
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(14.dp)
+                                                        .clip(CircleShape)
+                                                        .background(themeItem.numberButtonBg)
+                                                        .border(0.5.dp, Color.Gray, CircleShape)
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(14.dp)
+                                                        .clip(CircleShape)
+                                                        .background(themeItem.operatorButtonBg)
+                                                )
+                                            }
+
+                                            val hasMotion = themeItem.hasBatSignal || themeItem.hasArcReactor ||
+                                                    themeItem.isOrtylMinimal || themeItem.isOledStealthVoid ||
+                                                    themeItem.isStarryGotham || themeItem.isCosmicSingularity ||
+                                                    themeItem.isGirlMath || themeItem.isNekoMochi ||
+                                                    themeItem.isRetroCircuit || themeItem.isNothingDossier ||
+                                                    themeItem.isBauhausDossier || themeItem.isTerracottaStudio
+                                            if (hasMotion) {
+                                                Surface(
+                                                    color = themeItem.accentColor.copy(alpha = 0.20f),
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    border = androidx.compose.foundation.BorderStroke(0.6.dp, themeItem.accentColor.copy(alpha = 0.6f))
+                                                ) {
+                                                    Text(
+                                                        text = "ANIMATED",
+                                                        color = themeItem.accentColor,
+                                                        fontSize = 7.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -892,10 +882,10 @@ fun SettingsSheet(
                             ),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            val demoFont = when (customDisplayFont ?: activeTheme.displayFont) {
-                                DisplayFontType.MONOSPACE, DisplayFontType.DIGITAL_LCD -> FontFamily.Monospace
-                                else -> FontFamily.SansSerif
-                            }
+                            val effectiveFontType = customDisplayFont ?: activeTheme.displayFont
+                            val demoFont = DisplayFontHelper.getFontFamily(effectiveFontType)
+                            val demoLetterSpacing = DisplayFontHelper.getLetterSpacing(effectiveFontType)
+                            val demoWeight = DisplayFontHelper.getFontWeight(effectiveFontType, isResult = true)
 
                             val sampleExpr = "1250000 × 1.18 + 500"
                             val sampleResult = "1475500"
@@ -978,6 +968,7 @@ fun SettingsSheet(
                                         color = activeTheme.screenExpressionColor,
                                         fontSize = 16.sp,
                                         fontFamily = demoFont,
+                                        letterSpacing = demoLetterSpacing,
                                         textAlign = TextAlign.End,
                                         modifier = Modifier.fillMaxWidth()
                                     )
@@ -988,6 +979,7 @@ fun SettingsSheet(
                                             color = activeTheme.screenPreviewColor,
                                             fontSize = 14.sp,
                                             fontFamily = demoFont,
+                                            letterSpacing = demoLetterSpacing,
                                             fontWeight = FontWeight.SemiBold,
                                             textAlign = TextAlign.End,
                                             modifier = Modifier.fillMaxWidth()
@@ -998,8 +990,9 @@ fun SettingsSheet(
                                         text = formattedSampleResult,
                                         color = activeTheme.screenTextColor,
                                         fontSize = 32.sp,
-                                        fontWeight = FontWeight.Bold,
+                                        fontWeight = demoWeight,
                                         fontFamily = demoFont,
+                                        letterSpacing = demoLetterSpacing,
                                         textAlign = TextAlign.End,
                                         modifier = Modifier.fillMaxWidth()
                                     )
@@ -1066,20 +1059,27 @@ fun SettingsSheet(
 
                                     fonts.forEach { (font, name) ->
                                         val isSelected = (font == null && customDisplayFont == null) || (font == customDisplayFont)
+                                        val chipFontType = font ?: activeTheme.displayFont
+                                        val chipFontFamily = DisplayFontHelper.getFontFamily(chipFontType)
+                                        val chipLetterSpacing = DisplayFontHelper.getLetterSpacing(chipFontType)
                                         Surface(
                                             color = if (isSelected) activeTheme.accentColor else activeTheme.surfaceColor,
                                             shape = RoundedCornerShape(8.dp),
+                                            border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, activeTheme.accentColor) else null,
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .clickable { onSelectDisplayFont(font) }
+                                                .testTag("font_chip_${name.lowercase()}")
                                         ) {
                                             Text(
                                                 text = name,
                                                 color = if (isSelected) activeTheme.backgroundColor else activeTheme.screenTextColor,
-                                                fontSize = 11.sp,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                fontSize = 11.5.sp,
+                                                fontFamily = chipFontFamily,
+                                                letterSpacing = if (chipFontType == DisplayFontType.DIGITAL_LCD) 0.5.sp else chipLetterSpacing,
+                                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
                                                 textAlign = TextAlign.Center,
-                                                modifier = Modifier.padding(vertical = 8.dp)
+                                                modifier = Modifier.padding(vertical = 9.dp)
                                             )
                                         }
                                     }
@@ -1805,7 +1805,7 @@ fun SettingsSheet(
                                         border = androidx.compose.foundation.BorderStroke(1.dp, activeTheme.accentColor.copy(alpha = 0.4f))
                                     ) {
                                         Text(
-                                            text = "v8.9 STABLE",
+                                            text = "v9.0 STABLE",
                                             color = activeTheme.accentColor,
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
@@ -2001,7 +2001,7 @@ fun SettingsSheet(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = "What's New in Version 8.9",
+                                        text = "What's New in Version 9.0",
                                         color = activeTheme.screenTextColor,
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold
@@ -2009,8 +2009,9 @@ fun SettingsSheet(
                                 }
 
                                 val featureHighlights = listOf(
+                                    "Dark Knight Vengeance Engine (Default Theme)" to "The Dark Knight theme is now the premier default theme, featuring zero-allocation GPU rendering for butter-smooth 60/120 FPS animations, illuminated Gotham Bat-Signal, billowing cape waves, and interactive Batarang flight physics.",
                                     "Default Indian (Lakh / Crore) Numbering" to "Displays format numbers using the Indian numbering system by default (e.g. ₹ 12,34,567.89 instead of 1,234,567.89), making GST, budgeting, and everyday arithmetic effortless to read. International Million/Billion and space styles remain selectable.",
-                                    "Kinetic Hardware Studio Themes" to "Features 4 custom studio themes: Retro Circuit 90034 (Japanese vermilion lacquer, amber VFD numerals, porcelain buttons, and animated electron packets along PCB bus lines), Nothing Dossier Mono, Swiss Bauhaus Dossier, Terracotta Studio, and superhero HUDs (Batman Dark Knight & Iron Man Arc Reactor).",
+                                    "Kinetic Hardware Studio Themes" to "Features custom studio themes: Batman Dark Knight, Iron Man Arc Reactor, Retro Circuit 90034, Nothing Dossier Mono, Swiss Bauhaus Dossier, and Terracotta Studio.",
                                     "10 Specialized Computing Engines" to "Standard with real-time live preview; Casio MJ-120GST inspired GST & Tax engine with +GST / -GST and custom slabs; Scientific laboratory with trigonometry, logs, and rad/deg; Draggable Worksheet & Paper Tape with exportable receipts; Programmer mode with QWORD/DWORD/WORD/BYTE bitwise logic; Loan EMI Calculator; Unit Converter (12+ categories); Live Currency Converter; Live Age Chronometer; and Dining Tip & Bill Splitter.",
                                     "Custom Display Precision & Notation" to "Choose from Auto, 2, 4, 6 decimals or Full Exact precision, plus Standard, Scientific (1.25e+6), and Engineering (1.25 × 10⁶) notations with authentic CRT scanline filters.",
                                     "Sensory Audio & Dynamic Haptics" to "Bespoke synthesized mechanical switch click sounds and haptic vibration for tactile keystroke feedback, coupled with responsive spring bounce physics.",

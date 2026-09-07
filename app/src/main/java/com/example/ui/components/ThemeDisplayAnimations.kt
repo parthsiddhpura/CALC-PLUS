@@ -70,6 +70,16 @@ fun ThemeAmbientDisplayAnimation(
         label = "ambient_sweep_progress"
     )
 
+    // Pre-allocated paths to ensure 0 GC heap allocations during 60/120Hz display animation
+    val reusableWavePath = remember { Path() }
+    val reusableOscPath = remember { Path() }
+    val reusableHeartPath = remember { Path() }
+    val reusableStarPath = remember { Path() }
+    val reusableEarLeft = remember { Path() }
+    val reusableEarLeftInner = remember { Path() }
+    val reusableEarRight = remember { Path() }
+    val reusableEarRightInner = remember { Path() }
+
     Canvas(modifier = modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
@@ -98,21 +108,20 @@ fun ThemeAmbientDisplayAnimation(
                     val heartAlpha = (sin(progress * Math.PI.toFloat()) * 0.45f).coerceIn(0f, 0.45f)
                     val heartScale = (5.5.dp.toPx() + (i % 3) * 2.dp.toPx())
 
-                    val heartPath = Path().apply {
-                        moveTo(heartX, heartY)
-                        cubicTo(
-                            heartX - heartScale, heartY - heartScale,
-                            heartX - heartScale * 1.5f, heartY + heartScale * 0.4f,
-                            heartX, heartY + heartScale * 1.2f
-                        )
-                        cubicTo(
-                            heartX + heartScale * 1.5f, heartY + heartScale * 0.4f,
-                            heartX + heartScale, heartY - heartScale,
-                            heartX, heartY
-                        )
-                        close()
-                    }
-                    drawPath(heartPath, color = heartColors[i].copy(alpha = heartAlpha))
+                    reusableHeartPath.reset()
+                    reusableHeartPath.moveTo(heartX, heartY)
+                    reusableHeartPath.cubicTo(
+                        heartX - heartScale, heartY - heartScale,
+                        heartX - heartScale * 1.5f, heartY + heartScale * 0.4f,
+                        heartX, heartY + heartScale * 1.2f
+                    )
+                    reusableHeartPath.cubicTo(
+                        heartX + heartScale * 1.5f, heartY + heartScale * 0.4f,
+                        heartX + heartScale, heartY - heartScale,
+                        heartX, heartY
+                    )
+                    reusableHeartPath.close()
+                    drawPath(reusableHeartPath, color = heartColors[i].copy(alpha = heartAlpha))
                 }
 
                 // Adorable fluffy white kitten peeking over the top display frame
@@ -127,36 +136,34 @@ fun ThemeAmbientDisplayAnimation(
                     center = Offset(kittenX, kittenY + headR * 0.4f)
                 )
                 // Left Ear
-                val earLeft = Path().apply {
-                    moveTo(kittenX - headR * 0.8f, kittenY + headR * 0.2f)
-                    lineTo(kittenX - headR * 0.65f, kittenY - headR * 0.65f)
-                    lineTo(kittenX - headR * 0.15f, kittenY)
-                    close()
-                }
-                drawPath(earLeft, color = Color.White)
-                val earLeftInner = Path().apply {
-                    moveTo(kittenX - headR * 0.70f, kittenY + headR * 0.15f)
-                    lineTo(kittenX - headR * 0.60f, kittenY - headR * 0.45f)
-                    lineTo(kittenX - headR * 0.25f, kittenY)
-                    close()
-                }
-                drawPath(earLeftInner, color = Color(0xFFFF9EAA))
+                reusableEarLeft.reset()
+                reusableEarLeft.moveTo(kittenX - headR * 0.8f, kittenY + headR * 0.2f)
+                reusableEarLeft.lineTo(kittenX - headR * 0.65f, kittenY - headR * 0.65f)
+                reusableEarLeft.lineTo(kittenX - headR * 0.15f, kittenY)
+                reusableEarLeft.close()
+                drawPath(reusableEarLeft, color = Color.White)
+
+                reusableEarLeftInner.reset()
+                reusableEarLeftInner.moveTo(kittenX - headR * 0.70f, kittenY + headR * 0.15f)
+                reusableEarLeftInner.lineTo(kittenX - headR * 0.60f, kittenY - headR * 0.45f)
+                reusableEarLeftInner.lineTo(kittenX - headR * 0.25f, kittenY)
+                reusableEarLeftInner.close()
+                drawPath(reusableEarLeftInner, color = Color(0xFFFF9EAA))
 
                 // Right Ear
-                val earRight = Path().apply {
-                    moveTo(kittenX + headR * 0.15f, kittenY)
-                    lineTo(kittenX + headR * 0.65f, kittenY - headR * 0.65f)
-                    lineTo(kittenX + headR * 0.8f, kittenY + headR * 0.2f)
-                    close()
-                }
-                drawPath(earRight, color = Color.White)
-                val earRightInner = Path().apply {
-                    moveTo(kittenX + headR * 0.25f, kittenY)
-                    lineTo(kittenX + headR * 0.60f, kittenY - headR * 0.45f)
-                    lineTo(kittenX + headR * 0.70f, kittenY + headR * 0.15f)
-                    close()
-                }
-                drawPath(earRightInner, color = Color(0xFFFF9EAA))
+                reusableEarRight.reset()
+                reusableEarRight.moveTo(kittenX + headR * 0.15f, kittenY)
+                reusableEarRight.lineTo(kittenX + headR * 0.65f, kittenY - headR * 0.65f)
+                reusableEarRight.lineTo(kittenX + headR * 0.8f, kittenY + headR * 0.2f)
+                reusableEarRight.close()
+                drawPath(reusableEarRight, color = Color.White)
+
+                reusableEarRightInner.reset()
+                reusableEarRightInner.moveTo(kittenX + headR * 0.25f, kittenY)
+                reusableEarRightInner.lineTo(kittenX + headR * 0.60f, kittenY - headR * 0.45f)
+                reusableEarRightInner.lineTo(kittenX + headR * 0.70f, kittenY + headR * 0.15f)
+                reusableEarRightInner.close()
+                drawPath(reusableEarRightInner, color = Color(0xFFFF9EAA))
 
                 // Cute pink bow by left ear
                 drawCircle(color = Color(0xFFFF5277), radius = 2.2.dp.toPx(), center = Offset(kittenX - headR * 0.45f, kittenY - headR * 0.2f))
@@ -279,15 +286,14 @@ fun ThemeAmbientDisplayAnimation(
 
                 // 4-pointed radiant Y2K chrome stars
                 fun drawY2kStar(cx: Float, cy: Float, sizePx: Float, alpha: Float) {
-                    val p = Path().apply {
-                        moveTo(cx, cy - sizePx)
-                        cubicTo(cx, cy - sizePx * 0.2f, cx + sizePx * 0.2f, cy, cx + sizePx, cy)
-                        cubicTo(cx + sizePx * 0.2f, cy, cx, cy + sizePx * 0.2f, cx, cy + sizePx)
-                        cubicTo(cx, cy + sizePx * 0.2f, cx - sizePx * 0.2f, cy, cx - sizePx, cy)
-                        cubicTo(cx - sizePx * 0.2f, cy, cx, cy - sizePx * 0.2f, cx, cy - sizePx)
-                        close()
-                    }
-                    drawPath(p, color = Color(0xFFFF69A6).copy(alpha = alpha * 0.75f))
+                    reusableStarPath.reset()
+                    reusableStarPath.moveTo(cx, cy - sizePx)
+                    reusableStarPath.cubicTo(cx, cy - sizePx * 0.2f, cx + sizePx * 0.2f, cy, cx + sizePx, cy)
+                    reusableStarPath.cubicTo(cx + sizePx * 0.2f, cy, cx, cy + sizePx * 0.2f, cx, cy + sizePx)
+                    reusableStarPath.cubicTo(cx, cy + sizePx * 0.2f, cx - sizePx * 0.2f, cy, cx - sizePx, cy)
+                    reusableStarPath.cubicTo(cx - sizePx * 0.2f, cy, cx, cy - sizePx * 0.2f, cx, cy - sizePx)
+                    reusableStarPath.close()
+                    drawPath(reusableStarPath, color = Color(0xFFFF69A6).copy(alpha = alpha * 0.75f))
                     drawCircle(color = Color.White.copy(alpha = alpha), radius = sizePx * 0.25f, center = Offset(cx, cy))
                 }
                 drawY2kStar(22.dp.toPx(), 16.dp.toPx(), 7.dp.toPx(), breathPulseVal)
@@ -335,23 +341,23 @@ fun ThemeAmbientDisplayAnimation(
 
             // 0E. RETRO CIRCUIT 90034: Flowing Logic Pulses & Oscilloscope Trace
             theme.isRetroCircuit || theme.id == ThemeId.RETRO_CIRCUIT_RED -> {
-                val oscPath = Path()
+                reusableOscPath.reset()
                 val startX = w * 0.08f
                 val endX = w * 0.92f
                 val waveY = h - 6.dp.toPx()
                 val pulseH = 4.dp.toPx()
 
                 var px = startX
-                oscPath.moveTo(px, waveY)
+                reusableOscPath.moveTo(px, waveY)
                 while (px < endX) {
                     val phase = ((px / w) * 8f - sweepProgressVal * 4f)
                     val isHigh = (sin(phase) > 0.3f)
                     val py = if (isHigh) waveY - pulseH else waveY
-                    oscPath.lineTo(px, py)
+                    reusableOscPath.lineTo(px, py)
                     px += 6.dp.toPx()
                 }
                 drawPath(
-                    path = oscPath,
+                    path = reusableOscPath,
                     color = theme.accentColor.copy(alpha = 0.35f + breathPulseVal * 0.35f),
                     style = Stroke(width = 1.2.dp.toPx(), cap = StrokeCap.Square)
                 )
@@ -561,8 +567,8 @@ fun ThemeAmbientDisplayAnimation(
 
             // 5. INTERACTIVE DARK / OBSIDIAN / CYBERPUNK / DEFAULT: Dynamic Multi-Harmonic Calculation Wave
             else -> {
-                // Harmonic mathematical wave across baseline
-                val wavePath = Path()
+                // Harmonic mathematical wave across baseline (zero allocation)
+                reusableWavePath.reset()
                 val startX = 0f
                 val baseY = h - 6.dp.toPx()
                 val waveHeight = 4.dp.toPx()
@@ -579,10 +585,10 @@ fun ThemeAmbientDisplayAnimation(
                             (sin(normX * 24f - wavePhaseVal * 1.4f) * waveHeight * 0.35f)
 
                     if (isFirst) {
-                        wavePath.moveTo(x, y)
+                        reusableWavePath.moveTo(x, y)
                         isFirst = false
                     } else {
-                        wavePath.lineTo(x, y)
+                        reusableWavePath.lineTo(x, y)
                     }
                     x += step
                 }
@@ -599,7 +605,7 @@ fun ThemeAmbientDisplayAnimation(
                     )
                 )
                 drawPath(
-                    path = wavePath,
+                    path = reusableWavePath,
                     brush = waveBrush,
                     style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round)
                 )

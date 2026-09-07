@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -72,11 +73,11 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Procedural vector path generator for the classic geometric Batman insignia.
- * Normalized and scaled to fit the provided width and height cleanly.
+ * Procedural vector path populator for the classic geometric Batman insignia.
+ * Normalized and scaled to fit the provided width and height cleanly without heap allocation.
  */
-fun createBatmanLogoPath(width: Float, height: Float): Path {
-    val path = Path()
+fun populateBatmanLogoPath(path: Path, width: Float, height: Float) {
+    path.reset()
     val cx = width / 2f
     val cy = height / 2f
     val halfW = width / 2f
@@ -159,16 +160,23 @@ fun createBatmanLogoPath(width: Float, height: Float): Path {
     // Left ear inner slope back to center notch
     path.lineTo(cx - 0.05f * halfW, cy - 0.30f * halfH)
     path.close()
+}
 
+/**
+ * Procedural vector path generator for the classic geometric Batman insignia.
+ */
+fun createBatmanLogoPath(width: Float, height: Float): Path {
+    val path = Path()
+    populateBatmanLogoPath(path, width, height)
     return path
 }
 
 /**
- * Creates a stylized flying bat silhouette with organic wing flapping articulation.
+ * Populates a stylized flying bat silhouette with organic wing flapping articulation.
  * [flapCycle] ranges from -1.0 (wings swept down) to +1.0 (wings arched up).
  */
-fun createAnimatedFlyingBatPath(width: Float, height: Float, flapCycle: Float): Path {
-    val path = Path()
+fun populateAnimatedFlyingBatPath(path: Path, width: Float, height: Float, flapCycle: Float) {
+    path.reset()
     val cx = width / 2f
     val cy = height / 2f
     val hw = width / 2f
@@ -222,7 +230,7 @@ fun createAnimatedFlyingBatPath(width: Float, height: Float, flapCycle: Float): 
     )
     path.cubicTo(
         cx - 0.66f * hw, cy + (0.36f * hh) + midWingYOffset * 0.5f,
-        cx - 0.82f * hw, cy + (0.22f * hh) + wingTipYOffset * 0.5f,
+        cx - 0.82f * hw, cy + (0.22f * hw) + wingTipYOffset * 0.5f,
         cx - hw, cy - (0.22f * hh) + wingTipYOffset
     )
     path.cubicTo(
@@ -233,15 +241,19 @@ fun createAnimatedFlyingBatPath(width: Float, height: Float, flapCycle: Float): 
     path.lineTo(cx - 0.09f * hw, cy - 0.78f * hh) // left ear tip
     path.lineTo(cx - 0.06f * hw, cy - 0.40f * hh)
     path.close()
+}
 
+fun createAnimatedFlyingBatPath(width: Float, height: Float, flapCycle: Float): Path {
+    val path = Path()
+    populateAnimatedFlyingBatPath(path, width, height, flapCycle)
     return path
 }
 
 /**
- * Aerodynamic tactical Batarang path for interactive flight strikes.
+ * Populates aerodynamic tactical Batarang path for interactive flight strikes.
  */
-fun createBatarangPath(width: Float, height: Float): Path {
-    val path = Path()
+fun populateBatarangPath(path: Path, width: Float, height: Float) {
+    path.reset()
     val cx = width / 2f
     val cy = height / 2f
     val hw = width / 2f
@@ -276,6 +288,11 @@ fun createBatarangPath(width: Float, height: Float): Path {
         cx - 0.12f * hw, cy - 0.40f * hh
     )
     path.close()
+}
+
+fun createBatarangPath(width: Float, height: Float): Path {
+    val path = Path()
+    populateBatarangPath(path, width, height)
     return path
 }
 
@@ -288,12 +305,13 @@ fun BatmanLogoIcon(
     tint: Color = Color(0xFFFFE500),
     strokeColor: Color? = null
 ) {
+    val logoPath = remember { Path() }
     Canvas(modifier = modifier) {
-        val path = createBatmanLogoPath(size.width, size.height)
-        drawPath(path = path, color = tint, style = Fill)
+        populateBatmanLogoPath(logoPath, size.width, size.height)
+        drawPath(path = logoPath, color = tint, style = Fill)
         if (strokeColor != null) {
             drawPath(
-                path = path,
+                path = logoPath,
                 color = strokeColor,
                 style = Stroke(width = 1.2f, join = StrokeJoin.Round, cap = StrokeCap.Round)
             )
@@ -328,7 +346,22 @@ fun BatmanDisplayOverlay(
     var activeEasterEgg by remember { mutableStateOf(false) }
     var quoteIndex by remember { mutableIntStateOf(0) }
     var batarangActive by remember { mutableStateOf(false) }
-    var batarangProgress by remember { mutableFloatStateOf(0f) }
+    val batarangAnim = remember { Animatable(0f) }
+    val lightningAnim = remember { Animatable(0f) }
+
+    // Pre-allocated paths to avoid GC allocations during high frame-rate animations
+    val batPath = remember { Path() }
+    val distBatPath = remember { Path() }
+    val batarangPath = remember { Path() }
+    val ledgePath = remember { Path() }
+    val capePath = remember { Path() }
+    val cowlPath = remember { Path() }
+    val rimLightPath = remember { Path() }
+    val capeRimLightPath = remember { Path() }
+    val leftEyePath = remember { Path() }
+    val rightEyePath = remember { Path() }
+    val signalConePath = remember { Path() }
+    val signalInsigniaPath = remember { Path() }
 
     val quotes = listOf(
         "I AM VENGEANCE. I AM THE NIGHT.",
@@ -469,26 +502,20 @@ fun BatmanDisplayOverlay(
     )
 
     // Interactive Tap spring response
-    val tapSpringScale by animateFloatAsState(
+    val tapSpringScale = animateFloatAsState(
         targetValue = if (isTapped) 1.06f else 1.0f,
         animationSpec = spring(dampingRatio = 0.52f, stiffness = 850f),
         label = "tap_spring_scale"
     )
 
-    // Lightning Flash state (triggers occasionally or on tap)
-    var lightningIntensity by remember { mutableFloatStateOf(0f) }
-
     LaunchedEffect(Unit) {
         while (true) {
             delay(9000)
-            // Double-strike cinematic lightning
-            lightningIntensity = 0.45f
-            delay(80)
-            lightningIntensity = 0.12f
-            delay(60)
-            lightningIntensity = 0.70f
-            delay(120)
-            lightningIntensity = 0f
+            // Double-strike cinematic lightning with smooth interpolation
+            lightningAnim.animateTo(0.45f, tween(70, easing = LinearEasing))
+            lightningAnim.animateTo(0.12f, tween(50, easing = LinearEasing))
+            lightningAnim.animateTo(0.70f, tween(60, easing = LinearEasing))
+            lightningAnim.animateTo(0f, tween(160, easing = FastOutSlowInEasing))
         }
     }
 
@@ -504,25 +531,18 @@ fun BatmanDisplayOverlay(
                 activeEasterEgg = true
                 quoteIndex = (quoteIndex + 1) % quotes.size
 
-                // Trigger interactive Batarang throw and lightning strike
+                // Trigger interactive Batarang throw and lightning strike smoothly
                 scope.launch {
-                    lightningIntensity = 0.65f
-                    delay(90)
-                    lightningIntensity = 0.15f
-                    delay(50)
-                    lightningIntensity = 0.45f
-                    delay(120)
-                    lightningIntensity = 0f
+                    lightningAnim.animateTo(0.65f, tween(60, easing = LinearEasing))
+                    lightningAnim.animateTo(0.15f, tween(40, easing = LinearEasing))
+                    lightningAnim.animateTo(0.45f, tween(60, easing = LinearEasing))
+                    lightningAnim.animateTo(0f, tween(160, easing = FastOutSlowInEasing))
                 }
 
                 scope.launch {
                     batarangActive = true
-                    batarangProgress = 0f
-                    val steps = 30
-                    for (i in 0..steps) {
-                        batarangProgress = i.toFloat() / steps
-                        delay(24)
-                    }
+                    batarangAnim.snapTo(0f)
+                    batarangAnim.animateTo(1f, tween(durationMillis = 650, easing = FastOutSlowInEasing))
                     batarangActive = false
                 }
 
@@ -539,8 +559,9 @@ fun BatmanDisplayOverlay(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    scaleX = tapSpringScale
-                    scaleY = tapSpringScale
+                    val s = tapSpringScale.value
+                    scaleX = s
+                    scaleY = s
                 }
         ) {
             val width = size.width
@@ -558,6 +579,8 @@ fun BatmanDisplayOverlay(
             val sonarPulseProgress = sonarPulseProgress.value
             val radarRotationAngle = radarRotationAngle.value
             val rainTime = rainTime.value
+            val lightningIntensity = lightningAnim.value
+            val batarangProgress = batarangAnim.value
 
             // 1. GOTHAM MIDNIGHT CANVAS WITH DYNAMIC LIGHTNING ILLUMINATION
             val skyGradient = Brush.verticalGradient(
@@ -687,16 +710,16 @@ fun BatmanDisplayOverlay(
             val beamRightTop = Offset(signalCenterX + beamWidthAtClouds / 2f, signalCenterY)
             val beamBottom = Offset(projectorBaseX, projectorBaseY)
 
-            // Volumetric searchlight cone
-            val beamConePath = Path().apply {
-                moveTo(beamBottom.x - 4f, beamBottom.y)
-                lineTo(beamLeftTop.x, beamLeftTop.y)
-                lineTo(beamRightTop.x, beamRightTop.y)
-                lineTo(beamBottom.x + 4f, beamBottom.y)
-                close()
-            }
+            // Volumetric searchlight cone (zero-allocation)
+            signalConePath.reset()
+            signalConePath.moveTo(beamBottom.x - 4f, beamBottom.y)
+            signalConePath.lineTo(beamLeftTop.x, beamLeftTop.y)
+            signalConePath.lineTo(beamRightTop.x, beamRightTop.y)
+            signalConePath.lineTo(beamBottom.x + 4f, beamBottom.y)
+            signalConePath.close()
+
             drawPath(
-                path = beamConePath,
+                path = signalConePath,
                 brush = Brush.verticalGradient(
                     colors = listOf(
                         Color(0x35FFE500).copy(alpha = signalPulseAlpha * 0.9f),
@@ -726,26 +749,25 @@ fun BatmanDisplayOverlay(
                 center = Offset(signalCenterX, signalCenterY)
             )
 
-            // Crisp Batman insignia embedded inside the roving spotlight
+            // Crisp Batman insignia embedded inside the roving spotlight (zero-allocation)
             rotate(degrees = searchlightAngle * 0.4f, pivot = Offset(signalCenterX, signalCenterY)) {
                 val logoW = spotRadius * 1.08f
                 val logoH = logoW * 0.52f
-                val insigniaPath = Path().apply {
-                    val base = createBatmanLogoPath(logoW, logoH)
-                    addPath(base, Offset(signalCenterX - logoW / 2f, signalCenterY - logoH / 2f))
+                populateBatmanLogoPath(signalInsigniaPath, logoW, logoH)
+                translate(signalCenterX - logoW / 2f, signalCenterY - logoH / 2f) {
+                    // Dark core silhouette inside the spotlight
+                    drawPath(
+                        path = signalInsigniaPath,
+                        color = Color(0x9907090E),
+                        style = Fill
+                    )
+                    // Glowing golden outline
+                    drawPath(
+                        path = signalInsigniaPath,
+                        color = Color(0xFFFFE500).copy(alpha = (signalPulseAlpha * 1.5f).coerceAtMost(0.65f)),
+                        style = Stroke(width = 1.6f, join = StrokeJoin.Round)
+                    )
                 }
-                // Dark core silhouette inside the spotlight
-                drawPath(
-                    path = insigniaPath,
-                    color = Color(0x9907090E),
-                    style = Fill
-                )
-                // Glowing golden outline
-                drawPath(
-                    path = insigniaPath,
-                    color = Color(0xFFFFE500).copy(alpha = (signalPulseAlpha * 1.5f).coerceAtMost(0.65f)),
-                    style = Stroke(width = 1.6f, join = StrokeJoin.Round)
-                )
             }
 
             // 5. DETECTIVE MODE SONAR SCANNER PULSE FROM BATMAN'S POST
@@ -804,16 +826,15 @@ fun BatmanDisplayOverlay(
                 center = Offset(batX, batY)
             )
 
-            val animatedBatPath = Path().apply {
-                val base = createAnimatedFlyingBatPath(batW, batH, wingFlapCycle)
-                addPath(base, Offset(batX - batW / 2f, batY - batH / 2f))
+            populateAnimatedFlyingBatPath(batPath, batW, batH, wingFlapCycle)
+            translate(batX - batW / 2f, batY - batH / 2f) {
+                drawPath(path = batPath, color = Color.White, style = Fill)
+                drawPath(
+                    path = batPath,
+                    color = Color(0xEEFFFFFF),
+                    style = Stroke(width = 1.3f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
             }
-            drawPath(path = animatedBatPath, color = Color.White, style = Fill)
-            drawPath(
-                path = animatedBatPath,
-                color = Color(0xEEFFFFFF),
-                style = Stroke(width = 1.3f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-            )
 
             // Distant trailing companion shadow bat
             val distBatX = batX - 55.dp.toPx()
@@ -821,11 +842,10 @@ fun BatmanDisplayOverlay(
             if (distBatX > -20f && distBatX < width + 20f) {
                 val distBatW = 22.dp.toPx()
                 val distBatH = 11.dp.toPx()
-                val distBatPath = Path().apply {
-                    val base = createAnimatedFlyingBatPath(distBatW, distBatH, -wingFlapCycle)
-                    addPath(base, Offset(distBatX - distBatW / 2f, distBatY - distBatH / 2f))
+                populateAnimatedFlyingBatPath(distBatPath, distBatW, distBatH, -wingFlapCycle)
+                translate(distBatX - distBatW / 2f, distBatY - distBatH / 2f) {
+                    drawPath(path = distBatPath, color = Color(0x99A0B8D0), style = Fill)
                 }
-                drawPath(path = distBatPath, color = Color(0x99A0B8D0), style = Fill)
             }
 
             // 7. SLEEK GOTHAM RAIN STREAKS
@@ -847,13 +867,13 @@ fun BatmanDisplayOverlay(
             }
 
             // 8. FOREGROUND ROOFTOP PARAPET & GARGOLYE LEDGE
-            val ledgePath = Path().apply {
-                moveTo(heroX - heroH * 0.50f, heroLedgeY)
-                lineTo(width + 10f, heroLedgeY - 20.dp.toPx())
-                lineTo(width + 10f, height + 10f)
-                lineTo(heroX - heroH * 0.60f, height + 10f)
-                close()
-            }
+            ledgePath.reset()
+            ledgePath.moveTo(heroX - heroH * 0.50f, heroLedgeY)
+            ledgePath.lineTo(width + 10f, heroLedgeY - 20.dp.toPx())
+            ledgePath.lineTo(width + 10f, height + 10f)
+            ledgePath.lineTo(heroX - heroH * 0.60f, height + 10f)
+            ledgePath.close()
+
             drawPath(
                 path = ledgePath,
                 brush = Brush.verticalGradient(
@@ -880,32 +900,31 @@ fun BatmanDisplayOverlay(
             val capeWave2 = capeSecondaryRipple * 2.5.dp.toPx()
             val totalCapeOffset = capeWave1 + capeWave2
 
-            val capePath = Path().apply {
-                // Left shoulder anchor
-                moveTo(heroX - headW * 1.15f, heroHeadY + headH * 0.95f)
-                // Downward billow arc with dual sinusoidal wind propagation
-                cubicTo(
-                    heroX - headW * 2.3f + totalCapeOffset, heroHeadY + heroH * 0.42f,
-                    heroX - headW * 2.8f - totalCapeOffset, heroHeadY + heroH * 0.72f,
-                    heroX - headW * 2.3f + totalCapeOffset * 1.4f, heroLedgeY + 6.dp.toPx()
-                )
-                // Scalloped cape hem scallops
-                cubicTo(
-                    heroX - headW * 1.7f, heroLedgeY + 1.dp.toPx() + totalCapeOffset * 0.3f,
-                    heroX - headW * 1.3f, heroLedgeY + 4.dp.toPx(),
-                    heroX - headW * 0.85f, heroLedgeY
-                )
-                cubicTo(
-                    heroX - headW * 0.45f, heroLedgeY + 3.dp.toPx(),
-                    heroX, heroLedgeY + 1.dp.toPx(),
-                    heroX + headW * 0.65f, heroLedgeY
-                )
-                // Up right torso
-                lineTo(heroX + headW * 0.82f, heroHeadY + headH * 1.25f)
-                // Neck/shoulder
-                lineTo(heroX + headW * 0.52f, heroHeadY + headH * 0.72f)
-                close()
-            }
+            capePath.reset()
+            // Left shoulder anchor
+            capePath.moveTo(heroX - headW * 1.15f, heroHeadY + headH * 0.95f)
+            // Downward billow arc with dual sinusoidal wind propagation
+            capePath.cubicTo(
+                heroX - headW * 2.3f + totalCapeOffset, heroHeadY + heroH * 0.42f,
+                heroX - headW * 2.8f - totalCapeOffset, heroHeadY + heroH * 0.72f,
+                heroX - headW * 2.3f + totalCapeOffset * 1.4f, heroLedgeY + 6.dp.toPx()
+            )
+            // Scalloped cape hem scallops
+            capePath.cubicTo(
+                heroX - headW * 1.7f, heroLedgeY + 1.dp.toPx() + totalCapeOffset * 0.3f,
+                heroX - headW * 1.3f, heroLedgeY + 4.dp.toPx(),
+                heroX - headW * 0.85f, heroLedgeY
+            )
+            capePath.cubicTo(
+                heroX - headW * 0.45f, heroLedgeY + 3.dp.toPx(),
+                heroX, heroLedgeY + 1.dp.toPx(),
+                heroX + headW * 0.65f, heroLedgeY
+            )
+            // Up right torso
+            capePath.lineTo(heroX + headW * 0.82f, heroHeadY + headH * 1.25f)
+            // Neck/shoulder
+            capePath.lineTo(heroX + headW * 0.52f, heroHeadY + headH * 0.72f)
+            capePath.close()
 
             // Fill stealth cape
             drawPath(
@@ -919,27 +938,26 @@ fun BatmanDisplayOverlay(
             )
 
             // Batman's Cowl & Stance with sharp pointed ears
-            val cowlPath = Path().apply {
-                moveTo(heroX - headW * 0.68f, heroHeadY + headH)
-                lineTo(heroX - headW * 0.56f, heroHeadY + headH * 0.35f)
-                // Left ear tip
-                lineTo(heroX - headW * 0.48f, heroHeadY - headH * 0.28f)
-                // Left ear inner slope
-                lineTo(heroX - headW * 0.20f, heroHeadY + headH * 0.14f)
-                // Crown notch
-                lineTo(heroX + headW * 0.10f, heroHeadY + headH * 0.14f)
-                // Right ear tip
-                lineTo(heroX + headW * 0.36f, heroHeadY - headH * 0.22f)
-                // Right ear outer slope
-                lineTo(heroX + headW * 0.44f, heroHeadY + headH * 0.35f)
-                // Jawline turned toward Gotham
-                lineTo(heroX + headW * 0.52f, heroHeadY + headH * 0.70f)
-                // Chin
-                lineTo(heroX + headW * 0.22f, heroHeadY + headH * 0.95f)
-                // Chest
-                lineTo(heroX - headW * 0.68f, heroHeadY + headH)
-                close()
-            }
+            cowlPath.reset()
+            cowlPath.moveTo(heroX - headW * 0.68f, heroHeadY + headH)
+            cowlPath.lineTo(heroX - headW * 0.56f, heroHeadY + headH * 0.35f)
+            // Left ear tip
+            cowlPath.lineTo(heroX - headW * 0.48f, heroHeadY - headH * 0.28f)
+            // Left ear inner slope
+            cowlPath.lineTo(heroX - headW * 0.20f, heroHeadY + headH * 0.14f)
+            // Crown notch
+            cowlPath.lineTo(heroX + headW * 0.10f, heroHeadY + headH * 0.14f)
+            // Right ear tip
+            cowlPath.lineTo(heroX + headW * 0.36f, heroHeadY - headH * 0.22f)
+            // Right ear outer slope
+            cowlPath.lineTo(heroX + headW * 0.44f, heroHeadY + headH * 0.35f)
+            // Jawline turned toward Gotham
+            cowlPath.lineTo(heroX + headW * 0.52f, heroHeadY + headH * 0.70f)
+            // Chin
+            cowlPath.lineTo(heroX + headW * 0.22f, heroHeadY + headH * 0.95f)
+            // Chest
+            cowlPath.lineTo(heroX - headW * 0.68f, heroHeadY + headH)
+            cowlPath.close()
 
             // Fill Cowl
             drawPath(
@@ -953,15 +971,15 @@ fun BatmanDisplayOverlay(
             )
 
             // COMIC-BOOK CRISP WHITE RIM LIGHT ACCENT
-            val rimLightPath = Path().apply {
-                moveTo(heroX - headW * 0.56f, heroHeadY + headH * 0.62f)
-                lineTo(heroX - headW * 0.56f, heroHeadY + headH * 0.35f)
-                lineTo(heroX - headW * 0.48f, heroHeadY - headH * 0.28f)
-                lineTo(heroX - headW * 0.20f, heroHeadY + headH * 0.14f)
-                lineTo(heroX + headW * 0.10f, heroHeadY + headH * 0.14f)
-                lineTo(heroX + headW * 0.36f, heroHeadY - headH * 0.22f)
-                lineTo(heroX + headW * 0.44f, heroHeadY + headH * 0.35f)
-            }
+            rimLightPath.reset()
+            rimLightPath.moveTo(heroX - headW * 0.56f, heroHeadY + headH * 0.62f)
+            rimLightPath.lineTo(heroX - headW * 0.56f, heroHeadY + headH * 0.35f)
+            rimLightPath.lineTo(heroX - headW * 0.48f, heroHeadY - headH * 0.28f)
+            rimLightPath.lineTo(heroX - headW * 0.20f, heroHeadY + headH * 0.14f)
+            rimLightPath.lineTo(heroX + headW * 0.10f, heroHeadY + headH * 0.14f)
+            rimLightPath.lineTo(heroX + headW * 0.36f, heroHeadY - headH * 0.22f)
+            rimLightPath.lineTo(heroX + headW * 0.44f, heroHeadY + headH * 0.35f)
+
             drawPath(
                 path = rimLightPath,
                 color = Color.White.copy(alpha = 0.90f),
@@ -969,14 +987,14 @@ fun BatmanDisplayOverlay(
             )
 
             // White rim light along the flowing outer cape billow
-            val capeRimLightPath = Path().apply {
-                moveTo(heroX - headW * 1.15f, heroHeadY + headH * 0.95f)
-                cubicTo(
-                    heroX - headW * 2.3f + totalCapeOffset, heroHeadY + heroH * 0.42f,
-                    heroX - headW * 2.8f - totalCapeOffset, heroHeadY + heroH * 0.72f,
-                    heroX - headW * 2.3f + totalCapeOffset * 1.4f, heroLedgeY + 6.dp.toPx()
-                )
-            }
+            capeRimLightPath.reset()
+            capeRimLightPath.moveTo(heroX - headW * 1.15f, heroHeadY + headH * 0.95f)
+            capeRimLightPath.cubicTo(
+                heroX - headW * 2.3f + totalCapeOffset, heroHeadY + heroH * 0.42f,
+                heroX - headW * 2.8f - totalCapeOffset, heroHeadY + heroH * 0.72f,
+                heroX - headW * 2.3f + totalCapeOffset * 1.4f, heroLedgeY + 6.dp.toPx()
+            )
+
             drawPath(
                 path = capeRimLightPath,
                 color = Color.White.copy(alpha = 0.45f),
@@ -988,18 +1006,18 @@ fun BatmanDisplayOverlay(
             val eyeLeftX = heroX - headW * 0.14f
             val eyeRightX = heroX + headW * 0.18f
 
-            val leftEyePath = Path().apply {
-                moveTo(eyeLeftX - 3.5.dp.toPx(), eyeCenterY + 0.8.dp.toPx())
-                lineTo(eyeLeftX, eyeCenterY - 1.2.dp.toPx())
-                lineTo(eyeLeftX + 3.5.dp.toPx(), eyeCenterY + 0.8.dp.toPx())
-                close()
-            }
-            val rightEyePath = Path().apply {
-                moveTo(eyeRightX - 3.5.dp.toPx(), eyeCenterY + 0.8.dp.toPx())
-                lineTo(eyeRightX, eyeCenterY - 1.2.dp.toPx())
-                lineTo(eyeRightX + 3.5.dp.toPx(), eyeCenterY + 0.8.dp.toPx())
-                close()
-            }
+            leftEyePath.reset()
+            leftEyePath.moveTo(eyeLeftX - 3.5.dp.toPx(), eyeCenterY + 0.8.dp.toPx())
+            leftEyePath.lineTo(eyeLeftX, eyeCenterY - 1.2.dp.toPx())
+            leftEyePath.lineTo(eyeLeftX + 3.5.dp.toPx(), eyeCenterY + 0.8.dp.toPx())
+            leftEyePath.close()
+
+            rightEyePath.reset()
+            rightEyePath.moveTo(eyeRightX - 3.5.dp.toPx(), eyeCenterY + 0.8.dp.toPx())
+            rightEyePath.lineTo(eyeRightX, eyeCenterY - 1.2.dp.toPx())
+            rightEyePath.lineTo(eyeRightX + 3.5.dp.toPx(), eyeCenterY + 0.8.dp.toPx())
+            rightEyePath.close()
+
             val activeEyeAlpha = eyeGlowPulse.coerceIn(0.6f, 1.0f)
             drawPath(path = leftEyePath, color = Color.White.copy(alpha = activeEyeAlpha), style = Fill)
             drawPath(path = rightEyePath, color = Color.White.copy(alpha = activeEyeAlpha), style = Fill)
@@ -1036,16 +1054,15 @@ fun BatmanDisplayOverlay(
                 )
 
                 rotate(degrees = batarangSpinDeg, pivot = Offset(curBX, curBY)) {
-                    val batarangPath = Path().apply {
-                        val base = createBatarangPath(batarangSizeW, batarangSizeH)
-                        addPath(base, Offset(curBX - batarangSizeW / 2f, curBY - batarangSizeH / 2f))
+                    populateBatarangPath(batarangPath, batarangSizeW, batarangSizeH)
+                    translate(curBX - batarangSizeW / 2f, curBY - batarangSizeH / 2f) {
+                        drawPath(path = batarangPath, color = Color(0xFFFFE500), style = Fill)
+                        drawPath(
+                            path = batarangPath,
+                            color = Color.White,
+                            style = Stroke(width = 1.2f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                        )
                     }
-                    drawPath(path = batarangPath, color = Color(0xFFFFE500), style = Fill)
-                    drawPath(
-                        path = batarangPath,
-                        color = Color.White,
-                        style = Stroke(width = 1.2f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-                    )
                 }
             }
 
@@ -1148,6 +1165,18 @@ fun BatmanScreenBackground(
         label = "grid_sweep"
     )
 
+    val scanLineColors = remember {
+        listOf(
+            Color.Transparent,
+            Color(0x25FFE500),
+            Color(0x40FFE500),
+            Color(0x25FFE500),
+            Color.Transparent
+        )
+    }
+    val scanBrush = remember { Brush.horizontalGradient(scanLineColors) }
+    val searchlightBaseColor = remember { Color(0xFFFFE500) }
+
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
@@ -1180,15 +1209,7 @@ fun BatmanScreenBackground(
         // Horizontal tactical scan line moving smoothly down the screen
         val scanY = sweep * height
         drawLine(
-            brush = Brush.horizontalGradient(
-                colors = listOf(
-                    Color.Transparent,
-                    Color(0x25FFE500),
-                    Color(0x40FFE500),
-                    Color(0x25FFE500),
-                    Color.Transparent
-                )
-            ),
+            brush = scanBrush,
             start = Offset(0f, scanY),
             end = Offset(width, scanY),
             strokeWidth = 1.0f
@@ -1198,7 +1219,7 @@ fun BatmanScreenBackground(
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    Color(0xFFFFE500).copy(alpha = pulse),
+                    searchlightBaseColor.copy(alpha = pulse),
                     Color.Transparent
                 ),
                 center = Offset(width * 0.15f, height * 0.88f),

@@ -511,6 +511,8 @@ fun IronManDisplayOverlay(
         }
     }
 
+    val quantumWavePath = remember { Path() }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -585,8 +587,8 @@ fun IronManDisplayOverlay(
                         center = reticleCenter
                     )
 
-                    // Continuous sinusoidal quantum waveform across baseline
-                    val wavePath = Path()
+                    // Continuous sinusoidal quantum waveform across baseline (zero allocation)
+                    quantumWavePath.reset()
                     val baseY = h - 6.dp.toPx()
                     val step = 4.dp.toPx()
                     var x = 0f
@@ -598,10 +600,10 @@ fun IronManDisplayOverlay(
                                 (sin(normX * 20f - wavePhase * 1.5f) * 1.5.dp.toPx())
 
                         if (isFirst) {
-                            wavePath.moveTo(x, y)
+                            quantumWavePath.moveTo(x, y)
                             isFirst = false
                         } else {
-                            wavePath.lineTo(x, y)
+                            quantumWavePath.lineTo(x, y)
                         }
                         x += step
                     }
@@ -618,7 +620,7 @@ fun IronManDisplayOverlay(
                         )
                     )
                     drawPath(
-                        path = wavePath,
+                        path = quantumWavePath,
                         brush = waveBrush,
                         style = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round)
                     )

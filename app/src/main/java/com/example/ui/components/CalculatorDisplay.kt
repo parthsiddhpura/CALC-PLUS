@@ -6,8 +6,16 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import com.example.ui.theme.DisplayFontHelper
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -120,15 +128,23 @@ fun CalculatorDisplay(
     val exprScrollState = rememberScrollState()
     var justCopied by remember { mutableStateOf(false) }
 
-    // Cursor visibility and blinking state
-    var cursorVisible by remember { mutableStateOf(true) }
-    LaunchedEffect(expression, cursorPosition) {
-        cursorVisible = true
-        while (true) {
-            delay(530)
-            cursorVisible = !cursorVisible
-        }
-    }
+    // Draw-phase cursor blinking animation (zero recomposition on idle blinking)
+    val cursorTransition = rememberInfiniteTransition(label = "cursor_blink")
+    val cursorBlinkAlpha = cursorTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 1060
+                1f at 0
+                1f at 530
+                0f at 531
+                0f at 1060
+            },
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "cursor_alpha"
+    )
 
     LaunchedEffect(expression) {
         if (exprScrollState.maxValue > 0) {
@@ -136,14 +152,9 @@ fun CalculatorDisplay(
         }
     }
 
-    val fontFamily = when (theme.displayFont) {
-        DisplayFontType.MONOSPACE -> FontFamily.Monospace
-        DisplayFontType.DIGITAL_LCD -> FontFamily.Monospace
-        DisplayFontType.MODERN_SANS -> FontFamily.SansSerif
-        DisplayFontType.ROUNDED -> FontFamily.SansSerif
-        DisplayFontType.PIXEL_8BIT -> FontFamily.Monospace
-        DisplayFontType.KAWAII_CANDY -> FontFamily.SansSerif
-    }
+    val fontFamily = DisplayFontHelper.getFontFamily(theme.displayFont)
+    val fontLetterSpacing = DisplayFontHelper.getLetterSpacing(theme.displayFont)
+    val fontResultWeight = DisplayFontHelper.getFontWeight(theme.displayFont, isResult = true)
 
     val screenShape = RoundedCornerShape(theme.cornerRadiusDp.coerceAtLeast(14.dp))
 
@@ -248,16 +259,21 @@ fun CalculatorDisplay(
         // Batman Display Overlay (Bat-Signal searchlight, insignia, and tactile responses)
         if (theme.hasBatSignal) {
             BatmanDisplayOverlay(modifier = Modifier.matchParentSize())
-        }
-
-        // Iron Man Display Overlay (Unique Stark HUD animation for Mark 85, Stealth, Silver Centurion, Hulkbuster)
-        if (theme.hasArcReactor) {
+        } else if (theme.hasArcReactor) {
             IronManDisplayOverlay(
                 modifier = Modifier.matchParentSize(),
                 suitType = theme.ironManSuit ?: com.example.model.IronManSuitType.MARK_85_CLASSIC,
                 accentColor = theme.accentColor
             )
-        } else if (!theme.hasBatSignal) {
+        } else if (theme.isOrtylMinimal) {
+            OrtylDisplayOverlay(modifier = Modifier.matchParentSize())
+        } else if (theme.isOledStealthVoid) {
+            OledStealthVoidDisplayOverlay(modifier = Modifier.matchParentSize())
+        } else if (theme.isStarryGotham) {
+            StarryGothamDisplayOverlay(modifier = Modifier.matchParentSize())
+        } else if (theme.isCosmicSingularity) {
+            CosmicSingularityDisplayOverlay(modifier = Modifier.matchParentSize())
+        } else {
             // Unique professional ambient display animation for all other theme categories
             ThemeAmbientDisplayAnimation(
                 modifier = Modifier.matchParentSize(),
@@ -732,6 +748,7 @@ fun CalculatorDisplay(
                         fontSize = exprBaseSize.sp,
                         lineHeight = exprBaseSize.sp,
                         fontFamily = fontFamily,
+                        letterSpacing = fontLetterSpacing,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.End,
                         maxLines = 1,
@@ -744,8 +761,9 @@ fun CalculatorDisplay(
                             .testTag("expression_text")
                             .drawWithContent {
                                 drawContent()
+                                val isCursorVisible = cursorBlinkAlpha.value > 0.5f
                                 // Interactive cursor line
-                                if (onCursorChange != null && cursorVisible && !isPlaceholder) {
+                                if (onCursorChange != null && isCursorVisible && !isPlaceholder) {
                                     val layout = textLayoutResult
                                     if (layout != null && formattedExpr.isNotEmpty()) {
                                         val safeOffset = formattedCursorPos.coerceIn(0, formattedExpr.length)
@@ -775,7 +793,7 @@ fun CalculatorDisplay(
                                             center = Offset(cursorRect.left, cursorTop + cursorHeight + 2.dp.toPx())
                                         )
                                     }
-                                } else if (onCursorChange != null && cursorVisible && isPlaceholder) {
+                                } else if (onCursorChange != null && isCursorVisible && isPlaceholder) {
                                     val cursorWidth = 2.5.dp.toPx()
                                     val cursorHeight = (exprBaseSize * 0.9f).dp.toPx()
                                     drawRoundRect(
@@ -822,6 +840,7 @@ fun CalculatorDisplay(
                                 fontSize = previewSp.sp,
                                 lineHeight = previewSp.sp,
                                 fontFamily = fontFamily,
+                                letterSpacing = fontLetterSpacing,
                                 fontWeight = FontWeight.SemiBold,
                                 textAlign = TextAlign.End,
                                 maxLines = 1,
@@ -852,7 +871,7 @@ fun CalculatorDisplay(
                 val targetSp = (baseSp * dynamicScale).coerceIn(12f, baseSp)
                 val animatedSp by animateFloatAsState(
                     targetValue = targetSp,
-                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 800f),
+                    animationSpec = tween(durationMillis = 80, easing = FastOutSlowInEasing),
                     label = "result_font_scale"
                 )
 
@@ -875,7 +894,8 @@ fun CalculatorDisplay(
                         fontSize = animatedSp.sp,
                         lineHeight = animatedSp.sp,
                         fontFamily = fontFamily,
-                        fontWeight = FontWeight.Bold,
+                        letterSpacing = fontLetterSpacing,
+                        fontWeight = fontResultWeight,
                         textAlign = TextAlign.End,
                         maxLines = 1,
                         softWrap = false,

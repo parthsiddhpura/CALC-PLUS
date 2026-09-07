@@ -1473,8 +1473,8 @@ object CalculatorThemes {
         screenBorderColor = Color(0xFF263040),
         screenTextColor = Color(0xFFF8FAFC),
         screenExpressionColor = Color(0xFF8B9CB0),
-        screenPreviewColor = Color(0xFFF59E0B),
-        cursorColor = Color(0xFFF59E0B),
+        screenPreviewColor = Color(0xFFFFD600),
+        cursorColor = Color(0xFFFFD600),
         displayFont = DisplayFontType.MODERN_SANS,
         hasScanlines = false,
         hasBatSignal = true,
@@ -1482,19 +1482,19 @@ object CalculatorThemes {
         numberButtonText = Color(0xFFF1F5F9),
         numberButtonBorder = Color(0xFF263042),
         operatorButtonBg = Color(0xFF1C2230),
-        operatorButtonText = Color(0xFFFBBF24),
-        operatorButtonBorder = Color(0x55F59E0B),
+        operatorButtonText = Color(0xFFFFEA00),
+        operatorButtonBorder = Color(0x66FFD600),
         functionButtonBg = Color(0xFF181E28),
         functionButtonText = Color(0xFF94A3B8),
         functionButtonBorder = Color(0xFF283244),
         equalsButtonBrush = Brush.linearGradient(
-            colors = listOf(Color(0xFFF59E0B), Color(0xFFD97706))
+            colors = listOf(Color(0xFFFFEA00), Color(0xFFFFC400))
         ),
         equalsButtonText = Color(0xFF080A0E),
-        equalsButtonBorder = Color(0xFFFBBF24),
-        accentColor = Color(0xFFF59E0B),
-        secondaryAccent = Color(0xFFFBBF24),
-        glowColor = Color(0x66F59E0B),
+        equalsButtonBorder = Color(0xFFFFEA00),
+        accentColor = Color(0xFFFFD600),
+        secondaryAccent = Color(0xFFFFEA00),
+        glowColor = Color(0x66FFD600),
         shapeType = ButtonShapeType.ROUNDED_SQUARE,
         cornerRadiusDp = 18.dp,
         borderWidthDp = 1.2.dp,
@@ -2732,13 +2732,13 @@ object CalculatorThemes {
             listOf(Color(0xFF9E141D), Color(0xFF7E0F16), Color(0xFF56090E))
         ),
         backgroundColor = Color(0xFF7E0F16),
-        surfaceColor = Color(0x35FFFFFF),
-        cardBackground = Color(0xFF2A0D10),
-        screenBackground = Color(0xFF0E080A),
-        screenBorderColor = Color(0xFFE59866),
-        screenTextColor = Color(0xFFFFC233),
-        screenExpressionColor = Color(0xFFFF9E66),
-        screenPreviewColor = Color(0xFFFF5252),
+        surfaceColor = Color(0xFF28090D),
+        cardBackground = Color(0xFF1E070A),
+        screenBackground = Color(0xFF0E0405),
+        screenBorderColor = Color(0x66FFC233),
+        screenTextColor = Color(0xFFFFF6E5),
+        screenExpressionColor = Color(0xFFFFB380),
+        screenPreviewColor = Color(0xFFFFD54F),
         cursorColor = Color(0xFFFFC233),
         displayFont = DisplayFontType.MONOSPACE,
         hasScanlines = true,
@@ -2756,8 +2756,8 @@ object CalculatorThemes {
         ),
         equalsButtonText = Color.White,
         equalsButtonBorder = Color(0xFFFFC233),
-        accentColor = Color(0xFFE53935),
-        secondaryAccent = Color(0xFFFFC233),
+        accentColor = Color(0xFFFFC233),
+        secondaryAccent = Color(0xFFFFD54F),
         glowColor = Color(0x60FF9100),
         shapeType = ButtonShapeType.ROUNDED_SQUARE,
         cornerRadiusDp = 14.dp,
@@ -2809,8 +2809,8 @@ object CalculatorThemes {
         accentColor = Color(0xFFEB261E),
         secondaryAccent = Color(0xFFF0F2F5),
         glowColor = Color(0x60EB261E),
-        shapeType = ButtonShapeType.PILL,
-        cornerRadiusDp = 24.dp,
+        shapeType = ButtonShapeType.SQUIRCLE,
+        cornerRadiusDp = 16.dp,
         borderWidthDp = 1.dp,
         hasShadow = true,
         shadowElevationDp = 4.dp,
@@ -2921,15 +2921,225 @@ object CalculatorThemes {
         isTerracottaStudio = true
     )
 
+    /**
+     * 10. Ortyl Minimal Matte (Sleek Matte Obsidian with Signature Amber Block)
+     * Inspired directly by uploaded photo: 95573a5ade9c3960fef8a7f28e373ce3.jpg
+     */
+    val OrtylMinimalMatte = ThemePalette(
+        id = ThemeId.ORTYL_MINIMAL_MATTE,
+        name = "Ortyl Minimal Matte",
+        subtitle = "Sleek matte obsidian, hairline grid & signature amber block",
+        category = "Minimal & Aesthetic",
+        isDark = true,
+        backgroundBrush = Brush.verticalGradient(
+            listOf(Color(0xFF141416), Color(0xFF1B1B1E), Color(0xFF111113))
+        ),
+        backgroundColor = Color(0xFF141416),
+        surfaceColor = Color(0xFF1B1B1E),
+        cardBackground = Color(0xFF222226),
+        screenBackground = Color(0xFF121214),
+        screenBorderColor = Color(0x22FFFFFF),
+        screenTextColor = Color(0xFFFFFFFF),
+        screenExpressionColor = Color(0xFF8E8E93),
+        screenPreviewColor = Color(0xFFFFB703),
+        cursorColor = Color(0xFFFFB703),
+        displayFont = DisplayFontType.MODERN_SANS,
+        hasScanlines = false,
+        numberButtonBg = Color(0xFF1D1D20),
+        numberButtonText = Color(0xFFFFFFFF),
+        numberButtonBorder = Color(0x18FFFFFF),
+        operatorButtonBg = Color(0xFF171719),
+        operatorButtonText = Color(0xFFB0B0B6),
+        operatorButtonBorder = Color(0x14FFFFFF),
+        functionButtonBg = Color(0xFF171719),
+        functionButtonText = Color(0xFFB0B0B6),
+        functionButtonBorder = Color(0x14FFFFFF),
+        equalsButtonBrush = Brush.verticalGradient(
+            listOf(Color(0xFFFFB703), Color(0xFFF5A623))
+        ),
+        equalsButtonText = Color(0xFF121212),
+        equalsButtonBorder = Color(0x33FFA000),
+        accentColor = Color(0xFFFFB703),
+        secondaryAccent = Color(0xFFF5A623),
+        glowColor = Color(0x40FFB703),
+        shapeType = ButtonShapeType.ROUNDED_SQUARE,
+        cornerRadiusDp = 10.dp,
+        borderWidthDp = 1.dp,
+        hasShadow = false,
+        shadowElevationDp = 1.dp,
+        pressAnimation = PressAnimationType.DEEP_SINK,
+        statusBarDarkIcons = false,
+        isOrtylMinimal = true
+    )
+
+    /**
+     * 11. OLED Stealth Void (True 0-Lux Pure Black with Brushed Titanium & Platinum Contrast)
+     * Pure pitch black OLED pixels shut down completely for infinite contrast & zero power.
+     */
+    val OledStealthVoid = ThemePalette(
+        id = ThemeId.OLED_STEALTH_VOID,
+        name = "OLED Stealth Void",
+        subtitle = "True 0-lux pitch black, brushed titanium & pure OLED contrast",
+        category = "Futuristic",
+        isDark = true,
+        backgroundBrush = Brush.verticalGradient(
+            listOf(Color(0xFF000000), Color(0xFF000000), Color(0xFF000000))
+        ),
+        backgroundColor = Color(0xFF000000),
+        surfaceColor = Color(0xFF000000),
+        cardBackground = Color(0xFF0A0A0C),
+        screenBackground = Color(0xFF000000),
+        screenBorderColor = Color(0x24FFFFFF),
+        screenTextColor = Color(0xFFFFFFFF),
+        screenExpressionColor = Color(0xFF8E8E93),
+        screenPreviewColor = Color(0xFFE2E8F0),
+        cursorColor = Color(0xFFE2E8F0),
+        displayFont = DisplayFontType.MODERN_SANS,
+        hasScanlines = false,
+        numberButtonBg = Color(0xFF101114),
+        numberButtonText = Color(0xFFF8FAFC),
+        numberButtonBorder = Color(0x18FFFFFF),
+        operatorButtonBg = Color(0xFF1A1C22),
+        operatorButtonText = Color(0xFFE2E8F0),
+        operatorButtonBorder = Color(0x24FFFFFF),
+        functionButtonBg = Color(0xFF141519),
+        functionButtonText = Color(0xFF94A3B8),
+        functionButtonBorder = Color(0x1CFFFFFF),
+        equalsButtonBrush = Brush.verticalGradient(
+            listOf(Color(0xFFF8FAFC), Color(0xFFCBD5E1))
+        ),
+        equalsButtonText = Color(0xFF09090B),
+        equalsButtonBorder = Color(0x40FFFFFF),
+        accentColor = Color(0xFFF8FAFC),
+        secondaryAccent = Color(0xFF94A3B8),
+        glowColor = Color(0x20FFFFFF),
+        shapeType = ButtonShapeType.ROUNDED_SQUARE,
+        cornerRadiusDp = 12.dp,
+        borderWidthDp = 0.8.dp,
+        hasShadow = false,
+        shadowElevationDp = 0.dp,
+        pressAnimation = PressAnimationType.DEEP_SINK,
+        statusBarDarkIcons = false,
+        isOledStealthVoid = true
+    )
+
+    /**
+     * 12. Starry Night Gotham (Van Gogh Swirling Sky over the Dark Knight)
+     * Inspired directly by uploaded photo: f108ea71c730f5a1b31d02fbd19cd8cd.jpg
+     */
+    val StarryNightGotham = ThemePalette(
+        id = ThemeId.STARRY_NIGHT_GOTHAM,
+        name = "Starry Night Gotham",
+        subtitle = "Van Gogh impressionist starry sky over the Dark Knight",
+        category = "Modern Art",
+        isDark = true,
+        backgroundBrush = Brush.verticalGradient(
+            listOf(Color(0xFF0F2038), Color(0xFF142C4E), Color(0xFF0D1726))
+        ),
+        backgroundColor = Color(0xFF0F2038),
+        surfaceColor = Color(0xFF142236),
+        cardBackground = Color(0xFF1A2C46),
+        screenBackground = Color(0xF00A1322),
+        screenBorderColor = Color(0x55FFD166),
+        screenTextColor = Color(0xFFFFD166),
+        screenExpressionColor = Color(0xFF81D4FA),
+        screenPreviewColor = Color(0xFFFFE082),
+        cursorColor = Color(0xFFFFD166),
+        displayFont = DisplayFontType.ROUNDED,
+        hasScanlines = false,
+        numberButtonBg = Color(0xDD15253D),
+        numberButtonText = Color(0xFFFFF9E6),
+        numberButtonBorder = Color(0x33FFD166),
+        operatorButtonBg = Color(0xEE1E3557),
+        operatorButtonText = Color(0xFFFFD166),
+        operatorButtonBorder = Color(0x55FFD166),
+        functionButtonBg = Color(0xEE101E33),
+        functionButtonText = Color(0xFF81D4FA),
+        functionButtonBorder = Color(0x4481D4FA),
+        equalsButtonBrush = Brush.verticalGradient(
+            listOf(Color(0xFFFFD166), Color(0xFFFFA000))
+        ),
+        equalsButtonText = Color(0xFF0A1322),
+        equalsButtonBorder = Color(0x88FFD166),
+        accentColor = Color(0xFFFFD166),
+        secondaryAccent = Color(0xFF81D4FA),
+        glowColor = Color(0x55FFD166),
+        shapeType = ButtonShapeType.ROUNDED_SQUARE,
+        cornerRadiusDp = 14.dp,
+        borderWidthDp = 1.dp,
+        hasShadow = true,
+        shadowElevationDp = 4.dp,
+        pressAnimation = PressAnimationType.NEON_GLOW,
+        statusBarDarkIcons = false,
+        isStarryGotham = true
+    )
+
+    /**
+     * 13. Cosmic Singularity (Accretion Disk & Crimson Ringed Planet)
+     * Inspired directly by uploaded photo: 951efd7b043bef460efaf854064af22b.jpg
+     */
+    val CosmicSingularity = ThemePalette(
+        id = ThemeId.COSMIC_SINGULARITY,
+        name = "Cosmic Singularity",
+        subtitle = "Deep space black hole, crimson nebula & fiery accretion rings",
+        category = "Futuristic",
+        isDark = true,
+        backgroundBrush = Brush.verticalGradient(
+            listOf(Color(0xFF080408), Color(0xFF140712), Color(0xFF070308))
+        ),
+        backgroundColor = Color(0xFF080408),
+        surfaceColor = Color(0xFF160914),
+        cardBackground = Color(0xFF1E0B1B),
+        screenBackground = Color(0xF20B040A),
+        screenBorderColor = Color(0x55FF2A4D),
+        screenTextColor = Color(0xFFFF3355),
+        screenExpressionColor = Color(0xFFFFAA00),
+        screenPreviewColor = Color(0xFFFF6B81),
+        cursorColor = Color(0xFFFF2A4D),
+        displayFont = DisplayFontType.MONOSPACE,
+        hasScanlines = false,
+        numberButtonBg = Color(0xDE1A0A17),
+        numberButtonText = Color(0xFFFFF0F5),
+        numberButtonBorder = Color(0x28FF2A4D),
+        operatorButtonBg = Color(0xEE2A0E23),
+        operatorButtonText = Color(0xFFFF8C00),
+        operatorButtonBorder = Color(0x55FF8C00),
+        functionButtonBg = Color(0xEE1F0819),
+        functionButtonText = Color(0xFFFF3355),
+        functionButtonBorder = Color(0x44FF3355),
+        equalsButtonBrush = Brush.verticalGradient(
+            listOf(Color(0xFFFF2A4D), Color(0xFFFFAA00))
+        ),
+        equalsButtonText = Color(0xFF070308),
+        equalsButtonBorder = Color(0x88FF2A4D),
+        accentColor = Color(0xFFFF2A4D),
+        secondaryAccent = Color(0xFFFFAA00),
+        glowColor = Color(0x55FF2A4D),
+        shapeType = ButtonShapeType.ROUNDED_SQUARE,
+        cornerRadiusDp = 14.dp,
+        borderWidthDp = 1.dp,
+        hasShadow = true,
+        shadowElevationDp = 4.dp,
+        pressAnimation = PressAnimationType.NEON_GLOW,
+        statusBarDarkIcons = false,
+        isCosmicSingularity = true
+    )
+
     val allThemes: List<ThemePalette> = listOf(
+        // Default Premier Theme: The Dark Knight
+        BatmanDarkKnight,
+
         // Featured Exact User Uploads & Studio Hardware Themes
+        OrtylMinimalMatte,
+        OledStealthVoid,
+        StarryNightGotham,
+        CosmicSingularity,
         RetroCircuitRed,
         NothingDossier,
         BauhausDossier,
         TerracottaStudio,
 
         // Featured Premier Themes
-        BatmanDarkKnight,
         GirlMathPastel,
         NekoMochiCat,
         NekoMochiDark,

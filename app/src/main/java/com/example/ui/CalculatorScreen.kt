@@ -58,6 +58,10 @@ import com.example.model.toToolTheme
 import com.example.ui.components.AgeCalculatorView
 import com.example.ui.components.AiMathCopilotView
 import com.example.ui.components.BatmanLogoIcon
+import com.example.ui.components.OrtylScreenBackground
+import com.example.ui.components.OledStealthVoidScreenBackground
+import com.example.ui.components.StarryGothamScreenBackground
+import com.example.ui.components.CosmicSingularityScreenBackground
 import com.example.ui.components.BatmanScreenBackground
 import com.example.ui.components.ArcReactorIcon
 import com.example.ui.components.IronManScreenBackground
@@ -130,6 +134,14 @@ fun CalculatorScreen(
                     modifier = Modifier.fillMaxSize(),
                     suitType = theme.ironManSuit ?: com.example.model.IronManSuitType.MARK_85_CLASSIC
                 )
+            } else if (theme.isOrtylMinimal) {
+                OrtylScreenBackground(modifier = Modifier.fillMaxSize())
+            } else if (theme.isOledStealthVoid) {
+                OledStealthVoidScreenBackground(modifier = Modifier.fillMaxSize())
+            } else if (theme.isStarryGotham) {
+                StarryGothamScreenBackground(modifier = Modifier.fillMaxSize())
+            } else if (theme.isCosmicSingularity) {
+                CosmicSingularityScreenBackground(modifier = Modifier.fillMaxSize())
             } else if (theme.isGirlMath || theme.isNekoMochi || theme.isY2kGlossy || theme.isPixelArt) {
                 KawaiiScreenBackground(
                     theme = theme,

@@ -72,7 +72,11 @@ enum class ThemeId {
     RETRO_CIRCUIT_RED,
     NOTHING_DOSSIER,
     BAUHAUS_DOSSIER,
-    TERRACOTTA_STUDIO
+    TERRACOTTA_STUDIO,
+    ORTYL_MINIMAL_MATTE,
+    OLED_STEALTH_VOID,
+    STARRY_NIGHT_GOTHAM,
+    COSMIC_SINGULARITY
 }
 
 enum class ButtonShapeType {
@@ -177,6 +181,10 @@ data class ThemePalette(
     val isNothingDossier: Boolean = false,
     val isBauhausDossier: Boolean = false,
     val isTerracottaStudio: Boolean = false,
+    val isOrtylMinimal: Boolean = false,
+    val isOledStealthVoid: Boolean = false,
+    val isStarryGotham: Boolean = false,
+    val isCosmicSingularity: Boolean = false,
     val customKeyColors: Map<String, Color>? = null,
     val customKeyTextColors: Map<String, Color>? = null
 ) {
@@ -249,8 +257,11 @@ val ThemePalette.onCardSubtextColor: Color
  * and text elements have optimal contrast, deep legible typography, and vibrant accents.
  */
 fun ThemePalette.toToolTheme(): ThemePalette {
-    val isLightCanvas = backgroundColor.luminance() > 0.45f || surfaceColor.luminance() > 0.45f
-    val isNekoOrLight = isLightCanvas && (screenTextColor.luminance() > 0.4f || id == ThemeId.NEKO_MOCHI_CAT || isNekoMochi || isGirlMath)
+    if (isDark || isRetroCircuit || isNothingDossier || isBauhausDossier || isTerracottaStudio) {
+        return this
+    }
+    val isLightCanvas = !isDark && backgroundColor.luminance() > 0.45f
+    val isNekoOrLight = isLightCanvas && (id == ThemeId.NEKO_MOCHI_CAT || isNekoMochi || isGirlMath || screenTextColor.luminance() > 0.45f)
     return if (isNekoOrLight) {
         val primaryText = if (id == ThemeId.NEKO_MOCHI_CAT || isNekoMochi) Color(0xFF3B1A23)
         else if (isGirlMath) Color(0xFF4A202D)

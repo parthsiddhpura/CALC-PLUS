@@ -49,7 +49,9 @@ import androidx.compose.ui.unit.sp
 import com.example.model.ButtonShapeType
 import com.example.model.DisplayFontType
 import com.example.model.PressAnimationType
+import com.example.model.ThemeId
 import com.example.model.ThemePalette
+import com.example.ui.theme.DisplayFontHelper
 
 @Composable
 fun CalculatorButton(
@@ -77,7 +79,7 @@ fun CalculatorButton(
     val resolvedTextColor = theme.customKeyTextColors?.get(text) ?: textColor
 
     // Ultra-crisp, zero-latency physical tactile spring
-    val scale by animateFloatAsState(
+    val scaleState = animateFloatAsState(
         targetValue = when {
             isPressed && theme.pressAnimation == PressAnimationType.JELLY_SQUISH -> 0.86f
             isPressed && theme.pressAnimation == PressAnimationType.BOUNCE -> 0.88f
@@ -101,10 +103,19 @@ fun CalculatorButton(
     val pixelOffsetX = if (isPressed && (theme.pressAnimation == PressAnimationType.PIXEL_STEP || theme.isPixelArt)) 2.5f else 0f
     val brutalDiff = if (theme.isBrutalistShadow && isPressed) 3.5f else 0f
 
+    val isNothingTheme = theme.isNothingDossier || theme.id == ThemeId.NOTHING_DOSSIER
+
     val currentBgColor = if (isPressed) {
         when {
             theme.hasBatSignal -> Color(0xFF283344)
             theme.hasArcReactor -> Color(0xFF1F2D42)
+            isNothingTheme -> {
+                if (resolvedBgColor == theme.operatorButtonBg) {
+                    Color(0xFFD8DEE8)
+                } else {
+                    Color(0xFF232730)
+                }
+            }
             theme.pressAnimation == PressAnimationType.NEON_GLOW -> theme.accentColor.copy(alpha = 0.35f)
             theme.pressAnimation == PressAnimationType.JELLY_SQUISH -> resolvedBgColor.copy(alpha = 0.90f)
             else -> resolvedBgColor.copy(alpha = 0.84f)
@@ -116,14 +127,7 @@ fun CalculatorButton(
     }
 
     val fontFamily = remember(theme.displayFont) {
-        when (theme.displayFont) {
-            DisplayFontType.MONOSPACE -> FontFamily.Monospace
-            DisplayFontType.DIGITAL_LCD -> FontFamily.Monospace
-            DisplayFontType.MODERN_SANS -> FontFamily.SansSerif
-            DisplayFontType.ROUNDED -> FontFamily.SansSerif
-            DisplayFontType.PIXEL_8BIT -> FontFamily.Monospace
-            DisplayFontType.KAWAII_CANDY -> FontFamily.SansSerif
-        }
+        DisplayFontHelper.getFontFamily(theme.displayFont)
     }
 
     // Neko Cat-Culator sweet kitten expressions per key
@@ -159,8 +163,9 @@ fun CalculatorButton(
         modifier = modifier
             .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
             .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
+                val currentScale = scaleState.value
+                scaleX = currentScale
+                scaleY = currentScale
                 if (sinkOffsetY != 0f) {
                     translationY = sinkOffsetY.dp.toPx()
                 }
@@ -213,15 +218,27 @@ fun CalculatorButton(
                     }
                 )
                 .then(
-                    if (borderWidth > 0.dp || (isPressed && (theme.pressAnimation == PressAnimationType.NEON_GLOW || theme.hasBatSignal || theme.hasArcReactor))) {
-                        val activeBorderColor = if (isPressed && (theme.pressAnimation == PressAnimationType.NEON_GLOW || theme.hasBatSignal || theme.hasArcReactor)) {
-                            theme.accentColor
-                        } else borderColor
-                        val activeWidth = if (isPressed && (theme.pressAnimation == PressAnimationType.NEON_GLOW || theme.hasBatSignal || theme.hasArcReactor)) {
-                            borderWidth + 1.2.dp
-                        } else borderWidth
-                        Modifier.border(activeWidth, activeBorderColor, shape)
-                    } else Modifier
+                    run {
+                        val isRingActive = isPressed && (
+                            theme.pressAnimation == PressAnimationType.NEON_GLOW ||
+                            theme.hasBatSignal ||
+                            theme.hasArcReactor ||
+                            isNothingTheme
+                        )
+                        if (borderWidth > 0.dp || isRingActive) {
+                            val activeBorderColor = if (isRingActive) {
+                                when {
+                                    isNothingTheme && (text == "=" || backgroundBrush != null) -> Color.White
+                                    isNothingTheme -> theme.accentColor
+                                    else -> theme.accentColor
+                                }
+                            } else borderColor
+                            val activeWidth = if (isRingActive) {
+                                if (isNothingTheme) 2.dp else (borderWidth + 1.2.dp)
+                            } else borderWidth
+                            Modifier.border(activeWidth, activeBorderColor, shape)
+                        } else Modifier
+                    }
                 )
                 .clickable(
                     interactionSource = interactionSource,
@@ -293,6 +310,11 @@ fun CalculatorButton(
 
             // Kawaii Neko Cat Ears on top corners of the mochi button
             if (theme.isNekoMochi || theme.shapeType == ButtonShapeType.NEKO_EARS) {
+                val leftEarPath = remember { Path() }
+                val leftInnerPath = remember { Path() }
+                val rightEarPath = remember { Path() }
+                val rightInnerPath = remember { Path() }
+
                 Canvas(modifier = Modifier.matchParentSize()) {
                     val w = size.width
                     val h = size.height
@@ -300,40 +322,38 @@ fun CalculatorButton(
                     val strokePx = borderWidth.toPx().coerceAtLeast(1.2f)
 
                     // Left Ear Outer
-                    val leftEarPath = Path().apply {
-                        moveTo(w * 0.10f, earH)
-                        lineTo(w * 0.20f, 1.dp.toPx())
-                        lineTo(w * 0.34f, earH * 0.90f)
-                        close()
-                    }
+                    leftEarPath.reset()
+                    leftEarPath.moveTo(w * 0.10f, earH)
+                    leftEarPath.lineTo(w * 0.20f, 1.dp.toPx())
+                    leftEarPath.lineTo(w * 0.34f, earH * 0.90f)
+                    leftEarPath.close()
                     drawPath(leftEarPath, color = currentBgColor)
+
                     // Left Ear Inner Blush
-                    val leftInnerPath = Path().apply {
-                        moveTo(w * 0.15f, earH * 0.82f)
-                        lineTo(w * 0.20f, 3.dp.toPx())
-                        lineTo(w * 0.29f, earH * 0.78f)
-                        close()
-                    }
+                    leftInnerPath.reset()
+                    leftInnerPath.moveTo(w * 0.15f, earH * 0.82f)
+                    leftInnerPath.lineTo(w * 0.20f, 3.dp.toPx())
+                    leftInnerPath.lineTo(w * 0.29f, earH * 0.78f)
+                    leftInnerPath.close()
                     drawPath(leftInnerPath, color = Color(0xFFFF85A1).copy(alpha = 0.85f))
                     if (borderWidth > 0.dp) {
                         drawPath(leftEarPath, color = borderColor, style = Stroke(width = strokePx))
                     }
 
                     // Right Ear Outer
-                    val rightEarPath = Path().apply {
-                        moveTo(w * 0.66f, earH * 0.90f)
-                        lineTo(w * 0.80f, 1.dp.toPx())
-                        lineTo(w * 0.90f, earH)
-                        close()
-                    }
+                    rightEarPath.reset()
+                    rightEarPath.moveTo(w * 0.66f, earH * 0.90f)
+                    rightEarPath.lineTo(w * 0.80f, 1.dp.toPx())
+                    rightEarPath.lineTo(w * 0.90f, earH)
+                    rightEarPath.close()
                     drawPath(rightEarPath, color = currentBgColor)
+
                     // Right Ear Inner Blush
-                    val rightInnerPath = Path().apply {
-                        moveTo(w * 0.71f, earH * 0.78f)
-                        lineTo(w * 0.80f, 3.dp.toPx())
-                        lineTo(w * 0.85f, earH * 0.82f)
-                        close()
-                    }
+                    rightInnerPath.reset()
+                    rightInnerPath.moveTo(w * 0.71f, earH * 0.78f)
+                    rightInnerPath.lineTo(w * 0.80f, 3.dp.toPx())
+                    rightInnerPath.lineTo(w * 0.85f, earH * 0.82f)
+                    rightInnerPath.close()
                     drawPath(rightInnerPath, color = Color(0xFFFF85A1).copy(alpha = 0.85f))
                     if (borderWidth > 0.dp) {
                         drawPath(rightEarPath, color = borderColor, style = Stroke(width = strokePx))
