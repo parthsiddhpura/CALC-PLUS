@@ -35,6 +35,7 @@ fun ScientificKeypad(
     onMemorySubtract: () -> Unit,
     onMemoryRecall: () -> Unit,
     onMemoryClear: () -> Unit,
+    onEng: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val rowSpacing = 3.dp
@@ -212,15 +213,16 @@ fun ScientificKeypad(
                 testTag = "btn_e"
             )
             CalculatorButton(
-                text = "φ",
-                onClick = { onConstant("φ") },
+                text = if (isSecondFunction) "ENG" else "φ",
+                onClick = { if (isSecondFunction) onEng() else onConstant("φ") },
                 theme = theme,
-                backgroundColor = theme.functionButtonBg,
-                textColor = theme.functionButtonText,
-                borderColor = theme.functionButtonBorder,
-                fontSize = 16.sp,
+                backgroundColor = if (isSecondFunction) theme.accentColor.copy(alpha = 0.22f) else theme.functionButtonBg,
+                textColor = if (isSecondFunction) theme.accentColor else theme.functionButtonText,
+                borderColor = if (isSecondFunction) theme.accentColor.copy(alpha = 0.6f) else theme.functionButtonBorder,
+                fontSize = if (isSecondFunction) 12.sp else 16.sp,
+                fontWeight = if (isSecondFunction) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier.weight(1f),
-                testTag = "btn_phi"
+                testTag = if (isSecondFunction) "btn_eng" else "btn_phi"
             )
             CalculatorButton(
                 text = "1/x",

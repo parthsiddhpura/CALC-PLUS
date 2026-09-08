@@ -108,7 +108,7 @@ data class CalculatorUiState(
     val historyOnlyFavorites: Boolean = false,
     
     // GST Calculator State (Casio MJ-120GST inspired)
-    val gstAmountInput: String = "1000",
+    val gstAmountInput: String = "0",
     val gstCalculationType: GstCalculationType = GstCalculationType.EXCLUSIVE,
     val gstSelectedSlabId: Int = 3, // Default to GST+3 (18%)
     val gstSlabs: List<GstSlab> = GstEngine.DEFAULT_SLABS,
@@ -180,6 +180,7 @@ data class CalculatorUiState(
 
     // Worksheet & Paper Tape Calculator State
     val worksheetDocuments: List<WorksheetDocument> = emptyList(),
+    val worksheetSettings: com.example.model.WorksheetSettings = com.example.model.WorksheetSettings(),
     val activeWorksheetDocument: WorksheetDocument = WorksheetDocument(
         title = "Candle Cost Calculation",
         lines = WorksheetTapeEngine.getDefaultTemplates()[0].lines,
@@ -272,7 +273,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         val initialSlab = initialSlabs.firstOrNull { it.id == initialSlabId } ?: initialSlabs[3]
 
         // Initial GST calculation
-        val initialGstRes = GstEngine.calculate(1000.0, initialSlab.ratePercent, GstCalculationType.EXCLUSIVE)
+        val initialGstRes = GstEngine.calculate(0.0, initialSlab.ratePercent, GstCalculationType.EXCLUSIVE)
 
         _uiState = MutableStateFlow(
             CalculatorUiState(
@@ -525,6 +526,25 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     fun setDisplayNotation(notation: DisplayNotation) {
         prefs.edit().putString("display_notation", notation.name).apply()
         _uiState.update { it.copy(displayConfig = it.displayConfig.copy(notation = notation)) }
+    }
+
+    fun toggleDisplayNotation(haptics: HapticFeedback? = null) {
+        soundHapticHelper.playClick(_uiState.value.isSoundEnabled)
+        soundHapticHelper.triggerHaptic(haptics, _uiState.value.isHapticsEnabled)
+        val nextNotation = when (_uiState.value.displayConfig.notation) {
+            DisplayNotation.STANDARD -> DisplayNotation.SCIENTIFIC
+            DisplayNotation.SCIENTIFIC -> DisplayNotation.ENGINEERING
+            DisplayNotation.ENGINEERING -> DisplayNotation.STANDARD
+        }
+        setDisplayNotation(nextNotation)
+    }
+
+    fun onEngKey(haptics: HapticFeedback? = null) {
+        soundHapticHelper.playClick(_uiState.value.isSoundEnabled)
+        soundHapticHelper.triggerHaptic(haptics, _uiState.value.isHapticsEnabled)
+        val current = _uiState.value.displayConfig.notation
+        val next = if (current == DisplayNotation.ENGINEERING) DisplayNotation.STANDARD else DisplayNotation.ENGINEERING
+        setDisplayNotation(next)
     }
 
     fun toggleLivePreview() {
@@ -902,13 +922,26 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
                 isOperator && endsWithOperator -> {
                     cur.dropLast(1) + digit
                 }
-                // If user entered an operator on initial 0
+                // If user entered an operator on initial 0 or empty
                 isOperator && (cur.isEmpty() || cur == "0") -> {
                     "0$digit"
                 }
-                // First digit replacement from 0 or initial 1000
-                (cur == "0" || cur == "1000") && !isOperator && digit != "00" && digit != "." -> {
-                    digit
+                // When current input is "0" or empty and user enters a number or decimal
+                (cur == "0" || cur.isEmpty()) && !isOperator -> {
+                    when (digit) {
+                        ".", "0." -> "0."
+                        "0", "00" -> "0"
+                        else -> digit
+                    }
+                }
+                // If user enters "." check if current number segment already has a decimal point
+                digit == "." -> {
+                    val lastNumberPart = cur.split('+', '−', '-', '×', '*', '÷', '/', '%').lastOrNull() ?: ""
+                    if (lastNumberPart.contains('.')) cur else cur + digit
+                }
+                // Avoid multiple leading zeros after operator (e.g. 100+00 -> 100+0)
+                endsWithOperator && digit == "00" -> {
+                    cur + "0"
                 }
                 else -> {
                     cur + digit
@@ -917,7 +950,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
 
             val amt = GstEngine.evaluateAmountOrExpression(newInput)
             val slab = state.gstSlabs.firstOrNull { it.id == state.gstSelectedSlabId } ?: state.gstSlabs[3]
-            val res = if (amt > 0.0) GstEngine.calculate(amt, slab.ratePercent, state.gstCalculationType) else null
+            val res = GstEngine.calculate(amt, slab.ratePercent, state.gstCalculationType)
             state.copy(gstAmountInput = newInput, gstCurrentResult = res)
         }
     }
@@ -934,19 +967,21 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
 
             val solvedAmountStr = if (amt == amt.toLong().toDouble()) amt.toLong().toString() else amt.toString()
 
-            // Accumulate into Grand Total (GST GT)
-            val newGtGross = state.gstGrandTotalGross + res.grossAmount
-            val newGtGst = state.gstGrandTotalGst + res.gstAmount
-            val newCount = state.gstCalculationCount + 1
+            val shouldAccumulate = amt > 0.0
+            val newGtGross = if (shouldAccumulate) state.gstGrandTotalGross + res.grossAmount else state.gstGrandTotalGross
+            val newGtGst = if (shouldAccumulate) state.gstGrandTotalGst + res.gstAmount else state.gstGrandTotalGst
+            val newCount = if (shouldAccumulate) state.gstCalculationCount + 1 else state.gstCalculationCount
 
-            viewModelScope.launch {
-                val label = if (state.gstCalculationType == GstCalculationType.EXCLUSIVE) "GST+ (${slab.label})" else "GST- (${slab.label})"
-                val exprDesc = if (cur != solvedAmountStr && cur.isNotBlank()) "$cur = $solvedAmountStr ($label)" else "$label on ${GstEngine.formatCurrency(amt)}"
-                repository.insert(
-                    expression = exprDesc,
-                    result = "Gross: ${GstEngine.formatCurrency(res.grossAmount)} (Tax: ${GstEngine.formatCurrency(res.gstAmount)})",
-                    mode = "GST_TAX"
-                )
+            if (shouldAccumulate) {
+                viewModelScope.launch {
+                    val label = if (state.gstCalculationType == GstCalculationType.EXCLUSIVE) "GST+ (${slab.label})" else "GST- (${slab.label})"
+                    val exprDesc = if (cur != solvedAmountStr && cur.isNotBlank()) "$cur = $solvedAmountStr ($label)" else "$label on ${GstEngine.formatCurrency(amt)}"
+                    repository.insert(
+                        expression = exprDesc,
+                        result = "Gross: ${GstEngine.formatCurrency(res.grossAmount)} (Tax: ${GstEngine.formatCurrency(res.gstAmount)})",
+                        mode = "GST_TAX"
+                    )
+                }
             }
 
             state.copy(
@@ -962,7 +997,11 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     fun onGstClear(haptics: HapticFeedback? = null) {
         soundHapticHelper.playClick(_uiState.value.isSoundEnabled, isClear = true)
         soundHapticHelper.triggerHaptic(haptics, _uiState.value.isHapticsEnabled, isHeavy = true)
-        _uiState.update { it.copy(gstAmountInput = "0", gstCurrentResult = null) }
+        _uiState.update { state ->
+            val slab = state.gstSlabs.firstOrNull { it.id == state.gstSelectedSlabId } ?: state.gstSlabs[3]
+            val zeroRes = GstEngine.calculate(0.0, slab.ratePercent, state.gstCalculationType)
+            state.copy(gstAmountInput = "0", gstCurrentResult = zeroRes)
+        }
     }
 
     fun onGstBackspace(haptics: HapticFeedback? = null) {
@@ -973,7 +1012,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             val newInput = if (cur.length > 1) cur.dropLast(1) else "0"
             val amt = GstEngine.evaluateAmountOrExpression(newInput)
             val slab = state.gstSlabs.firstOrNull { it.id == state.gstSelectedSlabId } ?: state.gstSlabs[3]
-            val res = if (amt > 0.0) GstEngine.calculate(amt, slab.ratePercent, state.gstCalculationType) else null
+            val res = GstEngine.calculate(amt, slab.ratePercent, state.gstCalculationType)
             state.copy(gstAmountInput = newInput, gstCurrentResult = res)
         }
     }
@@ -1001,24 +1040,26 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             val res = GstEngine.calculate(amt, slab.ratePercent, state.gstCalculationType)
             val solvedAmountStr = if (amt == amt.toLong().toDouble()) amt.toLong().toString() else amt.toString()
 
-            // Accumulate into Grand Total (GST GT)
-            val newGtGross = state.gstGrandTotalGross + res.grossAmount
-            val newGtGst = state.gstGrandTotalGst + res.gstAmount
-            val newCount = state.gstCalculationCount + 1
+            val shouldAccumulate = amt > 0.0
+            val newGtGross = if (shouldAccumulate) state.gstGrandTotalGross + res.grossAmount else state.gstGrandTotalGross
+            val newGtGst = if (shouldAccumulate) state.gstGrandTotalGst + res.gstAmount else state.gstGrandTotalGst
+            val newCount = if (shouldAccumulate) state.gstCalculationCount + 1 else state.gstCalculationCount
 
-            viewModelScope.launch {
-                val label = if (state.gstCalculationType == GstCalculationType.EXCLUSIVE) "GST+ (${slab.label})" else "GST- (${slab.label})"
-                val exprDesc = if (cur != solvedAmountStr && cur.isNotBlank()) "$cur = $solvedAmountStr ($label)" else "$label on ${GstEngine.formatCurrency(amt)}"
-                repository.insert(
-                    expression = exprDesc,
-                    result = "Gross: ${GstEngine.formatCurrency(res.grossAmount)} (Tax: ${GstEngine.formatCurrency(res.gstAmount)})",
-                    mode = "GST_TAX"
-                )
+            if (shouldAccumulate) {
+                viewModelScope.launch {
+                    val label = if (state.gstCalculationType == GstCalculationType.EXCLUSIVE) "GST+ (${slab.label})" else "GST- (${slab.label})"
+                    val exprDesc = if (cur != solvedAmountStr && cur.isNotBlank()) "$cur = $solvedAmountStr ($label)" else "$label on ${GstEngine.formatCurrency(amt)}"
+                    repository.insert(
+                        expression = exprDesc,
+                        result = "Gross: ${GstEngine.formatCurrency(res.grossAmount)} (Tax: ${GstEngine.formatCurrency(res.gstAmount)})",
+                        mode = "GST_TAX"
+                    )
+                }
             }
 
             state.copy(
                 gstSelectedSlabId = slab.id,
-                gstAmountInput = solvedAmountStr,
+                gstAmountInput = if (cur.isEmpty() || cur == "0") "0" else solvedAmountStr,
                 gstCurrentResult = res,
                 gstGrandTotalGross = newGtGross,
                 gstGrandTotalGst = newGtGst,
@@ -1640,22 +1681,52 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun createNewWorksheetDocument() {
+    fun updateWorksheetSettings(settings: com.example.model.WorksheetSettings) {
+        _uiState.update { it.copy(worksheetSettings = settings) }
+    }
+
+    fun createNewWorksheetDocument(customTitle: String = "") {
         viewModelScope.launch {
             val count = _uiState.value.worksheetDocuments.size + 1
+            val resolvedTitle = customTitle.ifBlank { "Calculation($count)" }
             val newDoc = WorksheetDocument(
-                title = "Worksheet $count",
+                title = resolvedTitle,
                 lines = listOf(
                     WorksheetLine(
                         operator = "+",
                         rawValue = "0",
-                        note = "Initial entry"
+                        note = ""
                     )
                 ),
-                grandTotal = 0.0
+                grandTotal = 0.0,
+                headerNote = ""
             )
             worksheetRepository.saveWorksheet(newDoc)
             _uiState.update { it.copy(activeWorksheetDocument = newDoc) }
+        }
+    }
+
+    fun duplicateWorksheetDocument(doc: WorksheetDocument) {
+        viewModelScope.launch {
+            val duplicated = doc.copy(
+                id = java.util.UUID.randomUUID().toString(),
+                title = "${doc.title} (Copy)",
+                createdAt = System.currentTimeMillis(),
+                updatedAt = System.currentTimeMillis()
+            )
+            worksheetRepository.saveWorksheet(duplicated)
+            _uiState.update { it.copy(activeWorksheetDocument = duplicated) }
+        }
+    }
+
+    fun restoreWorksheets(docs: List<WorksheetDocument>) {
+        viewModelScope.launch {
+            docs.forEach { doc ->
+                worksheetRepository.saveWorksheet(doc)
+            }
+            if (docs.isNotEmpty()) {
+                _uiState.update { it.copy(activeWorksheetDocument = docs.last()) }
+            }
         }
     }
 

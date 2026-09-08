@@ -71,6 +71,13 @@ data class ModeItemData(
 
 val MORE_MODES = listOf(
     ModeItemData(
+        mode = CalculatorMode.ENGINEERING,
+        title = "Engineering Calculations",
+        description = "Ohm's law, RLC resonance, 3-phase power, kinematics, Reynolds flow, thermal, gears & SI prefixes",
+        icon = Icons.Default.Build,
+        badgeText = "PRO"
+    ),
+    ModeItemData(
         mode = CalculatorMode.WORKSHEET_TAPE,
         title = "Worksheet & Paper Tape",
         description = "Step-by-step accounting tape, reactive variable math, drag-to-fit keypad & multi-sheet documents",
@@ -138,12 +145,6 @@ val MORE_MODES = listOf(
         title = "Tip & Split (₹)",
         description = "Bill split, custom tip percentage & per-person sharing in Rupees",
         icon = Icons.Default.ReceiptLong
-    ),
-    ModeItemData(
-        mode = CalculatorMode.ENGINEERING,
-        title = "Engineering Calculation",
-        description = "Ohm's law, RC circuits, mechanics, stress/strain, beam bending & constants",
-        icon = Icons.Default.Calculate
     )
 )
 

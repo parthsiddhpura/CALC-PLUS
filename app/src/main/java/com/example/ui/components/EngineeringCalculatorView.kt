@@ -1,5 +1,9 @@
 package com.example.ui.components
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
@@ -50,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -118,11 +123,18 @@ fun EngineeringCalculatorView(
         when (selectedCategory) {
             EngineeringCategory.OHMS_LAW -> OhmsLawSection(theme)
             EngineeringCategory.CIRCUITS -> CircuitsSection(theme)
+            EngineeringCategory.RLC_RESONANCE -> RlcResonanceSection(theme)
+            EngineeringCategory.THREE_PHASE_POWER -> ThreePhasePowerSection(theme)
             EngineeringCategory.MECHANICS -> MechanicsSection(theme)
+            EngineeringCategory.KINEMATICS -> KinematicsSection(theme)
             EngineeringCategory.ENERGY_POWER -> EnergyPowerSection(theme)
             EngineeringCategory.STRESS_STRAIN -> StressStrainSection(theme)
-            EngineeringCategory.FLUID_THERMAL -> FluidThermalSection(theme)
             EngineeringCategory.STRUCTURAL -> StructuralBeamSection(theme)
+            EngineeringCategory.REYNOLDS_PIPE -> ReynoldsFlowSection(theme)
+            EngineeringCategory.FLUID_THERMAL -> FluidThermalSection(theme)
+            EngineeringCategory.THERMAL_EXPANSION -> ThermalExpansionSection(theme)
+            EngineeringCategory.GEARS_PULLEYS -> GearsTransmissionSection(theme)
+            EngineeringCategory.ENG_PREFIXES -> EngPrefixSection(theme)
             EngineeringCategory.CONSTANTS -> EngineeringConstantsSection(theme)
         }
     }
@@ -285,6 +297,184 @@ private fun CircuitsSection(theme: ThemePalette) {
     }
 }
 
+// ---------------------- 2B. RLC RESONANCE & AC REACTANCE ----------------------
+@Composable
+private fun RlcResonanceSection(theme: ThemePalette) {
+    var rInput by remember { mutableStateOf("50") }
+    var lInput by remember { mutableStateOf("10") }
+    var cInput by remember { mutableStateOf("1") }
+    var freqInput by remember { mutableStateOf("1000") }
+
+    val r = rInput.toCleanDoubleOrNull() ?: 50.0
+    val l = lInput.toCleanDoubleOrNull() ?: 10.0
+    val c = cInput.toCleanDoubleOrNull() ?: 1.0
+    val f = freqInput.toCleanDoubleOrNull() ?: 1000.0
+
+    val rlcResult = remember(r, l, c, f) {
+        EngineeringEngine.calcRlcResonance(r, l, c, f)
+    }
+
+    EngineeringCalculatorCard(
+        title = "RLC Resonance & AC Impedance",
+        icon = "📻",
+        theme = theme
+    ) {
+        Text(
+            text = "Calculate resonant frequency f₀, inductive reactance XL, capacitive reactance XC, and total impedance Z.",
+            color = theme.screenExpressionColor,
+            fontSize = 11.sp
+        )
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EngineeringInput(
+                value = rInput,
+                onValueChange = { rInput = it },
+                label = "Resistance (R)",
+                unit = "Ω",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+            EngineeringInput(
+                value = lInput,
+                onValueChange = { lInput = it },
+                label = "Inductance (L)",
+                unit = "mH",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EngineeringInput(
+                value = cInput,
+                onValueChange = { cInput = it },
+                label = "Capacitance (C)",
+                unit = "µF",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+            EngineeringInput(
+                value = freqInput,
+                onValueChange = { freqInput = it },
+                label = "AC Frequency (f)",
+                unit = "Hz",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Presets:", color = theme.screenExpressionColor, fontSize = 11.sp)
+            listOf("50" to "50 Hz", "60" to "60 Hz", "1000" to "1 kHz", "10000" to "10 kHz").forEach { (v, label) ->
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (freqInput == v) theme.accentColor else theme.surfaceColor,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { freqInput = v }
+                ) {
+                    Text(
+                        text = label,
+                        color = if (freqInput == v) theme.backgroundColor else theme.screenTextColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        EngineeringResultBox(result = rlcResult, theme = theme)
+    }
+}
+
+// ---------------------- 2C. 3-PHASE AC POWER ----------------------
+@Composable
+private fun ThreePhasePowerSection(theme: ThemePalette) {
+    var lineVoltageInput by remember { mutableStateOf("415") }
+    var lineCurrentInput by remember { mutableStateOf("25") }
+    var powerFactorInput by remember { mutableStateOf("0.85") }
+
+    val vl = lineVoltageInput.toCleanDoubleOrNull() ?: 415.0
+    val il = lineCurrentInput.toCleanDoubleOrNull() ?: 25.0
+    val pf = powerFactorInput.toCleanDoubleOrNull() ?: 0.85
+
+    val powerResult = remember(vl, il, pf) {
+        EngineeringEngine.calcThreePhasePower(vl, il, pf)
+    }
+
+    EngineeringCalculatorCard(
+        title = "3-Phase Industrial AC Power & PF",
+        icon = "🏭",
+        theme = theme
+    ) {
+        Text(
+            text = "Solves symmetrical 3-phase Active (kW), Apparent (kVA), Reactive (kVAR) and power factor capacitor correction.",
+            color = theme.screenExpressionColor,
+            fontSize = 11.sp
+        )
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EngineeringInput(
+                value = lineVoltageInput,
+                onValueChange = { lineVoltageInput = it },
+                label = "Line Voltage (V_L)",
+                unit = "Volts",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+            EngineeringInput(
+                value = lineCurrentInput,
+                onValueChange = { lineCurrentInput = it },
+                label = "Line Current (I_L)",
+                unit = "Amps",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        EngineeringInput(
+            value = powerFactorInput,
+            onValueChange = { powerFactorInput = it },
+            label = "Power Factor (cos φ, 0.1 to 1.0)",
+            unit = "0.85",
+            theme = theme,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("PF presets:", color = theme.screenExpressionColor, fontSize = 11.sp)
+            listOf("0.80", "0.85", "0.90", "0.95", "1.0").forEach { v ->
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (powerFactorInput == v) theme.accentColor else theme.surfaceColor,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { powerFactorInput = v }
+                ) {
+                    Text(
+                        text = v,
+                        color = if (powerFactorInput == v) theme.backgroundColor else theme.screenTextColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        EngineeringResultBox(result = powerResult, theme = theme)
+    }
+}
+
 // ---------------------- 3. MECHANICS ----------------------
 @Composable
 private fun MechanicsSection(theme: ThemePalette) {
@@ -364,6 +554,89 @@ private fun MechanicsSection(theme: ThemePalette) {
             }
             EngineeringResultBox(result = torqueResult, theme = theme)
         }
+    }
+}
+
+// ---------------------- 3B. KINEMATICS & PROJECTILE MOTION ----------------------
+@Composable
+private fun KinematicsSection(theme: ThemePalette) {
+    var velocityInput by remember { mutableStateOf("45") }
+    var angleInput by remember { mutableStateOf("45") }
+    var heightInput by remember { mutableStateOf("0") }
+
+    val v = velocityInput.toCleanDoubleOrNull() ?: 45.0
+    val ang = angleInput.toCleanDoubleOrNull() ?: 45.0
+    val h = heightInput.toCleanDoubleOrNull() ?: 0.0
+
+    val kinResult = remember(v, ang, h) {
+        EngineeringEngine.calcKinematicsProjectile(v, ang, h)
+    }
+
+    EngineeringCalculatorCard(
+        title = "Kinematics & Ballistic Projectile",
+        icon = "🎯",
+        theme = theme
+    ) {
+        Text(
+            text = "Solves trajectory, apex height, total hang time, horizontal range, and impact velocity under gravity.",
+            color = theme.screenExpressionColor,
+            fontSize = 11.sp
+        )
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EngineeringInput(
+                value = velocityInput,
+                onValueChange = { velocityInput = it },
+                label = "Launch Speed (v₀)",
+                unit = "m/s",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+            EngineeringInput(
+                value = angleInput,
+                onValueChange = { angleInput = it },
+                label = "Launch Angle (θ)",
+                unit = "degrees",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        EngineeringInput(
+            value = heightInput,
+            onValueChange = { heightInput = it },
+            label = "Initial Launch Height (h₀, optional)",
+            unit = "meters (e.g. cliff)",
+            theme = theme,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Angle:", color = theme.screenExpressionColor, fontSize = 11.sp)
+            listOf("30", "45", "60", "75").forEach { angVal ->
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (angleInput == angVal) theme.accentColor else theme.surfaceColor,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { angleInput = angVal }
+                ) {
+                    Text(
+                        text = "$angVal°",
+                        color = if (angleInput == angVal) theme.backgroundColor else theme.screenTextColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        EngineeringResultBox(result = kinResult, theme = theme)
     }
 }
 
@@ -674,6 +947,487 @@ private fun StructuralBeamSection(theme: ThemePalette) {
         }
 
         EngineeringResultBox(result = beamResult, theme = theme)
+    }
+}
+
+// ---------------------- 7B. REYNOLDS NUMBER & FLUID FLOW ----------------------
+@Composable
+private fun ReynoldsFlowSection(theme: ThemePalette) {
+    var velocityInput by remember { mutableStateOf("2.5") }
+    var diameterInput by remember { mutableStateOf("50") }
+    var densityInput by remember { mutableStateOf("1000") }
+    var viscosityInput by remember { mutableStateOf("0.001") }
+
+    val v = velocityInput.toCleanDoubleOrNull() ?: 2.5
+    val d = diameterInput.toCleanDoubleOrNull() ?: 50.0
+    val rho = densityInput.toCleanDoubleOrNull() ?: 1000.0
+    val mu = viscosityInput.toCleanDoubleOrNull() ?: 0.001
+
+    val flowResult = remember(v, d, rho, mu) {
+        EngineeringEngine.calcReynoldsPipe(v, d, rho, mu)
+    }
+
+    EngineeringCalculatorCard(
+        title = "Reynolds Number & Pipe Fluid Dynamics",
+        icon = "🌊",
+        theme = theme
+    ) {
+        Text(
+            text = "Calculates Reynolds dimensionless number Re, Flow Regime (Laminar / Transitional / Turbulent), and flow rates.",
+            color = theme.screenExpressionColor,
+            fontSize = 11.sp
+        )
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EngineeringInput(
+                value = velocityInput,
+                onValueChange = { velocityInput = it },
+                label = "Flow Velocity (v)",
+                unit = "m/s",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+            EngineeringInput(
+                value = diameterInput,
+                onValueChange = { diameterInput = it },
+                label = "Pipe Diameter (D)",
+                unit = "mm",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EngineeringInput(
+                value = densityInput,
+                onValueChange = { densityInput = it },
+                label = "Fluid Density (ρ)",
+                unit = "kg/m³",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+            EngineeringInput(
+                value = viscosityInput,
+                onValueChange = { viscosityInput = it },
+                label = "Dynamic Viscosity (μ)",
+                unit = "Pa·s",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Fluid:", color = theme.screenExpressionColor, fontSize = 11.sp)
+            listOf(
+                Triple("Water", "1000", "0.001"),
+                Triple("Air", "1.2", "0.000018"),
+                Triple("Oil (SAE 30)", "900", "0.2"),
+                Triple("Glycerol", "1260", "1.4")
+            ).forEach { (name, rhoVal, muVal) ->
+                val isSelected = densityInput == rhoVal && viscosityInput == muVal
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isSelected) theme.accentColor else theme.surfaceColor,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            densityInput = rhoVal
+                            viscosityInput = muVal
+                        }
+                ) {
+                    Text(
+                        text = name,
+                        color = if (isSelected) theme.backgroundColor else theme.screenTextColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        EngineeringResultBox(result = flowResult, theme = theme)
+    }
+}
+
+// ---------------------- 7C. THERMAL EXPANSION & CONDUCTION ----------------------
+@Composable
+private fun ThermalExpansionSection(theme: ThemePalette) {
+    var lengthInput by remember { mutableStateOf("10") }
+    var deltaTempInput by remember { mutableStateOf("40") }
+    var alphaInput by remember { mutableStateOf("12") }
+    var conductKInput by remember { mutableStateOf("50") }
+    var wallThickInput by remember { mutableStateOf("0.2") }
+
+    val l0 = lengthInput.toCleanDoubleOrNull() ?: 10.0
+    val dt = deltaTempInput.toCleanDoubleOrNull() ?: 40.0
+    val alpha = alphaInput.toCleanDoubleOrNull() ?: 12.0
+    val k = conductKInput.toCleanDoubleOrNull() ?: 50.0
+    val thick = wallThickInput.toCleanDoubleOrNull() ?: 0.2
+
+    val thermResult = remember(l0, dt, alpha, k, thick) {
+        EngineeringEngine.calcThermalExpansionConduction(
+            origLengthMeters = l0,
+            tempDeltaC = dt,
+            alphaPpmPerC = alpha,
+            thermalConductivityK = k,
+            areaM2 = 1.0,
+            thicknessM = thick
+        )
+    }
+
+    EngineeringCalculatorCard(
+        title = "Thermal Expansion & 1D Heat Conduction",
+        icon = "🌡️",
+        theme = theme
+    ) {
+        Text(
+            text = "Calculates linear elongation ΔL, thermal strain ε, and 1D Fourier heat conduction through structural materials.",
+            color = theme.screenExpressionColor,
+            fontSize = 11.sp
+        )
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EngineeringInput(
+                value = lengthInput,
+                onValueChange = { lengthInput = it },
+                label = "Initial Length (L₀)",
+                unit = "meters",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+            EngineeringInput(
+                value = deltaTempInput,
+                onValueChange = { deltaTempInput = it },
+                label = "Temp Change (ΔT)",
+                unit = "°C / K",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        EngineeringInput(
+            value = alphaInput,
+            onValueChange = { alphaInput = it },
+            label = "Expansion Coeff (α × 10⁻⁶ /°C)",
+            unit = "ppm/°C",
+            theme = theme,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Material:", color = theme.screenExpressionColor, fontSize = 11.sp)
+            listOf(
+                Triple("Steel", "12", "50"),
+                Triple("Aluminum", "23", "205"),
+                Triple("Copper", "17", "385"),
+                Triple("Concrete", "12", "1.4"),
+                Triple("Glass", "9", "0.8")
+            ).forEach { (mat, aVal, kVal) ->
+                val isSelected = alphaInput == aVal
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isSelected) theme.accentColor else theme.surfaceColor,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            alphaInput = aVal
+                            conductKInput = kVal
+                        }
+                ) {
+                    Text(
+                        text = mat,
+                        color = if (isSelected) theme.backgroundColor else theme.screenTextColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EngineeringInput(
+                value = conductKInput,
+                onValueChange = { conductKInput = it },
+                label = "Conductivity (k)",
+                unit = "W/m·K",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+            EngineeringInput(
+                value = wallThickInput,
+                onValueChange = { wallThickInput = it },
+                label = "Wall Thickness (L)",
+                unit = "meters",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        EngineeringResultBox(result = thermResult, theme = theme)
+    }
+}
+
+// ---------------------- 7D. GEARS & MECHANICAL TRANSMISSION ----------------------
+@Composable
+private fun GearsTransmissionSection(theme: ThemePalette) {
+    var teethDriverInput by remember { mutableStateOf("15") }
+    var teethDrivenInput by remember { mutableStateOf("60") }
+    var inputRpmInput by remember { mutableStateOf("1440") }
+    var inputTorqueInput by remember { mutableStateOf("25") }
+    var efficiencyInput by remember { mutableStateOf("95") }
+
+    val z1 = teethDriverInput.toCleanDoubleOrNull() ?: 15.0
+    val z2 = teethDrivenInput.toCleanDoubleOrNull() ?: 60.0
+    val rpm1 = inputRpmInput.toCleanDoubleOrNull() ?: 1440.0
+    val t1 = inputTorqueInput.toCleanDoubleOrNull() ?: 25.0
+    val eff = efficiencyInput.toCleanDoubleOrNull() ?: 95.0
+
+    val gearResult = remember(z1, z2, rpm1, t1, eff) {
+        EngineeringEngine.calcGearsTransmission(z1, z2, rpm1, t1, eff)
+    }
+
+    EngineeringCalculatorCard(
+        title = "Gear Train, Torque & Mechanical Power",
+        icon = "⚙️",
+        theme = theme
+    ) {
+        Text(
+            text = "Solves gear speed reduction / overdrive ratio i, output torque multiplication, output RPM, and mechanical power.",
+            color = theme.screenExpressionColor,
+            fontSize = 11.sp
+        )
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EngineeringInput(
+                value = teethDriverInput,
+                onValueChange = { teethDriverInput = it },
+                label = "Driver Teeth (Z₁)",
+                unit = "input teeth",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+            EngineeringInput(
+                value = teethDrivenInput,
+                onValueChange = { teethDrivenInput = it },
+                label = "Driven Teeth (Z₂)",
+                unit = "output teeth",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EngineeringInput(
+                value = inputRpmInput,
+                onValueChange = { inputRpmInput = it },
+                label = "Input Speed (RPM₁)",
+                unit = "RPM",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+            EngineeringInput(
+                value = inputTorqueInput,
+                onValueChange = { inputTorqueInput = it },
+                label = "Input Torque (T₁)",
+                unit = "N·m",
+                theme = theme,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        EngineeringInput(
+            value = efficiencyInput,
+            onValueChange = { efficiencyInput = it },
+            label = "Transmission Efficiency (η %)",
+            unit = "e.g. 95%",
+            theme = theme,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Ratio:", color = theme.screenExpressionColor, fontSize = 11.sp)
+            listOf(
+                Triple("2:1", "20", "40"),
+                Triple("3:1", "15", "45"),
+                Triple("4:1", "15", "60"),
+                Triple("5:1", "12", "60")
+            ).forEach { (label, z1Val, z2Val) ->
+                val isSelected = teethDriverInput == z1Val && teethDrivenInput == z2Val
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isSelected) theme.accentColor else theme.surfaceColor,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            teethDriverInput = z1Val
+                            teethDrivenInput = z2Val
+                        }
+                ) {
+                    Text(
+                        text = label,
+                        color = if (isSelected) theme.backgroundColor else theme.screenTextColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        EngineeringResultBox(result = gearResult, theme = theme)
+    }
+}
+
+// ---------------------- 7E. SI METRIC PREFIXES EXPLORER ----------------------
+@Composable
+private fun EngPrefixSection(theme: ThemePalette) {
+    var rawInput by remember { mutableStateOf("1500000") }
+    val context = LocalContext.current
+
+    val num = rawInput.toCleanDoubleOrNull() ?: 1500000.0
+    val prefixSteps = remember(num) {
+        EngineeringEngine.calcMetricPrefixes(num)
+    }
+
+    EngineeringCalculatorCard(
+        title = "SI Metric Engineering Prefixes & Scaler",
+        icon = "🔢",
+        theme = theme
+    ) {
+        Text(
+            text = "Convert any value to standard engineering powers-of-ten (10³ steps: Mega, kilo, milli, micro, nano, pico).",
+            color = theme.screenExpressionColor,
+            fontSize = 11.sp
+        )
+
+        EngineeringInput(
+            value = rawInput,
+            onValueChange = { rawInput = it },
+            label = "Value to Scale",
+            unit = "e.g. 1500000",
+            theme = theme,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = theme.surfaceColor,
+                border = androidx.compose.foundation.BorderStroke(1.dp, theme.accentColor.copy(alpha = 0.5f)),
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable {
+                        rawInput = (num / 1000.0).toString()
+                    }
+            ) {
+                Text(
+                    text = "÷ 1,000 (10⁻³)",
+                    color = theme.accentColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = theme.surfaceColor,
+                border = androidx.compose.foundation.BorderStroke(1.dp, theme.accentColor.copy(alpha = 0.5f)),
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable {
+                        rawInput = (num * 1000.0).toString()
+                    }
+            ) {
+                Text(
+                    text = "× 1,000 (10⁺³)",
+                    color = theme.accentColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+        }
+
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = theme.surfaceColor,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                prefixSteps.forEach { step ->
+                    val isNearUnit = step.power == 0
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isNearUnit) theme.accentColor.copy(alpha = 0.15f) else Color.Transparent)
+                            .clickable {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("Prefix Value", step.formatted)
+                                clipboard.setPrimaryClip(clip)
+                                Toast.makeText(context, "Copied: ${step.formatted}", Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(horizontal = 8.dp, vertical = 5.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (step.symbol.isNotEmpty()) step.symbol else "—",
+                                color = theme.accentColor,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.width(26.dp)
+                            )
+                            Text(
+                                text = "${step.prefix} (10^${step.power})",
+                                color = theme.screenExpressionColor,
+                                fontSize = 11.sp
+                            )
+                        }
+
+                        Text(
+                            text = step.formatted,
+                            color = theme.screenTextColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

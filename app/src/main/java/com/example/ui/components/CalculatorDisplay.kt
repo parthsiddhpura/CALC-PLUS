@@ -120,6 +120,7 @@ fun CalculatorDisplay(
     onToggleAngleMode: (() -> Unit)? = null,
     onOpenHistory: (() -> Unit)? = null,
     onOpenDecimalConverter: (() -> Unit)? = null,
+    onToggleNotation: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -477,12 +478,15 @@ fun CalculatorDisplay(
                             }
                         }
 
-                        // Display Notation Badge if non-standard
+                        // Display Notation Badge if non-standard (clickable to cycle Standard -> Sci -> Eng)
                         if (displayConfig.notation != DisplayNotation.STANDARD) {
                             Surface(
                                 color = theme.accentColor.copy(alpha = 0.22f),
                                 shape = RoundedCornerShape(6.dp),
-                                border = androidx.compose.foundation.BorderStroke(0.8.dp, theme.accentColor.copy(alpha = 0.7f))
+                                border = androidx.compose.foundation.BorderStroke(0.8.dp, theme.accentColor.copy(alpha = 0.7f)),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .clickable(enabled = onToggleNotation != null) { onToggleNotation?.invoke() }
                             ) {
                                 Text(
                                     text = if (displayConfig.notation == DisplayNotation.SCIENTIFIC) "SCI" else "ENG",

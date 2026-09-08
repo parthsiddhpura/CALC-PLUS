@@ -1,6 +1,6 @@
 {
   "name": "CALC +",
-  "description": "CALC + is a powerful, customizable calculator featuring animated studio themes, interactive Worksheet & Paper Tape with draggable sizing, unit conversions, and AI math tools.",
+  "description": "CALC + is a powerful, customizable calculator featuring creative Worksheet & Paper Tape ledger calculations, Indian digit grouping, native PDF printing, engineering tools, animated studio themes, and unit conversions.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

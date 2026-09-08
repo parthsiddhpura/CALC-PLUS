@@ -56,8 +56,14 @@ object GstEngine {
         val direct = trimmed.toDoubleOrNull()
         if (direct != null) return direct
 
+        // Gracefully handle in-progress typing with a trailing operator (e.g., "10000+")
+        val safeExpr = trimmed.trimEnd('+', '−', '-', '×', '*', '÷', '/', '%')
+        val safeDirect = safeExpr.toDoubleOrNull()
+        if (safeDirect != null) return safeDirect
+
         return try {
-            val resultStr = CalculatorEngine.evaluate(trimmed, AngleMode.DEG)
+            val toEval = if (safeExpr.isNotBlank()) safeExpr else trimmed
+            val resultStr = CalculatorEngine.evaluate(toEval, AngleMode.DEG)
             if (resultStr == "Error") 0.0 else resultStr.replace(",", "").toDoubleOrNull() ?: 0.0
         } catch (e: Exception) {
             0.0

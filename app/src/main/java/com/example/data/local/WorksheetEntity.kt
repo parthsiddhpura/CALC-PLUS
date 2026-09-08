@@ -7,6 +7,7 @@ import com.example.model.WorksheetLine
 import com.example.model.WorksheetLineType
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 @Entity(tableName = "worksheet_documents")
 data class WorksheetEntity(
@@ -20,13 +21,22 @@ data class WorksheetEntity(
 ) {
     fun toDocument(): WorksheetDocument {
         val lineList = mutableListOf<WorksheetLine>()
+        var extractedHeader = ""
         try {
-            val jsonArray = JSONArray(linesJson)
+            val jsonTrimmed = linesJson.trim()
+            val jsonArray = if (jsonTrimmed.startsWith("{")) {
+                val rootObj = JSONObject(jsonTrimmed)
+                extractedHeader = rootObj.optString("headerNote", "")
+                rootObj.optJSONArray("lines") ?: JSONArray()
+            } else {
+                JSONArray(jsonTrimmed)
+            }
+
             for (i in 0 until jsonArray.length()) {
                 val obj = jsonArray.getJSONObject(i)
                 lineList.add(
                     WorksheetLine(
-                        id = obj.optString("id"),
+                        id = obj.optString("id", UUID.randomUUID().toString()),
                         lineType = try {
                             WorksheetLineType.valueOf(obj.optString("lineType", WorksheetLineType.CALCULATION.name))
                         } catch (e: Exception) {
@@ -38,7 +48,8 @@ data class WorksheetEntity(
                         percentageDelta = if (obj.has("percentageDelta") && !obj.isNull("percentageDelta")) obj.getDouble("percentageDelta") else null,
                         runningTotal = obj.optDouble("runningTotal", 0.0),
                         variableName = if (obj.has("variableName") && !obj.isNull("variableName")) obj.getString("variableName") else null,
-                        note = obj.optString("note", "")
+                        note = obj.optString("note", ""),
+                        hasDividerBefore = obj.optBoolean("hasDividerBefore", false)
                     )
                 )
             }
@@ -51,7 +62,8 @@ data class WorksheetEntity(
             createdAt = createdAt,
             updatedAt = updatedAt,
             lines = lineList,
-            grandTotal = grandTotal
+            grandTotal = grandTotal,
+            headerNote = extractedHeader
         )
     }
 
@@ -69,15 +81,20 @@ data class WorksheetEntity(
                     put("runningTotal", line.runningTotal)
                     if (line.variableName != null) put("variableName", line.variableName)
                     put("note", line.note)
+                    put("hasDividerBefore", line.hasDividerBefore)
                 }
                 jsonArray.put(obj)
+            }
+            val rootObj = JSONObject().apply {
+                put("headerNote", doc.headerNote)
+                put("lines", jsonArray)
             }
             return WorksheetEntity(
                 id = doc.id,
                 title = doc.title,
                 createdAt = doc.createdAt,
                 updatedAt = doc.updatedAt,
-                linesJson = jsonArray.toString(),
+                linesJson = rootObj.toString(),
                 grandTotal = doc.grandTotal
             )
         }

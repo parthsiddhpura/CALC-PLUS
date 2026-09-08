@@ -11,10 +11,47 @@ import java.util.UUID
 
 object WorksheetTapeEngine {
 
-    private val numberFormatter = DecimalFormat("#,##0.00", DecimalFormatSymbols(Locale.US))
+    private val standardFormatter = DecimalFormat("#,##0.00", DecimalFormatSymbols(Locale.US))
 
-    fun formatNumber(value: Double): String {
-        return numberFormatter.format(value)
+    fun formatNumber(value: Double, indianGrouping: Boolean = true, decimals: Int = 2): String {
+        if (value.isNaN() || value.isInfinite()) return "0.00"
+        return if (indianGrouping) {
+            formatIndianNumber(value, decimals)
+        } else {
+            val pattern = if (decimals > 0) "#,##0." + "0".repeat(decimals) else "#,##0"
+            val df = DecimalFormat(pattern, DecimalFormatSymbols(Locale.US))
+            df.format(value)
+        }
+    }
+
+    fun formatIndianNumber(value: Double, decimals: Int = 2): String {
+        val isNegative = value < 0
+        val absVal = kotlin.math.abs(value)
+        val longPart = absVal.toLong()
+        val fracPart = absVal - longPart
+        val strLong = longPart.toString()
+
+        val formattedInt = if (strLong.length <= 3) {
+            strLong
+        } else {
+            val last3 = strLong.takeLast(3)
+            val rest = strLong.dropLast(3)
+            val chunks = mutableListOf<String>()
+            var idx = rest.length
+            while (idx > 0) {
+                val start = kotlin.math.max(0, idx - 2)
+                chunks.add(0, rest.substring(start, idx))
+                idx -= 2
+            }
+            chunks.joinToString(",") + "," + last3
+        }
+
+        if (decimals <= 0) {
+            return (if (isNegative) "-" else "") + formattedInt
+        }
+        val fracFormatted = String.format(Locale.US, "%.${decimals}f", fracPart)
+        val fracStr = if (fracFormatted.contains(".")) fracFormatted.substringAfter(".") else "0".repeat(decimals)
+        return (if (isNegative) "-" else "") + "$formattedInt.$fracStr"
     }
 
     /**
@@ -208,6 +245,154 @@ object WorksheetTapeEngine {
         sb.appendLine()
         sb.appendLine("> **Grand Total**: `${formatNumber(doc.grandTotal)}`")
         return sb.toString()
+    }
+
+    /**
+     * Generate HTML table format for rich text / email sharing.
+     */
+    fun exportToHtml(doc: WorksheetDocument, indianGrouping: Boolean = true): String {
+        val sb = StringBuilder()
+        sb.append("<!DOCTYPE html><html><head><meta charset='utf-8'><title>${doc.title}</title>")
+        sb.append("<style>")
+        sb.append("body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; background: #fff; color: #1e293b; padding: 20px; }")
+        sb.append(".receipt { max-width: 440px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 8px; padding: 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }")
+        sb.append("h2 { margin-top: 0; font-size: 18px; border-bottom: 2px solid #0284c7; padding-bottom: 8px; }")
+        sb.append("table { width: 100%; border-collapse: collapse; font-family: monospace; font-size: 14px; }")
+        sb.append("td { padding: 4px 6px; }")
+        sb.append(".op { width: 24px; font-weight: bold; color: #64748b; }")
+        sb.append(".num { text-align: right; font-weight: 600; }")
+        sb.append(".neg { color: #dc2626; }")
+        sb.append(".note { padding-left: 12px; color: #64748b; font-style: italic; }")
+        sb.append(".subtotal { border-top: 1px solid #94a3b8; font-weight: bold; color: #0284c7; }")
+        sb.append(".total { border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a; font-size: 16px; font-weight: bold; }")
+        sb.append("</style></head><body><div class='receipt'>")
+        sb.append("<h2>${doc.title}</h2>")
+        if (doc.headerNote.isNotBlank()) {
+            sb.append("<p style='color: #64748b; margin-top: -4px;'>${doc.headerNote}</p>")
+        }
+        sb.append("<table>")
+        doc.lines.forEach { line ->
+            val numFormatted = formatNumber(line.evaluatedNumber, indianGrouping)
+            val isNeg = line.operator == "-" || line.evaluatedNumber < 0
+            val numClass = if (isNeg) "num neg" else "num"
+            val rowClass = if (line.hasDividerBefore) "subtotal" else ""
+            sb.append("<tr class='$rowClass'>")
+            sb.append("<td class='op'>${line.operator}</td>")
+            sb.append("<td class='$numClass'>$numFormatted</td>")
+            sb.append("<td class='note'>${line.note}</td>")
+            sb.append("</tr>")
+        }
+        sb.append("<tr class='total'><td class='op'>=</td><td class='num'>${formatNumber(doc.grandTotal, indianGrouping)}</td><td class='note'>GRAND TOTAL</td></tr>")
+        sb.append("</table></div></body></html>")
+        return sb.toString()
+    }
+
+    /**
+     * Triggers the Android Native Print Service (or Save to PDF)
+     */
+    fun printDocument(context: android.content.Context, doc: WorksheetDocument, indianGrouping: Boolean = true) {
+        val printManager = context.getSystemService(android.content.Context.PRINT_SERVICE) as? android.print.PrintManager ?: return
+        val jobName = "${doc.title}_Print"
+        printManager.print(jobName, TapePrintDocumentAdapter(context, doc, indianGrouping), null)
+    }
+
+    /**
+     * Backup documents and configuration to JSON string
+     */
+    fun createBackupJson(
+        documents: List<WorksheetDocument>,
+        includeWorksheet: Boolean = true,
+        includeAllCalculations: Boolean = true,
+        includeKeyboards: Boolean = true,
+        includeSettings: Boolean = true
+    ): String {
+        val root = org.json.JSONObject()
+        root.put("version", 1)
+        root.put("timestamp", System.currentTimeMillis())
+        root.put("includeWorksheet", includeWorksheet)
+        root.put("includeAllCalculations", includeAllCalculations)
+        root.put("includeKeyboards", includeKeyboards)
+        root.put("includeSettings", includeSettings)
+
+        val docsArray = org.json.JSONArray()
+        documents.forEach { doc ->
+            val docObj = org.json.JSONObject()
+            docObj.put("id", doc.id)
+            docObj.put("title", doc.title)
+            docObj.put("createdAt", doc.createdAt)
+            docObj.put("updatedAt", doc.updatedAt)
+            docObj.put("grandTotal", doc.grandTotal)
+            docObj.put("headerNote", doc.headerNote)
+
+            val linesArray = org.json.JSONArray()
+            doc.lines.forEach { line ->
+                val lineObj = org.json.JSONObject()
+                lineObj.put("id", line.id)
+                lineObj.put("lineType", line.lineType.name)
+                lineObj.put("operator", line.operator)
+                lineObj.put("rawValue", line.rawValue)
+                lineObj.put("evaluatedNumber", line.evaluatedNumber)
+                lineObj.put("runningTotal", line.runningTotal)
+                lineObj.put("note", line.note)
+                lineObj.put("variableName", line.variableName)
+                lineObj.put("hasDividerBefore", line.hasDividerBefore)
+                linesArray.put(lineObj)
+            }
+            docObj.put("lines", linesArray)
+            docsArray.put(docObj)
+        }
+        root.put("documents", docsArray)
+        return root.toString(2)
+    }
+
+    /**
+     * Restore documents from backup JSON string
+     */
+    fun restoreBackupJson(jsonString: String): List<WorksheetDocument> {
+        val list = mutableListOf<WorksheetDocument>()
+        try {
+            val root = org.json.JSONObject(jsonString)
+            val docsArray = root.optJSONArray("documents") ?: return list
+            for (i in 0 until docsArray.length()) {
+                val docObj = docsArray.getJSONObject(i)
+                val linesList = mutableListOf<WorksheetLine>()
+                val linesArray = docObj.optJSONArray("lines") ?: org.json.JSONArray()
+                for (j in 0 until linesArray.length()) {
+                    val lObj = linesArray.getJSONObject(j)
+                    linesList.add(
+                        WorksheetLine(
+                            id = lObj.optString("id", UUID.randomUUID().toString()),
+                            lineType = try {
+                                WorksheetLineType.valueOf(lObj.optString("lineType", WorksheetLineType.CALCULATION.name))
+                            } catch (e: Exception) {
+                                WorksheetLineType.CALCULATION
+                            },
+                            operator = lObj.optString("operator", "+"),
+                            rawValue = lObj.optString("rawValue", "0"),
+                            evaluatedNumber = lObj.optDouble("evaluatedNumber", 0.0),
+                            runningTotal = lObj.optDouble("runningTotal", 0.0),
+                            note = lObj.optString("note", ""),
+                            variableName = if (lObj.has("variableName") && !lObj.isNull("variableName")) lObj.getString("variableName") else null,
+                            hasDividerBefore = lObj.optBoolean("hasDividerBefore", false)
+                        )
+                    )
+                }
+                list.add(
+                    WorksheetDocument(
+                        id = docObj.optString("id", UUID.randomUUID().toString()),
+                        title = docObj.optString("title", "Calculation"),
+                        createdAt = docObj.optLong("createdAt", System.currentTimeMillis()),
+                        updatedAt = docObj.optLong("updatedAt", System.currentTimeMillis()),
+                        lines = linesList,
+                        grandTotal = docObj.optDouble("grandTotal", 0.0),
+                        headerNote = docObj.optString("headerNote", "")
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            // failed to parse
+        }
+        return list
     }
 
     /**

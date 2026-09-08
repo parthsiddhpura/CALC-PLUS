@@ -439,6 +439,7 @@ fun CalculatorScreen(
                                         onToggleAngleMode = { viewModel.toggleAngleMode() },
                                         onOpenHistory = { viewModel.setShowHistorySheet(true) },
                                         onOpenDecimalConverter = { viewModel.setShowDecimalConverterSheet(true) },
+                                        onToggleNotation = { viewModel.toggleDisplayNotation(haptics) },
                                         modifier = Modifier
                                             .weight(1f)
                                             .padding(bottom = 8.dp)
@@ -502,6 +503,7 @@ fun CalculatorScreen(
                                         onToggleAngleMode = { viewModel.toggleAngleMode() },
                                         onOpenHistory = { viewModel.setShowHistorySheet(true) },
                                         onOpenDecimalConverter = { viewModel.setShowDecimalConverterSheet(true) },
+                                        onToggleNotation = { viewModel.toggleDisplayNotation(haptics) },
                                         modifier = Modifier
                                             .weight(1f)
                                             .padding(bottom = 6.dp)
@@ -524,6 +526,7 @@ fun CalculatorScreen(
                                         onMemorySubtract = { viewModel.onMemorySubtract(haptics) },
                                         onMemoryRecall = { viewModel.onMemoryRecall(haptics) },
                                         onMemoryClear = { viewModel.onMemoryClear(haptics) },
+                                        onEng = { viewModel.onEngKey(haptics) },
                                         modifier = Modifier.padding(bottom = 4.dp)
                                     )
                                 }
@@ -718,10 +721,14 @@ fun CalculatorScreen(
                                     theme = toolTheme,
                                     documents = uiState.worksheetDocuments,
                                     activeDocument = uiState.activeWorksheetDocument,
+                                    settings = uiState.worksheetSettings,
+                                    onUpdateSettings = { viewModel.updateWorksheetSettings(it) },
                                     onSaveDocument = { viewModel.saveWorksheetDocument(it) },
                                     onSelectDocument = { viewModel.selectWorksheetDocument(it) },
                                     onDeleteDocument = { viewModel.deleteWorksheetDocument(it) },
-                                    onNewDocument = { viewModel.createNewWorksheetDocument() },
+                                    onNewDocument = { title -> viewModel.createNewWorksheetDocument(title) },
+                                    onDuplicateDocument = { viewModel.duplicateWorksheetDocument(it) },
+                                    onRestoreDocuments = { viewModel.restoreWorksheets(it) },
                                     onApplyTemplate = { viewModel.applyWorksheetTemplate(it) },
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
