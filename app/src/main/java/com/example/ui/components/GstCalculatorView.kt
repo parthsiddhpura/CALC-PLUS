@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -63,6 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -112,17 +115,13 @@ fun GstCalculatorView(
     val isExpression = amountInput.any { it in listOf('+', '−', '-', '×', '*', '÷', '/', '%') }
     val evaluatedAmount = remember(amountInput) { GstEngine.evaluateAmountOrExpression(amountInput) }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 4.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    val displayCardContent = @Composable { cardModifier: Modifier ->
         // --- 1. Big Casio LCD Style GST Screen & Breakdown Card (Scrollable Up & Down for Large Amounts) ---
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
+            modifier = cardModifier
                 .clip(RoundedCornerShape(16.dp))
                 .border(theme.borderWidthDp, theme.screenBorderColor, RoundedCornerShape(16.dp)),
             colors = CardDefaults.cardColors(containerColor = theme.screenBackground)
@@ -506,84 +505,93 @@ fun GstCalculatorView(
                 }
             }
         }
+    }
 
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // --- 2. Casio Dedicated GST Slab Buttons (Elevated upper bar right below display) ---
+    val controlsAndKeypadContent = @Composable { kpModifier: Modifier ->
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = kpModifier,
+            verticalArrangement = Arrangement.spacedBy(if (isLandscape) 4.dp else 4.dp)
         ) {
-            // Label indicator
-            Row(
+            // --- 2. Casio Dedicated GST Slab Buttons (Elevated upper bar right below display) ---
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(vertical = if (isLandscape) 0.dp else 2.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Text(
-                    text = LanguageStrings.rateSelectionHeader(language),
-                    color = theme.screenExpressionColor.copy(alpha = 0.7f),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.8.sp
-                )
-            }
-
-            // The Casio GST Slab Buttons row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(46.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                slabs.forEach { slab ->
-                    val isSelected = slab.id == selectedSlabId
-                    CalculatorButton(
-                        text = "${slab.name}\n${slab.label}",
-                        onClick = { onSelectSlab(slab) },
-                        theme = theme,
-                        backgroundColor = if (isSelected) theme.accentColor else theme.functionButtonBg,
-                        textColor = if (isSelected) theme.backgroundColor else theme.functionButtonText,
-                        borderColor = if (isSelected) theme.accentColor else theme.functionButtonBorder,
-                        fontSize = 11.sp,
+                // Label indicator
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = LanguageStrings.rateSelectionHeader(language),
+                        color = theme.screenExpressionColor.copy(alpha = 0.7f),
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f),
-                        testTag = "btn_slab_${slab.id}"
+                        letterSpacing = 0.8.sp
                     )
                 }
 
-                // GST GT (Grand Total) button
-                CalculatorButton(
-                    text = "GST GT",
-                    onClick = { showGtBreakdown = true },
-                    theme = theme,
-                    backgroundColor = if (calculationCount > 0) Color(0xFFFFB703) else theme.functionButtonBg,
-                    textColor = if (calculationCount > 0) Color.Black else theme.functionButtonText,
-                    borderColor = theme.functionButtonBorder,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    modifier = Modifier.weight(1f),
-                    testTag = "btn_gst_gt"
-                )
+                // The Casio GST Slab Buttons row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(if (isLandscape) 38.dp else 46.dp),
+                    horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 4.dp else 6.dp)
+                ) {
+                    slabs.forEach { slab ->
+                        val isSelected = slab.id == selectedSlabId
+                        CalculatorButton(
+                            text = "${slab.name}\n${slab.label}",
+                            onClick = { onSelectSlab(slab) },
+                            theme = theme,
+                            backgroundColor = if (isSelected) theme.accentColor else theme.functionButtonBg,
+                            textColor = if (isSelected) theme.backgroundColor else theme.functionButtonText,
+                            borderColor = if (isSelected) theme.accentColor else theme.functionButtonBorder,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f),
+                            testTag = "btn_slab_${slab.id}"
+                        )
+                    }
+
+                    // GST GT (Grand Total) button
+                    CalculatorButton(
+                        text = "GST GT",
+                        onClick = { showGtBreakdown = true },
+                        theme = theme,
+                        backgroundColor = if (calculationCount > 0) Color(0xFFFFB703) else theme.functionButtonBg,
+                        textColor = if (calculationCount > 0) Color.Black else theme.functionButtonText,
+                        borderColor = theme.functionButtonBorder,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.weight(1f),
+                        testTag = "btn_gst_gt"
+                    )
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.height(6.dp))
+            if (!isLandscape) {
+                Spacer(modifier = Modifier.height(4.dp))
+            }
 
-        // --- 3. Full Number Keypad for GST Entry (Supports arithmetic: +, −, ×, ÷, %, =, 00) ---
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            // Row 1: AC, ⌫, 00, ÷
-            Row(
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // --- 3. Full Number Keypad for GST Entry (Supports arithmetic: +, −, ×, ÷, %, =, 00) ---
+            Column(
+                modifier = if (isLandscape) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(if (isLandscape) 4.dp else 6.dp)
             ) {
+                val rowModifier = if (isLandscape) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().height(52.dp)
+                val rowSpacing = if (isLandscape) 4.dp else 8.dp
+
+                // Row 1: AC, ⌫, 00, ÷
+                Row(
+                    modifier = rowModifier,
+                    horizontalArrangement = Arrangement.spacedBy(rowSpacing)
+                ) {
                 CalculatorButton(
                     text = "AC",
                     onClick = onClear,
@@ -628,8 +636,8 @@ fun GstCalculatorView(
 
             // Row 2: 7, 8, 9, ×
             Row(
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = rowModifier,
+                horizontalArrangement = Arrangement.spacedBy(rowSpacing)
             ) {
                 CalculatorButton(
                     text = "7",
@@ -663,8 +671,8 @@ fun GstCalculatorView(
 
             // Row 3: 4, 5, 6, −
             Row(
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = rowModifier,
+                horizontalArrangement = Arrangement.spacedBy(rowSpacing)
             ) {
                 CalculatorButton(
                     text = "4",
@@ -698,8 +706,8 @@ fun GstCalculatorView(
 
             // Row 4: 1, 2, 3, +
             Row(
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = rowModifier,
+                horizontalArrangement = Arrangement.spacedBy(rowSpacing)
             ) {
                 CalculatorButton(
                     text = "1",
@@ -733,8 +741,8 @@ fun GstCalculatorView(
 
             // Row 5: 0, ., TAX-, =
             Row(
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = rowModifier,
+                horizontalArrangement = Arrangement.spacedBy(rowSpacing)
             ) {
                 CalculatorButton(
                     text = "0",
@@ -773,6 +781,49 @@ fun GstCalculatorView(
                     testTag = "btn_gst_equals"
                 )
             }
+        }
+    }
+}
+
+    if (isLandscape) {
+        Row(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 6.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Left Side: GST Display & Casio LCD breakdown (Takes 46% width, full height)
+            displayCardContent(
+                Modifier
+                    .weight(0.46f)
+                    .fillMaxHeight()
+            )
+
+            // Right Side: GST Slab Buttons & Number Keypad (Takes 54% width, full height)
+            controlsAndKeypadContent(
+                Modifier
+                    .weight(0.54f)
+                    .fillMaxHeight()
+            )
+        }
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 4.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            displayCardContent(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            controlsAndKeypadContent(
+                Modifier.fillMaxWidth()
+            )
         }
     }
 

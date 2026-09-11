@@ -35,42 +35,12 @@ fun ThemeAmbientDisplayAnimation(
     modifier: Modifier = Modifier,
     theme: ThemePalette
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "theme_ambient_anim")
+    // Static values for butter-smooth zero-recomposition performance
+    val wavePhaseVal = 1.0f
+    val breathPulseVal = 0.85f
+    val sweepProgressVal = 0.5f
 
-    // General wave phase cycle (4.5s loop)
-    val wavePhase = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = (2 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4500, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "ambient_wave_phase"
-    )
-
-    // Breathing pulse cycle (2.8s loop)
-    val breathPulse = infiniteTransition.animateFloat(
-        initialValue = 0.40f,
-        targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "ambient_breath_pulse"
-    )
-
-    // Linear scanning sweep (6.5s loop)
-    val sweepProgress = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 6500, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "ambient_sweep_progress"
-    )
-
-    // Pre-allocated paths to ensure 0 GC heap allocations during 60/120Hz display animation
+    // Pre-allocated paths to ensure 0 GC heap allocations during display drawing
     val reusableWavePath = remember { Path() }
     val reusableOscPath = remember { Path() }
     val reusableHeartPath = remember { Path() }
@@ -85,9 +55,6 @@ fun ThemeAmbientDisplayAnimation(
         val h = size.height
         val accent = theme.accentColor
         val secondary = theme.secondaryAccent
-        val wavePhaseVal = wavePhase.value
-        val breathPulseVal = breathPulse.value
-        val sweepProgressVal = sweepProgress.value
 
         when {
             // 0A. KAWAII GIRL MATH: Sweet Kitten Peek, Floating Pastel Hearts & Twinkling Sparkles

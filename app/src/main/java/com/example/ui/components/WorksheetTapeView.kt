@@ -77,9 +77,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import android.content.res.Configuration
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
@@ -130,7 +132,7 @@ fun WorksheetTapeView(
     // Selection & Tape Weight
     var selectedLineIndex by remember { mutableIntStateOf(-1) }
     var isKeyboardVisible by remember { mutableStateOf(true) }
-    var tapeWeight by remember { mutableFloatStateOf(0.48f) }
+    var tapeWeight by remember { mutableFloatStateOf(0.38f) }
 
     // Memory accumulator
     var memoryValue by remember { mutableStateOf(0.0) }
@@ -196,11 +198,10 @@ fun WorksheetTapeView(
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(paperBg)
-    ) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    val tapePaneContent = @Composable { canvasModifier: Modifier ->
         // --- TOP APP BAR ---
         Row(
             modifier = Modifier
@@ -399,9 +400,7 @@ fun WorksheetTapeView(
 
         // --- SCROLLABLE PAPER TAPE CANVAS ---
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(if (isKeyboardVisible) tapeWeight else 1f)
+            modifier = canvasModifier
                 .background(paperBg)
         ) {
             // Optional horizontal ruled notebook lines (matching frame 03:34)
@@ -479,58 +478,38 @@ fun WorksheetTapeView(
                 }
             }
 
-            // Floating Keyboard Toggle Button (Bottom Right, matching video frame 00:00 & 00:10)
-            Surface(
-                shape = CircleShape,
-                color = if (isLightCanvas) Color(0xFFE2E8F0) else Color(0xFF242C38),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color.Gray.copy(alpha = 0.3f)),
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-                    .clickable { isKeyboardVisible = !isKeyboardVisible }
-            ) {
-                Box(modifier = Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = if (isKeyboardVisible) Icons.Default.KeyboardHide else Icons.Default.Keyboard,
-                        contentDescription = "Toggle Keyboard",
-                        tint = textColor,
-                        modifier = Modifier.size(20.dp)
-                    )
+            // Floating Keyboard Toggle Button (Bottom Right, portrait only)
+            if (!isLandscape) {
+                Surface(
+                    shape = CircleShape,
+                    color = if (isLightCanvas) Color(0xFFE2E8F0) else Color(0xFF242C38),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.Gray.copy(alpha = 0.3f)),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp)
+                        .clickable { isKeyboardVisible = !isKeyboardVisible }
+                ) {
+                    Box(modifier = Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = if (isKeyboardVisible) Icons.Default.KeyboardHide else Icons.Default.Keyboard,
+                            contentDescription = "Toggle Keyboard",
+                            tint = textColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
+    }
 
-        // --- RESIZABLE SPLIT DRAG HANDLE ---
-        if (isKeyboardVisible) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(14.dp)
-                    .background(if (isLightCanvas) Color(0xFFE2E8F0) else Color(0xFF1B202A))
-                    .pointerInput(Unit) {
-                        detectVerticalDragGestures { _, dragAmount ->
-                            val delta = dragAmount / 1200f
-                            tapeWeight = (tapeWeight + delta).coerceIn(0.25f, 0.72f)
-                        }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.DragHandle,
-                    contentDescription = "Resize split",
-                    tint = subtextColor,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
+    val keypadPaneContent = @Composable { kMod: Modifier ->
+        val activeLine = activeDocument.lines.getOrNull(selectedLineIndex)
+        val currentNote = activeLine?.note ?: ""
+        val activeRawValue = activeLine?.rawValue ?: ""
 
-            // --- BOTTOM DOCK BAR & 4x6 KEYPAD ---
-            val activeLine = activeDocument.lines.getOrNull(selectedLineIndex)
-            val currentNote = activeLine?.note ?: ""
-            val activeRawValue = activeLine?.rawValue ?: ""
-
-            WorksheetKeypadView(
-                theme = theme,
-                settings = settings,
+        WorksheetKeypadView(
+            theme = theme,
+            settings = settings,
                 grandTotal = activeDocument.grandTotal,
                 currentNote = currentNote,
                 quickVariableValue = if (memoryValue != 0.0) memoryValue else null,
@@ -671,10 +650,74 @@ fun WorksheetTapeView(
                     val newTotal = recalculated.lastOrNull()?.runningTotal ?: 0.0
                     pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f - tapeWeight)
+                modifier = kMod
             )
+    }
+
+    if (isLandscape) {
+        Row(
+            modifier = modifier
+                .fillMaxSize()
+                .background(paperBg)
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Left Side: Display & Paper Tape
+            Column(
+                modifier = Modifier
+                    .weight(0.46f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, if (isLightCanvas) Color(0xFFCBD5E1) else Color(0xFF334155), RoundedCornerShape(12.dp))
+            ) {
+                tapePaneContent(Modifier.fillMaxWidth().weight(1f))
+            }
+
+            // Right Side: Keypad Buttons
+            Box(
+                modifier = Modifier
+                    .weight(0.54f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF1F242B))
+                    .border(1.dp, Color(0xFF334155), RoundedCornerShape(12.dp))
+            ) {
+                keypadPaneContent(Modifier.fillMaxSize())
+            }
+        }
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(paperBg)
+        ) {
+            tapePaneContent(Modifier.fillMaxWidth().weight(if (isKeyboardVisible) tapeWeight else 1f))
+
+            if (isKeyboardVisible) {
+                // RESIZABLE SPLIT DRAG HANDLE
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(14.dp)
+                        .background(if (isLightCanvas) Color(0xFFE2E8F0) else Color(0xFF1B202A))
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures { _, dragAmount ->
+                                val delta = dragAmount / 1200f
+                                tapeWeight = (tapeWeight + delta).coerceIn(0.25f, 0.72f)
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DragHandle,
+                        contentDescription = "Resize split",
+                        tint = subtextColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                keypadPaneContent(Modifier.fillMaxWidth().weight(1f - tapeWeight))
+            }
         }
     }
 

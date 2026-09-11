@@ -85,6 +85,9 @@ object CalculatorEngine {
             .replace("asin", "arcsin")
             .replace("acos", "arccos")
             .replace("atan", "arctan")
+            .replace("asinh", "arcsinh")
+            .replace("acosh", "arccosh")
+            .replace("atanh", "arctanh")
 
         // Handle letter 'x' or 'X' as multiplication (e.g. 7x10% -> 7*10%)
         s = s.replace(Regex("(?<=[0-9)πeφ%])\\s*[xX]\\s*(?=[0-9(πeφ])"), "*")
@@ -188,7 +191,8 @@ object CalculatorEngine {
     private fun isFunction(token: String): Boolean {
         return token in listOf(
             "sin", "cos", "tan", "arcsin", "arccos", "arctan",
-            "ln", "log", "log10", "sqrt", "cbrt", "abs", "exp", "floor", "ceil"
+            "sinh", "cosh", "tanh", "arcsinh", "arccosh", "arctanh",
+            "ln", "log", "log10", "log2", "sqrt", "cbrt", "abs", "exp", "floor", "ceil", "round"
         )
     }
 
@@ -290,14 +294,22 @@ object CalculatorEngine {
                             val v = atan(a)
                             if (angleMode == AngleMode.DEG) Math.toDegrees(v) else v
                         }
+                        "sinh" -> sinh(a)
+                        "cosh" -> cosh(a)
+                        "tanh" -> tanh(a)
+                        "arcsinh" -> ln(a + sqrt(a * a + 1.0))
+                        "arccosh" -> if (a < 1.0) throw ArithmeticException("Domain error") else ln(a + sqrt(a * a - 1.0))
+                        "arctanh" -> if (abs(a) >= 1.0) throw ArithmeticException("Domain error") else 0.5 * ln((1.0 + a) / (1.0 - a))
                         "ln" -> ln(a)
                         "log", "log10" -> log10(a)
+                        "log2" -> ln(a) / ln(2.0)
                         "sqrt" -> sqrt(a)
                         "cbrt" -> cbrt(a)
                         "abs" -> abs(a)
                         "exp" -> exp(a)
                         "floor" -> floor(a)
                         "ceil" -> ceil(a)
+                        "round" -> kotlin.math.round(a)
                         else -> a
                     }
                     stack.push(res)

@@ -1,5 +1,6 @@
 package com.example.ui
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -16,14 +17,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -44,16 +49,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.ui.components.LandscapeDisplayPane
+import com.example.ui.components.LandscapeDualPaneView
+import com.example.ui.components.LandscapeScientificKeypad
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.domain.LanguageStrings
 import com.example.model.CalculatorMode
 import com.example.model.ThemeId
+import com.example.model.ThemePalette
 import com.example.model.toToolTheme
 import com.example.ui.components.AgeCalculatorView
 import com.example.ui.components.AiMathCopilotView
@@ -116,16 +126,32 @@ fun CalculatorScreen(
     val historySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val decimalSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    // Remembered stable callbacks to ensure Keypad composables skip recomposition when typing (butter-smooth typing)
+    val onInputCallback = remember(viewModel, haptics) { { char: String -> viewModel.onInput(char, haptics) } }
+    val onClearCallback = remember(viewModel, haptics) { { viewModel.onClear(haptics) } }
+    val onBackspaceCallback = remember(viewModel, haptics) { { viewModel.onBackspace(haptics) } }
+    val onNegateCallback = remember(viewModel, haptics) { { viewModel.onNegate(haptics) } }
+    val onEqualsCallback = remember(viewModel, haptics) { { viewModel.onEquals(haptics) } }
+    val onFunctionCallback = remember(viewModel, haptics) { { fn: String -> viewModel.onFunction(fn, haptics) } }
+    val onConstantCallback = remember(viewModel, haptics) { { c: String -> viewModel.onConstant(c, haptics) } }
+    val onMemoryAddCallback = remember(viewModel, haptics) { { viewModel.onMemoryAdd(haptics) } }
+    val onMemorySubtractCallback = remember(viewModel, haptics) { { viewModel.onMemorySubtract(haptics) } }
+    val onMemoryRecallCallback = remember(viewModel, haptics) { { viewModel.onMemoryRecall(haptics) } }
+    val onMemoryClearCallback = remember(viewModel, haptics) { { viewModel.onMemoryClear(haptics) } }
+    val onEngCallback = remember(viewModel, haptics) { { viewModel.onEngKey(haptics) } }
+    val onToggleAngleCallback = remember(viewModel) { { viewModel.toggleAngleMode() } }
+    val onToggle2ndCallback = remember(viewModel) { { viewModel.toggleSecondFunction() } }
+    val onToggleNotationCallback = remember(viewModel, haptics) { { viewModel.toggleDisplayNotation(haptics) } }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = theme.backgroundColor
-    ) { innerPadding ->
+    ) { _ ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(theme.backgroundBrush)
-                .padding(innerPadding)
-                .imePadding()
         ) {
             if (theme.hasBatSignal) {
                 BatmanScreenBackground(modifier = Modifier.fillMaxSize())
@@ -154,112 +180,59 @@ fun CalculatorScreen(
                 )
             }
 
+            val configuration = LocalConfiguration.current
+            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 14.dp, vertical = 6.dp)
-                    .widthIn(max = 650.dp)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(
+                        start = if (isLandscape) 10.dp else 12.dp,
+                        end = if (isLandscape) 10.dp else 12.dp,
+                        top = 2.dp,
+                        bottom = 4.dp
+                    )
+                    .then(if (!isLandscape) Modifier.widthIn(max = 650.dp) else Modifier)
                     .align(Alignment.Center),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 // Clean Minimal Top Header Bar (No clutter, No shuffle, Single Settings Access)
-                Column(modifier = Modifier.fillMaxWidth()) {
+                val topBarTextColor = if (theme.isDark) {
+                    theme.screenTextColor
+                } else {
+                    if (theme.isNekoMochi || theme.isGirlMath) Color(0xFF3E1E28) else Color(0xFF1E293B)
+                }
+                val topBarBadgeBg = if (theme.isDark) {
+                    theme.surfaceColor
+                } else {
+                    if (theme.isNekoMochi) Color(0xFFFFD6E0) else theme.surfaceColor
+                }
+                val topBarBadgeText = if (theme.isDark) {
+                    theme.screenExpressionColor
+                } else {
+                    if (theme.isNekoMochi || theme.isGirlMath) Color(0xFF5A2534) else Color(0xFF334155)
+                }
+
+                if (isLandscape) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp),
+                            .padding(vertical = 2.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val topBarTextColor = if (theme.isDark) {
-                            theme.screenTextColor
-                        } else {
-                            if (theme.isNekoMochi || theme.isGirlMath) Color(0xFF3E1E28) else Color(0xFF1E293B)
-                        }
-                        val topBarBadgeBg = if (theme.isDark) {
-                            theme.surfaceColor
-                        } else {
-                            if (theme.isNekoMochi) Color(0xFFFFD6E0) else theme.surfaceColor
-                        }
-                        val topBarBadgeText = if (theme.isDark) {
-                            theme.screenExpressionColor
-                        } else {
-                            if (theme.isNekoMochi || theme.isGirlMath) Color(0xFF5A2534) else Color(0xFF334155)
-                        }
-
+                        // Left: Brand & Theme
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            if (theme.hasBatSignal) {
-                                BatmanLogoIcon(
-                                    modifier = Modifier.size(16.dp),
-                                    tint = theme.accentColor
-                                )
-                            } else if (theme.hasArcReactor) {
-                                ArcReactorIcon(
-                                    modifier = Modifier.size(18.dp),
-                                    glowColor = theme.accentColor,
-                                    showOuterTabs = false
-                                )
-                            } else if (theme.isGirlMath) {
-                                Text(
-                                    text = "♡",
-                                    color = theme.accentColor,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                            } else if (theme.isNekoMochi) {
-                                Text(
-                                    text = "🐾",
-                                    fontSize = 15.sp
-                                )
-                            } else if (theme.isY2kGlossy) {
-                                Text(
-                                    text = "✨",
-                                    fontSize = 15.sp
-                                )
-                            } else if (theme.isPixelArt) {
-                                Text(
-                                    text = "👾",
-                                    fontSize = 15.sp
-                                )
-                            } else if (theme.isRetroCircuit) {
-                                Text(
-                                    text = "⚡",
-                                    fontSize = 15.sp
-                                )
-                            } else if (theme.isNothingDossier) {
-                                Text(
-                                    text = "▫",
-                                    color = theme.accentColor,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            } else if (theme.isBauhausDossier) {
-                                Text(
-                                    text = "▣",
-                                    color = theme.accentColor,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            } else if (theme.isTerracottaStudio) {
-                                Text(
-                                    text = "⚪",
-                                    fontSize = 14.sp
-                                )
-                            } else {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = theme.accentColor,
-                                    modifier = Modifier.size(10.dp)
-                                ) {}
-                            }
+                            TopBarBrandIcon(theme = theme)
 
                             Text(
                                 text = "CALC +",
                                 color = topBarTextColor,
-                                fontSize = 17.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
 
@@ -271,133 +244,305 @@ fun CalculatorScreen(
                                 Text(
                                     text = theme.name,
                                     color = topBarBadgeText,
-                                    fontSize = 11.sp,
+                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
                         }
 
-                        // Settings Icon Button
-                        IconButton(
-                            onClick = { viewModel.setShowSettingsSheet(true) },
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(topBarBadgeBg)
-                                .size(36.dp)
-                                .testTag("btn_settings")
+                        // Center: Mode tabs
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Settings & Appearance",
-                                tint = topBarTextColor,
-                                modifier = Modifier.size(18.dp)
+                            val landscapeModes = listOf(
+                                Pair(CalculatorMode.STANDARD, LanguageStrings.modeStandard(uiState.currentLanguage)),
+                                Pair(CalculatorMode.GST_CALCULATOR, LanguageStrings.modeGst(uiState.currentLanguage)),
+                                Pair(CalculatorMode.SCIENTIFIC, LanguageStrings.modeScientific(uiState.currentLanguage)),
+                                Pair(CalculatorMode.WORKSHEET_TAPE, "Tape")
                             )
-                        }
-                    }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                            landscapeModes.forEach { (modeItem, label) ->
+                                val isSelected = uiState.mode == modeItem
+                                val tabBg = when {
+                                    isSelected -> theme.accentColor
+                                    !theme.isDark -> if (theme.isNekoMochi) Color(0xFFFFF0F3) else theme.surfaceColor
+                                    else -> theme.surfaceColor
+                                }
+                                val tabBorder = if (!isSelected && !theme.isDark) {
+                                    androidx.compose.foundation.BorderStroke(1.dp, if (theme.isNekoMochi) Color(0xFFFFB5C5) else theme.accentColor.copy(alpha = 0.25f))
+                                } else null
+                                val tabTextColor = when {
+                                    isSelected -> if (theme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
+                                    !theme.isDark -> if (theme.isNekoMochi || theme.isGirlMath) Color(0xFF4A202D) else Color(0xFF1E293B)
+                                    else -> theme.screenTextColor.copy(alpha = 0.88f)
+                                }
 
-                    // Reorganized Navigation: 3 Main Buttons (Standard, GST Calc, Scientific) + "More" Button
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        val mainModes: List<Pair<CalculatorMode, String>> = listOf(
-                            Pair(CalculatorMode.STANDARD, LanguageStrings.modeStandard(uiState.currentLanguage)),
-                            Pair(CalculatorMode.GST_CALCULATOR, LanguageStrings.modeGst(uiState.currentLanguage)),
-                            Pair(CalculatorMode.SCIENTIFIC, LanguageStrings.modeScientific(uiState.currentLanguage))
-                        )
+                                Surface(
+                                    color = tabBg,
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = tabBorder,
+                                    modifier = Modifier
+                                        .clickable { viewModel.setMode(modeItem) }
+                                        .testTag("land_tab_mode_${modeItem.name.lowercase()}")
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = tabTextColor,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
 
-                        mainModes.forEach { (modeItem, label) ->
-                            val isSelected = uiState.mode == modeItem
-                            val tabBg = when {
-                                isSelected -> theme.accentColor
+                            val isMoreSelected = uiState.mode !in listOf(
+                                CalculatorMode.STANDARD,
+                                CalculatorMode.GST_CALCULATOR,
+                                CalculatorMode.SCIENTIFIC,
+                                CalculatorMode.WORKSHEET_TAPE
+                            )
+                            val moreTabBg = when {
+                                isMoreSelected -> theme.accentColor
                                 !theme.isDark -> if (theme.isNekoMochi) Color(0xFFFFF0F3) else theme.surfaceColor
                                 else -> theme.surfaceColor
                             }
-                            val tabBorder = if (!isSelected && !theme.isDark) {
-                                androidx.compose.foundation.BorderStroke(1.dp, if (theme.isNekoMochi) Color(0xFFFFB5C5) else theme.accentColor.copy(alpha = 0.3f))
+                            val moreTabBorder = if (!isMoreSelected && !theme.isDark) {
+                                androidx.compose.foundation.BorderStroke(1.dp, if (theme.isNekoMochi) Color(0xFFFFB5C5) else theme.accentColor.copy(alpha = 0.25f))
                             } else null
-                            val tabTextColor = when {
-                                isSelected -> if (theme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
+                            val moreTabTextColor = when {
+                                isMoreSelected -> if (theme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
                                 !theme.isDark -> if (theme.isNekoMochi || theme.isGirlMath) Color(0xFF4A202D) else Color(0xFF1E293B)
                                 else -> theme.screenTextColor.copy(alpha = 0.88f)
                             }
 
                             Surface(
-                                color = tabBg,
-                                shape = RoundedCornerShape(12.dp),
-                                border = tabBorder,
+                                color = moreTabBg,
+                                shape = RoundedCornerShape(8.dp),
+                                border = moreTabBorder,
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { viewModel.setMode(modeItem) }
-                                    .testTag("tab_mode_${modeItem.name.lowercase()}")
+                                    .clickable { viewModel.setShowMoreModesSheet(true) }
+                                    .testTag("land_tab_mode_more")
                             ) {
-                                Text(
-                                    text = label,
-                                    color = tabTextColor,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    modifier = Modifier.padding(vertical = 8.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Text(
+                                        text = if (isMoreSelected) uiState.mode.shortName else LanguageStrings.modeMore(uiState.currentLanguage),
+                                        color = moreTabTextColor,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isMoreSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.MoreHoriz,
+                                        contentDescription = "More modes",
+                                        tint = moreTabTextColor,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
                             }
                         }
 
-                        // "More" Button (with active mode indicator if a secondary mode is selected)
-                        val isMoreSelected = uiState.mode !in listOf(
-                            CalculatorMode.STANDARD,
-                            CalculatorMode.GST_CALCULATOR,
-                            CalculatorMode.SCIENTIFIC
-                        )
-                        val moreTabBg = when {
-                            isMoreSelected -> theme.accentColor
-                            !theme.isDark -> if (theme.isNekoMochi) Color(0xFFFFF0F3) else theme.surfaceColor
-                            else -> theme.surfaceColor
-                        }
-                        val moreTabBorder = if (!isMoreSelected && !theme.isDark) {
-                            androidx.compose.foundation.BorderStroke(1.dp, if (theme.isNekoMochi) Color(0xFFFFB5C5) else theme.accentColor.copy(alpha = 0.3f))
-                        } else null
-                        val moreTabTextColor = when {
-                            isMoreSelected -> if (theme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
-                            !theme.isDark -> if (theme.isNekoMochi || theme.isGirlMath) Color(0xFF4A202D) else Color(0xFF1E293B)
-                            else -> theme.screenTextColor.copy(alpha = 0.88f)
-                        }
-
-                        Surface(
-                            color = moreTabBg,
-                            shape = RoundedCornerShape(12.dp),
-                            border = moreTabBorder,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { viewModel.setShowMoreModesSheet(true) }
-                                .testTag("tab_mode_more")
+                        // Right: Angle Mode Toggle (Scientific only) & Settings Button
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(vertical = 8.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
+                            if (uiState.mode == CalculatorMode.SCIENTIFIC) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = topBarBadgeBg,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, theme.accentColor.copy(alpha = 0.5f)),
+                                    modifier = Modifier.clickable { viewModel.toggleAngleMode() }
+                                ) {
+                                    Text(
+                                        text = uiState.angleMode.name,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = theme.accentColor,
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = { viewModel.setShowSettingsSheet(true) },
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(topBarBadgeBg)
+                                    .size(32.dp)
+                                    .testTag("land_btn_settings")
                             ) {
-                                Text(
-                                    text = if (isMoreSelected) uiState.mode.shortName else LanguageStrings.modeMore(uiState.currentLanguage),
-                                    color = moreTabTextColor,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isMoreSelected) FontWeight.Bold else FontWeight.Medium
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
                                 Icon(
-                                    imageVector = Icons.Default.MoreHoriz,
-                                    contentDescription = "More modes",
-                                    tint = moreTabTextColor,
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings & Appearance",
+                                    tint = topBarTextColor,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
                         }
                     }
+                } else {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 1.dp, bottom = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                TopBarBrandIcon(theme = theme)
+
+                                Text(
+                                    text = "CALC +",
+                                    color = topBarTextColor,
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = topBarBadgeBg,
+                                    border = if (!theme.isDark && theme.isNekoMochi) androidx.compose.foundation.BorderStroke(0.8.dp, Color(0xFFFF85A1).copy(alpha = 0.5f)) else null
+                                ) {
+                                    Text(
+                                        text = theme.name,
+                                        color = topBarBadgeText,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
+                            // Settings Icon Button
+                            IconButton(
+                                onClick = { viewModel.setShowSettingsSheet(true) },
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(topBarBadgeBg)
+                                    .size(36.dp)
+                                    .testTag("btn_settings")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings & Appearance",
+                                    tint = topBarTextColor,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        // Reorganized Navigation: 3 Main Buttons (Standard, GST Calc, Scientific) + "More" Button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val mainModes: List<Pair<CalculatorMode, String>> = listOf(
+                                Pair(CalculatorMode.STANDARD, LanguageStrings.modeStandard(uiState.currentLanguage)),
+                                Pair(CalculatorMode.GST_CALCULATOR, LanguageStrings.modeGst(uiState.currentLanguage)),
+                                Pair(CalculatorMode.SCIENTIFIC, LanguageStrings.modeScientific(uiState.currentLanguage))
+                            )
+
+                            mainModes.forEach { (modeItem, label) ->
+                                val isSelected = uiState.mode == modeItem
+                                val tabBg = when {
+                                    isSelected -> theme.accentColor
+                                    !theme.isDark -> if (theme.isNekoMochi) Color(0xFFFFF0F3) else theme.surfaceColor
+                                    else -> theme.surfaceColor
+                                }
+                                val tabBorder = if (!isSelected && !theme.isDark) {
+                                    androidx.compose.foundation.BorderStroke(1.dp, if (theme.isNekoMochi) Color(0xFFFFB5C5) else theme.accentColor.copy(alpha = 0.3f))
+                                } else null
+                                val tabTextColor = when {
+                                    isSelected -> if (theme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
+                                    !theme.isDark -> if (theme.isNekoMochi || theme.isGirlMath) Color(0xFF4A202D) else Color(0xFF1E293B)
+                                    else -> theme.screenTextColor.copy(alpha = 0.88f)
+                                }
+
+                                Surface(
+                                    color = tabBg,
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = tabBorder,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { viewModel.setMode(modeItem) }
+                                        .testTag("tab_mode_${modeItem.name.lowercase()}")
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = tabTextColor,
+                                        fontSize = 13.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+                            }
+
+                            // "More" Button (with active mode indicator if a secondary mode is selected)
+                            val isMoreSelected = uiState.mode !in listOf(
+                                CalculatorMode.STANDARD,
+                                CalculatorMode.GST_CALCULATOR,
+                                CalculatorMode.SCIENTIFIC
+                            )
+                            val moreTabBg = when {
+                                isMoreSelected -> theme.accentColor
+                                !theme.isDark -> if (theme.isNekoMochi) Color(0xFFFFF0F3) else theme.surfaceColor
+                                else -> theme.surfaceColor
+                            }
+                            val moreTabBorder = if (!isMoreSelected && !theme.isDark) {
+                                androidx.compose.foundation.BorderStroke(1.dp, if (theme.isNekoMochi) Color(0xFFFFB5C5) else theme.accentColor.copy(alpha = 0.3f))
+                            } else null
+                            val moreTabTextColor = when {
+                                isMoreSelected -> if (theme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
+                                !theme.isDark -> if (theme.isNekoMochi || theme.isGirlMath) Color(0xFF4A202D) else Color(0xFF1E293B)
+                                else -> theme.screenTextColor.copy(alpha = 0.88f)
+                            }
+
+                            Surface(
+                                color = moreTabBg,
+                                shape = RoundedCornerShape(12.dp),
+                                border = moreTabBorder,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { viewModel.setShowMoreModesSheet(true) }
+                                    .testTag("tab_mode_more")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (isMoreSelected) uiState.mode.shortName else LanguageStrings.modeMore(uiState.currentLanguage),
+                                        color = moreTabTextColor,
+                                        fontSize = 13.sp,
+                                        fontWeight = if (isMoreSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.MoreHoriz,
+                                        contentDescription = "More modes",
+                                        tint = moreTabTextColor,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(if (isLandscape) 2.dp else 4.dp))
 
                 // Middle Content & Screen Display (Expands to fill available space)
                 AnimatedContent(
@@ -419,41 +564,51 @@ fun CalculatorScreen(
                     ) {
                         when (targetMode) {
                             CalculatorMode.STANDARD -> {
-                                Column(
-                                    modifier = Modifier.fillMaxSize(),
-                                    verticalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    CalculatorDisplay(
-                                        expression = uiState.expression,
-                                        result = uiState.result,
-                                        previewResult = uiState.previewResult,
+                                if (isLandscape) {
+                                    LandscapeDualPaneView(
+                                        uiState = uiState,
                                         theme = theme,
-                                        angleMode = uiState.angleMode,
-                                        hasMemory = uiState.hasMemory,
-                                        mode = uiState.mode,
-                                        displayConfig = uiState.displayConfig,
-                                        historyCount = historyList.size,
-                                        cursorPosition = uiState.cursorPosition,
-                                        onCursorChange = { viewModel.setCursorPosition(it) },
-                                        isEvaluated = uiState.lastEvaluated,
-                                        onToggleAngleMode = { viewModel.toggleAngleMode() },
-                                        onOpenHistory = { viewModel.setShowHistorySheet(true) },
-                                        onOpenDecimalConverter = { viewModel.setShowDecimalConverterSheet(true) },
-                                        onToggleNotation = { viewModel.toggleDisplayNotation(haptics) },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .padding(bottom = 8.dp)
+                                        historyList = historyList,
+                                        viewModel = viewModel,
+                                        haptics = haptics
                                     )
+                                } else {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        CalculatorDisplay(
+                                            expression = uiState.expression,
+                                            result = uiState.result,
+                                            previewResult = uiState.previewResult,
+                                            theme = theme,
+                                            angleMode = uiState.angleMode,
+                                            hasMemory = uiState.hasMemory,
+                                            mode = uiState.mode,
+                                            displayConfig = uiState.displayConfig,
+                                            historyCount = historyList.size,
+                                            cursorPosition = uiState.cursorPosition,
+                                            onCursorChange = { viewModel.setCursorPosition(it) },
+                                            isEvaluated = uiState.lastEvaluated,
+                                            onToggleAngleMode = { viewModel.toggleAngleMode() },
+                                            onOpenHistory = { viewModel.setShowHistorySheet(true) },
+                                            onOpenDecimalConverter = { viewModel.setShowDecimalConverterSheet(true) },
+                                            onToggleNotation = { viewModel.toggleDisplayNotation(haptics) },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .padding(bottom = 8.dp)
+                                        )
 
-                                    StandardKeypad(
-                                        theme = theme,
-                                        onInput = { viewModel.onInput(it, haptics) },
-                                        onClear = { viewModel.onClear(haptics) },
-                                        onBackspace = { viewModel.onBackspace(haptics) },
-                                        onNegate = { viewModel.onNegate(haptics) },
-                                        onEquals = { viewModel.onEquals(haptics) },
-                                        modifier = Modifier.padding(bottom = 4.dp)
-                                    )
+                                        StandardKeypad(
+                                            theme = theme,
+                                            onInput = onInputCallback,
+                                            onClear = onClearCallback,
+                                            onBackspace = onBackspaceCallback,
+                                            onNegate = onNegateCallback,
+                                            onEquals = onEqualsCallback,
+                                            modifier = Modifier.padding(bottom = 4.dp)
+                                        )
+                                    }
                                 }
                             }
 
@@ -483,52 +638,62 @@ fun CalculatorScreen(
                             }
 
                             CalculatorMode.SCIENTIFIC -> {
-                                Column(
-                                    modifier = Modifier.fillMaxSize(),
-                                    verticalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    CalculatorDisplay(
-                                        expression = uiState.expression,
-                                        result = uiState.result,
-                                        previewResult = uiState.previewResult,
+                                if (isLandscape) {
+                                    LandscapeDualPaneView(
+                                        uiState = uiState,
                                         theme = theme,
-                                        angleMode = uiState.angleMode,
-                                        hasMemory = uiState.hasMemory,
-                                        mode = uiState.mode,
-                                        displayConfig = uiState.displayConfig,
-                                        historyCount = historyList.size,
-                                        cursorPosition = uiState.cursorPosition,
-                                        onCursorChange = { viewModel.setCursorPosition(it) },
-                                        isEvaluated = uiState.lastEvaluated,
-                                        onToggleAngleMode = { viewModel.toggleAngleMode() },
-                                        onOpenHistory = { viewModel.setShowHistorySheet(true) },
-                                        onOpenDecimalConverter = { viewModel.setShowDecimalConverterSheet(true) },
-                                        onToggleNotation = { viewModel.toggleDisplayNotation(haptics) },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .padding(bottom = 6.dp)
+                                        historyList = historyList,
+                                        viewModel = viewModel,
+                                        haptics = haptics
                                     )
+                                } else {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        CalculatorDisplay(
+                                            expression = uiState.expression,
+                                            result = uiState.result,
+                                            previewResult = uiState.previewResult,
+                                            theme = theme,
+                                            angleMode = uiState.angleMode,
+                                            hasMemory = uiState.hasMemory,
+                                            mode = uiState.mode,
+                                            displayConfig = uiState.displayConfig,
+                                            historyCount = historyList.size,
+                                            cursorPosition = uiState.cursorPosition,
+                                            onCursorChange = { viewModel.setCursorPosition(it) },
+                                            isEvaluated = uiState.lastEvaluated,
+                                            onToggleAngleMode = { viewModel.toggleAngleMode() },
+                                            onOpenHistory = { viewModel.setShowHistorySheet(true) },
+                                            onOpenDecimalConverter = { viewModel.setShowDecimalConverterSheet(true) },
+                                            onToggleNotation = { viewModel.toggleDisplayNotation(haptics) },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .padding(bottom = 6.dp)
+                                        )
 
-                                    ScientificKeypad(
-                                        theme = theme,
-                                        angleMode = uiState.angleMode,
-                                        isSecondFunction = uiState.isSecondFunction,
-                                        onToggleAngleMode = { viewModel.toggleAngleMode() },
-                                        onToggleSecondFunction = { viewModel.toggleSecondFunction() },
-                                        onInput = { viewModel.onInput(it, haptics) },
-                                        onFunction = { viewModel.onFunction(it, haptics) },
-                                        onConstant = { viewModel.onConstant(it, haptics) },
-                                        onClear = { viewModel.onClear(haptics) },
-                                        onBackspace = { viewModel.onBackspace(haptics) },
-                                        onNegate = { viewModel.onNegate(haptics) },
-                                        onEquals = { viewModel.onEquals(haptics) },
-                                        onMemoryAdd = { viewModel.onMemoryAdd(haptics) },
-                                        onMemorySubtract = { viewModel.onMemorySubtract(haptics) },
-                                        onMemoryRecall = { viewModel.onMemoryRecall(haptics) },
-                                        onMemoryClear = { viewModel.onMemoryClear(haptics) },
-                                        onEng = { viewModel.onEngKey(haptics) },
-                                        modifier = Modifier.padding(bottom = 4.dp)
-                                    )
+                                        ScientificKeypad(
+                                            theme = theme,
+                                            angleMode = uiState.angleMode,
+                                            isSecondFunction = uiState.isSecondFunction,
+                                            onToggleAngleMode = onToggleAngleCallback,
+                                            onToggleSecondFunction = onToggle2ndCallback,
+                                            onInput = onInputCallback,
+                                            onFunction = onFunctionCallback,
+                                            onConstant = onConstantCallback,
+                                            onClear = onClearCallback,
+                                            onBackspace = onBackspaceCallback,
+                                            onNegate = onNegateCallback,
+                                            onEquals = onEqualsCallback,
+                                            onMemoryAdd = onMemoryAddCallback,
+                                            onMemorySubtract = onMemorySubtractCallback,
+                                            onMemoryRecall = onMemoryRecallCallback,
+                                            onMemoryClear = onMemoryClearCallback,
+                                            onEng = onEngCallback,
+                                            modifier = Modifier.padding(bottom = 4.dp)
+                                        )
+                                    }
                                 }
                             }
 
@@ -825,5 +990,73 @@ fun CalculatorScreen(
                 onDismiss = { viewModel.setEditingNoteFor(null) }
             )
         }
+    }
+}
+
+@Composable
+private fun TopBarBrandIcon(theme: ThemePalette) {
+    if (theme.hasBatSignal) {
+        BatmanLogoIcon(
+            modifier = Modifier.size(16.dp),
+            tint = theme.accentColor
+        )
+    } else if (theme.hasArcReactor) {
+        ArcReactorIcon(
+            modifier = Modifier.size(18.dp),
+            glowColor = theme.accentColor,
+            showOuterTabs = false
+        )
+    } else if (theme.isGirlMath) {
+        Text(
+            text = "♡",
+            color = theme.accentColor,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.ExtraBold
+        )
+    } else if (theme.isNekoMochi) {
+        Text(
+            text = "🐾",
+            fontSize = 15.sp
+        )
+    } else if (theme.isY2kGlossy) {
+        Text(
+            text = "✨",
+            fontSize = 15.sp
+        )
+    } else if (theme.isPixelArt) {
+        Text(
+            text = "👾",
+            fontSize = 15.sp
+        )
+    } else if (theme.isRetroCircuit) {
+        Text(
+            text = "⚡",
+            fontSize = 15.sp
+        )
+    } else if (theme.isNothingDossier) {
+        Text(
+            text = "▫",
+            color = theme.accentColor,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
+        )
+    } else if (theme.isBauhausDossier) {
+        Text(
+            text = "▣",
+            color = theme.accentColor,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
+        )
+    } else if (theme.isTerracottaStudio) {
+        Text(
+            text = "⚪",
+            fontSize = 14.sp
+        )
+    } else {
+        Surface(
+            shape = CircleShape,
+            color = theme.accentColor,
+            modifier = Modifier.size(10.dp)
+        ) {}
     }
 }

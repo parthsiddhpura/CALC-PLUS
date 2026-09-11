@@ -68,51 +68,11 @@ private data class OrtylTapShockwave(
 fun OrtylScreenBackground(
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "ortyl_caliper_anim")
-
-    // Dynamic precision laser caliper scan (sweeping vertically across the matte chassis)
-    val caliperProgress by infiniteTransition.animateFloat(
-        initialValue = -0.1f,
-        targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 5200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "ortyl_caliper_sweep"
-    )
-
-    // Slow meditative rotation of the architectural drafting compass dial
-    val dialRotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 48000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "ortyl_compass_rotation"
-    )
-
-    // High-frequency PCB circuit energy pulse
-    val energyPulse by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2400, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "ortyl_energy_pulse"
-    )
-
-    // Subtle breathing glow of amber telemetry indicators
-    val amberGlow by infiniteTransition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "ortyl_amber_glow"
-    )
+    // Static values for butter-smooth zero-recomposition performance
+    val caliperProgress = 0.5f
+    val dialRotation = 30f
+    val energyPulse = 0.5f
+    val amberGlow = 0.75f
 
     // Suspended cleanroom amber micro-motes
     val dustMotes = remember {
@@ -388,29 +348,9 @@ fun OrtylScreenBackground(
 fun OrtylDisplayOverlay(
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "ortyl_display_telemetry_anim")
-
-    // Dynamic wave phase for live oscilloscope frequency ripple
-    val wavePhase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = (2 * PI).toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2800, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "ortyl_wave_phase"
-    )
-
-    // Dual-state precision amber status LED beacon
-    val beaconPulse by infiniteTransition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "ortyl_beacon_pulse"
-    )
+    // Static values for butter-smooth zero-recomposition performance
+    val wavePhase = 1.0f
+    val beaconPulse = 0.8f
 
     val wavePath = remember { Path() }
 
@@ -509,51 +449,11 @@ private data class OledScreenTapEffect(
 fun OledStealthVoidScreenBackground(
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "oled_titanium_void_anim")
-
-    // Subtle titanium light sweep traversing through the absolute zero-black abyss
-    val titaniumSweepProgress by infiniteTransition.animateFloat(
-        initialValue = -0.15f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 6800, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "oled_titanium_sweep"
-    )
-
-    // Meditative breathing of the subtle geometric orbital horizon
-    val horizonBreath by infiniteTransition.animateFloat(
-        initialValue = 0.92f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "oled_horizon_breath"
-    )
-
-    // Slow astronomical rotation of subtle celestial calibration reticle
-    val reticleRotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 64000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "oled_reticle_rotation"
-    )
-
-    // Star scintillation frequency
-    val starTwinkle by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "oled_star_twinkle"
-    )
+    // Static values for butter-smooth zero-recomposition performance
+    val titaniumSweepProgress = 0.5f
+    val horizonBreath = 1.0f
+    val reticleRotation = 45f
+    val starTwinkle = 0.7f
 
     // Celestial silver micro-stars pre-allocated
     val silverStars = remember {
@@ -791,40 +691,10 @@ fun OledStealthVoidScreenBackground(
 fun OledStealthVoidDisplayOverlay(
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "oled_display_telemetry_anim")
-
-    // Serene breathing pulse of the platinum status beacon
-    val beaconGlow by infiniteTransition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "oled_beacon_glow"
-    )
-
-    // Animated Quantum Waveform Spectrum Phase (Silky, mathematical audio/quantum ribbon)
-    val wavePhase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = (2 * PI).toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "oled_wave_phase"
-    )
-
-    // Breathing amplitude for the waveform
-    val waveAmpFactor by infiniteTransition.animateFloat(
-        initialValue = 0.80f,
-        targetValue = 1.20f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "oled_wave_amp"
-    )
+    // Static values for butter-smooth zero-recomposition performance
+    val beaconGlow = 0.85f
+    val wavePhase = 1.0f
+    val waveAmpFactor = 1.0f
 
     // Interactive Tap Ripples in the Display - Smooth 60fps Animatable
     var displayTaps by remember { mutableStateOf<List<OledDisplayTapEffect>>(emptyList()) }
@@ -1078,40 +948,10 @@ private data class StarryVortex(val cx: Float, val cy: Float, val radius: Float,
 fun StarryGothamScreenBackground(
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "starry_gotham_anim")
-
-    // Continuous slow hypnotic rotation of Van Gogh's starry brushstroke vortexes
-    val vortexSpin by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 40000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "starry_vortex_spin"
-    )
-
-    // Pulsing radiant star glow
-    val starPulse by infiniteTransition.animateFloat(
-        initialValue = 0.75f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "starry_star_pulse"
-    )
-
-    // Bats swooping across the starry sky
-    val batFlightProgress by infiniteTransition.animateFloat(
-        initialValue = -0.1f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 14000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "starry_bat_flight"
-    )
+    // Static values for butter-smooth zero-recomposition performance
+    val vortexSpin = 0f
+    val starPulse = 1.0f
+    val batFlightProgress = 0.5f
 
     // Pre-allocated starry whirlpool centers matching Photo 3's composition
     val vortexes = remember {
@@ -1434,16 +1274,8 @@ private fun DrawScope.drawBatSilhouette(center: Offset, size: Float, path: Path)
 fun StarryGothamDisplayOverlay(
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "starry_disp_anim")
-    val starSpin by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 28000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "starry_disp_spin"
-    )
+    // Static value for butter-smooth zero-recomposition performance
+    val starSpin = 0f
 
     Canvas(modifier = modifier) {
         val width = size.width
@@ -1470,29 +1302,9 @@ private data class CosmicStar(val x: Float, val y: Float, val radius: Float, val
 fun CosmicSingularityScreenBackground(
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "cosmic_anim")
-
-    // Slow relativistic rotation of the gigantic fiery crimson accretion disk
-    val diskRotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 36000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "cosmic_disk_rotation"
-    )
-
-    // Cosmic gravitational breathing / lensing pulse
-    val lensingPulse by infiniteTransition.animateFloat(
-        initialValue = 0.95f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "cosmic_lensing_pulse"
-    )
+    // Static values for butter-smooth zero-recomposition performance
+    val diskRotation = 25f
+    val lensingPulse = 1.0f
 
     // Pre-allocated distant cosmic stars
     val stars = remember {
@@ -1758,16 +1570,8 @@ private fun DrawScope.drawIndigoPlanetRidge(width: Float, height: Float, path: P
 fun CosmicSingularityDisplayOverlay(
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "cosmic_disp_anim")
-    val rot by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 24000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "cosmic_disp_rot"
-    )
+    // Static value for butter-smooth zero-recomposition performance
+    val rot = 20f
 
     Canvas(modifier = modifier) {
         val width = size.width

@@ -50,48 +50,18 @@ fun StudioScreenBackground(
     theme: ThemePalette,
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "studio_theme_anim")
+    // Static values for butter-smooth zero-recomposition performance
+    val flowProgressVal = 0.5f
+    val breathPulseVal = 0.85f
+    val glassSweepVal = 0.5f
     val studioCache = remember { StudioPathCache() }
-
-    // Continuous smooth loop for flowing electrons and travelling wave scans (6s loop)
-    val flowProgress = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 6000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "studio_flow_progress"
-    )
-
-    // Breathing pulse for nodes, indicators, and glow accents (3.2s loop)
-    val breathPulse = infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "studio_breath_pulse"
-    )
-
-    // Specular glass sweep across glossy headers (4.8s loop)
-    val glassSweep = infiniteTransition.animateFloat(
-        initialValue = -0.3f,
-        targetValue = 1.3f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4800, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "studio_glass_sweep"
-    )
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
-        val flow = flowProgress.value
-        val pulse = breathPulse.value
-        val sweep = glassSweep.value
+        val flow = flowProgressVal
+        val pulse = breathPulseVal
+        val sweep = glassSweepVal
 
         when {
             theme.isRetroCircuit -> {

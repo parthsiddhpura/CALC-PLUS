@@ -68,27 +68,9 @@ fun ArcReactorIcon(
     isOvercharging: Boolean = false,
     showOuterTabs: Boolean = true
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "arc_reactor_icon_anim")
-
-    val fluxRotation = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 6500, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "flux_rotation"
-    )
-
-    val corePulse = infiniteTransition.animateFloat(
-        initialValue = 0.94f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "core_pulse"
-    )
+    // Static values for butter-smooth zero-recomposition performance
+    val fluxRotVal = 30f
+    val corePulseVal = 1.0f
 
     val overchargeScale = animateFloatAsState(
         targetValue = if (isOvercharging) 1.25f else 1f,
@@ -100,8 +82,6 @@ fun ArcReactorIcon(
         val diameter = size.minDimension
         val radius = diameter / 2f
         val center = Offset(size.width / 2f, size.height / 2f)
-        val fluxRotVal = fluxRotation.value
-        val corePulseVal = corePulse.value
         val overchargeVal = overchargeScale.value
 
         // 1. Outer Dark Metallic Housing Ring
@@ -302,37 +282,12 @@ fun IronManScreenBackground(
     modifier: Modifier = Modifier,
     suitType: IronManSuitType = IronManSuitType.MARK_85_CLASSIC
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "stark_screen_bg_anim")
-
-    // Subtle holographic scan sweep
-    val scanSweep = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 9500, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "stark_scan_sweep"
-    )
-
-    val ambientGlow = infiniteTransition.animateFloat(
-        initialValue = 0.03f,
-        targetValue = 0.07f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3600, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "ambient_glow"
-    )
-
     val suitColors = remember(suitType) { getSuitColors(suitType) }
 
     Box(modifier = modifier.fillMaxSize()) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
-            val glow = ambientGlow.value
-            val sweep = scanSweep.value
 
             // 1. Pure Pitch Black OLED Base
             drawRect(color = Color(0xFF000000))
@@ -341,7 +296,7 @@ fun IronManScreenBackground(
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        suitColors.arcGlow.copy(alpha = glow),
+                        suitColors.arcGlow.copy(alpha = 0.05f),
                         Color.Transparent
                     ),
                     center = Offset(width / 2f, height * 0.20f),
@@ -349,23 +304,6 @@ fun IronManScreenBackground(
                 ),
                 radius = width * 0.65f,
                 center = Offset(width / 2f, height * 0.20f)
-            )
-
-            // 3. Very subtle laser scanline traversing down the screen
-            val scanY = sweep * height
-            drawLine(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        suitColors.arcGlow.copy(alpha = 0.05f),
-                        suitColors.arcGlow.copy(alpha = 0.16f),
-                        suitColors.arcGlow.copy(alpha = 0.05f),
-                        Color.Transparent
-                    )
-                ),
-                start = Offset(0f, scanY),
-                end = Offset(width, scanY),
-                strokeWidth = 1.0f
             )
         }
     }
@@ -409,73 +347,13 @@ fun IronManDisplayOverlay(
 
     val suitColors = remember(suitType) { getSuitColors(suitType) }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "stark_hud_anim")
-
-    // Slow smooth orbital rotation (12s loop)
-    val rotationFast = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 12000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "rotation_fast"
-    )
-
-    // Counter rotation for dual rings (18s loop)
-    val rotationCounter = infiniteTransition.animateFloat(
-        initialValue = 360f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 18000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "rotation_counter"
-    )
-
-    // Sonar radar sweep (4.2s loop)
-    val radarSweepAngle = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "radar_sweep_angle"
-    )
-
-    // Mathematical wave phase (3.8s loop)
-    val wavePhase = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = (2 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3800, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "wave_phase"
-    )
-
-    // Pulse breathing (2.2s loop)
-    val corePulse = infiniteTransition.animateFloat(
-        initialValue = 0.50f,
-        targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "core_pulse"
-    )
-
-    // Linear traveling particle progress (2.5s loop)
-    val particleProgress = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2500, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "particle_progress"
-    )
+    // Static aesthetic values for butter-smooth zero-recomposition performance
+    val rotationFastVal = 45f
+    val rotationCounterVal = 315f
+    val radarSweepAngleVal = 120f
+    val wavePhaseVal = 1.0f
+    val corePulseVal = 0.85f
+    val particleProgressVal = 0.5f
 
     // Suit-specific quotes
     val suitQuotes = remember(suitType) {
@@ -538,12 +416,12 @@ fun IronManDisplayOverlay(
             val h = size.height
             val primaryGlow = suitColors.arcGlow
             val secondary = suitColors.goldAccent
-            val rotationFast = rotationFast.value
-            val rotationCounter = rotationCounter.value
-            val radarSweepAngle = radarSweepAngle.value
-            val wavePhase = wavePhase.value
-            val corePulse = corePulse.value
-            val particleProgress = particleProgress.value
+            val rotationFast = rotationFastVal
+            val rotationCounter = rotationCounterVal
+            val radarSweepAngle = radarSweepAngleVal
+            val wavePhase = wavePhaseVal
+            val corePulse = corePulseVal
+            val particleProgress = particleProgressVal
 
             when (suitType) {
                 // ==========================================================

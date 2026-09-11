@@ -547,6 +547,30 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         setDisplayNotation(next)
     }
 
+    fun onAnsKey(haptics: HapticFeedback? = null) {
+        soundHapticHelper.playClick(_uiState.value.isSoundEnabled)
+        soundHapticHelper.triggerHaptic(haptics, _uiState.value.isHapticsEnabled)
+
+        _uiState.update { state ->
+            val ansVal = if (state.result != "Error" && state.result.isNotBlank() && state.result != "0") {
+                state.result.replace(",", "").replace(" ", "")
+            } else "0"
+
+            val pos = state.cursorPosition.coerceIn(0, state.expression.length)
+            val newExpr = if (state.lastEvaluated) ansVal else {
+                state.expression.substring(0, pos) + ansVal + state.expression.substring(pos)
+            }
+            val newCursorPos = if (state.lastEvaluated) ansVal.length else pos + ansVal.length
+            val preview = CalculatorEngine.evaluatePreview(newExpr, state.angleMode)
+            state.copy(
+                expression = newExpr,
+                cursorPosition = newCursorPos,
+                previewResult = preview,
+                lastEvaluated = false
+            )
+        }
+    }
+
     fun toggleLivePreview() {
         _uiState.update {
             val nextVal = !it.displayConfig.showLivePreview

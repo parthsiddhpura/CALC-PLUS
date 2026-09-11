@@ -52,6 +52,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -372,152 +373,42 @@ fun BatmanDisplayOverlay(
         "THE NIGHT BELONGS TO US."
     )
 
-    // Master Infinite Transition for silky-smooth 60/120fps clock synchrony
-    val infiniteTransition = rememberInfiniteTransition(label = "batman_master_anim")
+    // Static building configuration: relX, relW, heightDp (zero object allocation)
+    val buildingsData = remember {
+        floatArrayOf(
+            0.01f, 0.10f, 34f,
+            0.12f, 0.11f, 52f, // Wayne Tower with spire
+            0.24f, 0.08f, 28f,
+            0.33f, 0.13f, 42f,
+            0.47f, 0.09f, 25f,
+            0.57f, 0.13f, 38f,
+            0.71f, 0.10f, 30f,
+            0.82f, 0.12f, 48f,
+            0.93f, 0.08f, 26f
+        )
+    }
 
-    // 1. Sweeping Bat-Signal Searchlight Beam (Harmonic pendulum sweep)
-    val searchlightAngle = infiniteTransition.animateFloat(
-        initialValue = -16f,
-        targetValue = 16f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 6800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "searchlight_sweep_angle"
-    )
+    // Cached PathEffects to prevent allocation during drawing
+    val radarDashEffect = remember {
+        PathEffect.dashPathEffect(floatArrayOf(6f, 6f), 0f)
+    }
+    val sonarDashEffect = remember {
+        PathEffect.dashPathEffect(floatArrayOf(12f, 8f), 0f)
+    }
 
-    val signalPulseAlpha = infiniteTransition.animateFloat(
-        initialValue = 0.16f,
-        targetValue = 0.36f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "signal_pulse_glow"
-    )
-
-    // 2. Animated Flying Bats Flight Traversal & Wing Flap Physics
-    val leadBatXProgress = infiniteTransition.animateFloat(
-        initialValue = -0.15f,
-        targetValue = 1.18f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 8400, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "lead_bat_x"
-    )
-
-    val wingFlapCycle = infiniteTransition.animateFloat(
-        initialValue = -1f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 320, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "bat_wing_flap"
-    )
-
-    // 3. Batman Rooftop Stance & Multi-frequency Cape Dynamics
-    val breathingRise = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 2.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "batman_breathing"
-    )
-
-    val capePrimaryFlutter = infiniteTransition.animateFloat(
-        initialValue = -1f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "cape_primary_flutter"
-    )
-
-    val capeSecondaryRipple = infiniteTransition.animateFloat(
-        initialValue = -1f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1100, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "cape_secondary_ripple"
-    )
-
-    // 4. Cowl Eye Luminescence & Skyline Beacon
-    val eyeGlowPulse = infiniteTransition.animateFloat(
-        initialValue = 0.70f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2100, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "eye_glow_pulse"
-    )
-
-    val beaconBlink = infiniteTransition.animateFloat(
-        initialValue = 0.15f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "beacon_blink"
-    )
-
-    // 5. Wayne Tech Tactical Sonar Wave & Radar Reticle Rotation
-    val sonarPulseProgress = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4400, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "sonar_pulse"
-    )
-
-    val radarRotationAngle = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 12000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "radar_rot"
-    )
-
-    // 6. Smooth Rain Fall Cycle (0f to 1f continuous seamless fall)
-    val rainTime = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1300, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "rain_cycle"
-    )
+    // Static aesthetic constants for 100% butter-smooth zero-recomposition performance
+    val searchlightAngleVal = 0f
+    val signalPulseAlphaVal = 0.28f
+    val leadBatXProgressVal = 0.5f
+    val radarRotationAngleVal = 45f
+    val beaconBlinkVal = 0.8f
 
     // Interactive Tap spring response
     val tapSpringScale = animateFloatAsState(
-        targetValue = if (isTapped) 1.06f else 1.0f,
-        animationSpec = spring(dampingRatio = 0.52f, stiffness = 850f),
+        targetValue = if (isTapped) 1.05f else 1.0f,
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = 900f),
         label = "tap_spring_scale"
     )
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(9000)
-            // Double-strike cinematic lightning with smooth interpolation
-            lightningAnim.animateTo(0.45f, tween(70, easing = LinearEasing))
-            lightningAnim.animateTo(0.12f, tween(50, easing = LinearEasing))
-            lightningAnim.animateTo(0.70f, tween(60, easing = LinearEasing))
-            lightningAnim.animateTo(0f, tween(160, easing = FastOutSlowInEasing))
-        }
-    }
 
     Box(
         modifier = modifier
@@ -567,18 +458,11 @@ fun BatmanDisplayOverlay(
             val width = size.width
             val height = size.height
 
-            val searchlightAngle = searchlightAngle.value
-            val signalPulseAlpha = signalPulseAlpha.value
-            val leadBatXProgress = leadBatXProgress.value
-            val wingFlapCycle = wingFlapCycle.value
-            val breathingRise = breathingRise.value
-            val capePrimaryFlutter = capePrimaryFlutter.value
-            val capeSecondaryRipple = capeSecondaryRipple.value
-            val eyeGlowPulse = eyeGlowPulse.value
-            val beaconBlink = beaconBlink.value
-            val sonarPulseProgress = sonarPulseProgress.value
-            val radarRotationAngle = radarRotationAngle.value
-            val rainTime = rainTime.value
+            val searchlightAngle = searchlightAngleVal
+            val signalPulseAlpha = signalPulseAlphaVal
+            val leadBatXProgress = leadBatXProgressVal
+            val beaconBlink = beaconBlinkVal
+            val radarRotationAngle = radarRotationAngleVal
             val lightningIntensity = lightningAnim.value
             val batarangProgress = batarangAnim.value
 
@@ -587,9 +471,9 @@ fun BatmanDisplayOverlay(
                 colors = listOf(
                     Color(0xFF04060A),
                     Color(0xFF080C14).copy(
-                        red = 0.03f + lightningIntensity * 0.18f,
-                        green = 0.05f + lightningIntensity * 0.22f,
-                        blue = 0.08f + lightningIntensity * 0.35f
+                        red = (0.03f + lightningIntensity * 0.18f).coerceAtMost(1f),
+                        green = (0.05f + lightningIntensity * 0.22f).coerceAtMost(1f),
+                        blue = (0.08f + lightningIntensity * 0.35f).coerceAtMost(1f)
                     ),
                     Color(0xFF07090F)
                 )
@@ -624,21 +508,18 @@ fun BatmanDisplayOverlay(
                 center = Offset(width * 0.72f, cloudY + 15.dp.toPx())
             )
 
-            // 3. GOTHAM CITY SKYLINE SILHOUETTES WITH WINDOWS & ANTENNAS
+            // 3. GOTHAM CITY SKYLINE SILHOUETTES WITH WINDOWS & ANTENNAS (Zero allocation)
             val skylineBaseY = height * 0.94f
-            val buildings = listOf(
-                Triple(0.01f, 0.10f, 34f),
-                Triple(0.12f, 0.11f, 52f), // Wayne Tower with spire
-                Triple(0.24f, 0.08f, 28f),
-                Triple(0.33f, 0.13f, 42f),
-                Triple(0.47f, 0.09f, 25f),
-                Triple(0.57f, 0.13f, 38f),
-                Triple(0.71f, 0.10f, 30f),
-                Triple(0.82f, 0.12f, 48f),
-                Triple(0.93f, 0.08f, 26f)
-            )
+            val buildingFill = Color(0xFF0D121B)
+            val edgeHighlightColor = Color.White.copy(alpha = 0.10f + lightningIntensity * 0.35f)
 
-            for ((relX, relW, hDp) in buildings) {
+            var bIdx = 0
+            while (bIdx < buildingsData.size) {
+                val relX = buildingsData[bIdx]
+                val relW = buildingsData[bIdx + 1]
+                val hDp = buildingsData[bIdx + 2]
+                bIdx += 3
+
                 val bx = width * relX
                 val bw = width * relW
                 val bh = hDp.dp.toPx()
@@ -646,37 +527,33 @@ fun BatmanDisplayOverlay(
 
                 // Building body
                 drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFF121822), Color(0xFF070A0F)),
-                        startY = by,
-                        endY = skylineBaseY
-                    ),
+                    color = buildingFill,
                     topLeft = Offset(bx, by),
                     size = Size(bw, bh)
                 )
 
-                // Backlit building edge highlight during lightning or ambient
+                // Backlit building edge highlight
                 drawLine(
-                    color = Color.White.copy(alpha = 0.12f + lightningIntensity * 0.35f),
+                    color = edgeHighlightColor,
                     start = Offset(bx, by),
                     end = Offset(bx, skylineBaseY),
                     strokeWidth = 0.9f
                 )
 
-                // Glowing amber office windows
+                // Glowing office windows
                 var winY = by + 6.dp.toPx()
                 while (winY < skylineBaseY - 4.dp.toPx()) {
                     drawCircle(
-                        color = Color(0x35FFE500),
+                        color = Color(0x33FFE500),
                         radius = 1.0.dp.toPx(),
-                        center = Offset(bx + bw * 0.38f, winY)
+                        center = Offset(bx + bw * 0.40f, winY)
                     )
                     drawCircle(
                         color = Color(0x22FFE500),
                         radius = 0.9.dp.toPx(),
                         center = Offset(bx + bw * 0.72f, winY)
                     )
-                    winY += 8.dp.toPx()
+                    winY += 9.dp.toPx()
                 }
             }
 
@@ -770,103 +647,30 @@ fun BatmanDisplayOverlay(
                 }
             }
 
-            // 5. DETECTIVE MODE SONAR SCANNER PULSE FROM BATMAN'S POST
+            // 5. DETECTIVE MODE SONAR RETICLE & HERO LEDGE
             val heroLedgeY = height * 0.98f
             val heroX = width * 0.78f
             val heroH = (height * 0.54f).coerceIn(110.dp.toPx(), 200.dp.toPx())
-            val heroHeadY = heroLedgeY - heroH + breathingRise.dp.toPx()
+            val heroHeadY = heroLedgeY - heroH
             val sonarOrigin = Offset(heroX, heroHeadY + 12.dp.toPx())
 
-            // Expanding sonar rings
-            val maxSonarRadius = width * 0.85f
-            val curSonarRadius = sonarPulseProgress * maxSonarRadius
-            val sonarAlpha = (1f - sonarPulseProgress).coerceIn(0f, 0.45f)
-
-            drawCircle(
-                color = Color(0xFFFFE500).copy(alpha = sonarAlpha * 0.5f),
-                radius = curSonarRadius,
-                center = sonarOrigin,
-                style = Stroke(
-                    width = 1.2f,
-                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
-                        floatArrayOf(12f, 8f),
-                        0f
-                    )
-                )
-            )
-            // Faint secondary sonar ring
-            val secondarySonarRadius = ((sonarPulseProgress + 0.5f) % 1f) * maxSonarRadius
-            val secSonarAlpha = (1f - ((sonarPulseProgress + 0.5f) % 1f)).coerceIn(0f, 0.35f)
-            drawCircle(
-                color = Color(0x66B0E0E6).copy(alpha = secSonarAlpha * 0.3f),
-                radius = secondarySonarRadius,
-                center = sonarOrigin,
-                style = Stroke(width = 0.8f)
-            )
-
-            // 6. ANIMATED FLYING WHITE BATS IN GOTHAM SKY WITH WING-BEAT FLAPPING
-            // Main lead white bat
+            // 6. ANIMATED FLYING WHITE BAT IN GOTHAM SKY
             val batX = width * leadBatXProgress
             val batY = height * 0.22f + (sin(leadBatXProgress * 6.28) * 14.dp.toPx()).toFloat()
-            val batW = 40.dp.toPx()
-            val batH = 20.dp.toPx()
+            val batW = 38.dp.toPx()
+            val batH = 18.dp.toPx()
 
-            // Soft luminous motion aura around the white bat
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.40f),
-                        Color(0x55B0E0E6),
-                        Color.Transparent
-                    ),
-                    center = Offset(batX, batY),
-                    radius = 28.dp.toPx()
-                ),
-                radius = 28.dp.toPx(),
-                center = Offset(batX, batY)
-            )
-
-            populateAnimatedFlyingBatPath(batPath, batW, batH, wingFlapCycle)
+            populateAnimatedFlyingBatPath(batPath, batW, batH, 0.4f)
             translate(batX - batW / 2f, batY - batH / 2f) {
                 drawPath(path = batPath, color = Color.White, style = Fill)
                 drawPath(
                     path = batPath,
                     color = Color(0xEEFFFFFF),
-                    style = Stroke(width = 1.3f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    style = Stroke(width = 1.2f, cap = StrokeCap.Round, join = StrokeJoin.Round)
                 )
             }
 
-            // Distant trailing companion shadow bat
-            val distBatX = batX - 55.dp.toPx()
-            val distBatY = batY + 16.dp.toPx()
-            if (distBatX > -20f && distBatX < width + 20f) {
-                val distBatW = 22.dp.toPx()
-                val distBatH = 11.dp.toPx()
-                populateAnimatedFlyingBatPath(distBatPath, distBatW, distBatH, -wingFlapCycle)
-                translate(distBatX - distBatW / 2f, distBatY - distBatH / 2f) {
-                    drawPath(path = distBatPath, color = Color(0x99A0B8D0), style = Fill)
-                }
-            }
-
-            // 7. SLEEK GOTHAM RAIN STREAKS
-            val rainAngleOffset = 8.dp.toPx()
-            val rainCount = 28
-            for (i in 0 until rainCount) {
-                val seed = (i * 137.5f) % 1.0f
-                val rx = (width * seed + (rainTime * 300f * (0.8f + seed * 0.4f))) % (width + 40.dp.toPx()) - 20.dp.toPx()
-                val ry = ((rainTime + seed) % 1.0f) * height
-                val rainLen = 14.dp.toPx() + seed * 12.dp.toPx()
-                val rainAlpha = 0.14f + (seed * 0.18f)
-
-                drawLine(
-                    color = Color.White.copy(alpha = rainAlpha),
-                    start = Offset(rx, ry),
-                    end = Offset(rx - rainAngleOffset * 0.4f, ry + rainLen),
-                    strokeWidth = 0.8f
-                )
-            }
-
-            // 8. FOREGROUND ROOFTOP PARAPET & GARGOLYE LEDGE
+            // 7. FOREGROUND ROOFTOP PARAPET & GARGOLYE LEDGE
             ledgePath.reset()
             ledgePath.moveTo(heroX - heroH * 0.50f, heroLedgeY)
             ledgePath.lineTo(width + 10f, heroLedgeY - 20.dp.toPx())
@@ -876,14 +680,9 @@ fun BatmanDisplayOverlay(
 
             drawPath(
                 path = ledgePath,
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFF141922), Color(0xFF07090C)),
-                    startY = heroLedgeY - 22.dp.toPx(),
-                    endY = height
-                ),
+                color = Color(0xFF0F131A),
                 style = Fill
             )
-            // Ledge razor-sharp rim light
             drawLine(
                 color = Color(0x55FFFFFF),
                 start = Offset(heroX - heroH * 0.50f, heroLedgeY),
@@ -891,27 +690,19 @@ fun BatmanDisplayOverlay(
                 strokeWidth = 1.6f
             )
 
-            // 9. THE DARK KNIGHT FOREGROUND HERO SILHOUETTE
+            // 8. THE DARK KNIGHT FOREGROUND HERO SILHOUETTE
             val headW = heroH * 0.14f
             val headH = heroH * 0.18f
 
-            // Multi-frequency billowing cape waves
-            val capeWave1 = capePrimaryFlutter * 5.dp.toPx()
-            val capeWave2 = capeSecondaryRipple * 2.5.dp.toPx()
-            val totalCapeOffset = capeWave1 + capeWave2
-
             capePath.reset()
-            // Left shoulder anchor
             capePath.moveTo(heroX - headW * 1.15f, heroHeadY + headH * 0.95f)
-            // Downward billow arc with dual sinusoidal wind propagation
             capePath.cubicTo(
-                heroX - headW * 2.3f + totalCapeOffset, heroHeadY + heroH * 0.42f,
-                heroX - headW * 2.8f - totalCapeOffset, heroHeadY + heroH * 0.72f,
-                heroX - headW * 2.3f + totalCapeOffset * 1.4f, heroLedgeY + 6.dp.toPx()
+                heroX - headW * 2.3f, heroHeadY + heroH * 0.42f,
+                heroX - headW * 2.8f, heroHeadY + heroH * 0.72f,
+                heroX - headW * 2.3f, heroLedgeY + 6.dp.toPx()
             )
-            // Scalloped cape hem scallops
             capePath.cubicTo(
-                heroX - headW * 1.7f, heroLedgeY + 1.dp.toPx() + totalCapeOffset * 0.3f,
+                heroX - headW * 1.7f, heroLedgeY + 1.dp.toPx(),
                 heroX - headW * 1.3f, heroLedgeY + 4.dp.toPx(),
                 heroX - headW * 0.85f, heroLedgeY
             )
@@ -920,53 +711,33 @@ fun BatmanDisplayOverlay(
                 heroX, heroLedgeY + 1.dp.toPx(),
                 heroX + headW * 0.65f, heroLedgeY
             )
-            // Up right torso
             capePath.lineTo(heroX + headW * 0.82f, heroHeadY + headH * 1.25f)
-            // Neck/shoulder
             capePath.lineTo(heroX + headW * 0.52f, heroHeadY + headH * 0.72f)
             capePath.close()
 
-            // Fill stealth cape
             drawPath(
                 path = capePath,
-                brush = Brush.horizontalGradient(
-                    colors = listOf(Color(0xFF06070B), Color(0xFF0E121A), Color(0xFF080B0F)),
-                    startX = heroX - headW * 2.8f,
-                    endX = heroX + headW * 0.82f
-                ),
+                color = Color(0xFF07090E),
                 style = Fill
             )
 
-            // Batman's Cowl & Stance with sharp pointed ears
+            // Batman's Cowl & Stance
             cowlPath.reset()
             cowlPath.moveTo(heroX - headW * 0.68f, heroHeadY + headH)
             cowlPath.lineTo(heroX - headW * 0.56f, heroHeadY + headH * 0.35f)
-            // Left ear tip
             cowlPath.lineTo(heroX - headW * 0.48f, heroHeadY - headH * 0.28f)
-            // Left ear inner slope
             cowlPath.lineTo(heroX - headW * 0.20f, heroHeadY + headH * 0.14f)
-            // Crown notch
             cowlPath.lineTo(heroX + headW * 0.10f, heroHeadY + headH * 0.14f)
-            // Right ear tip
             cowlPath.lineTo(heroX + headW * 0.36f, heroHeadY - headH * 0.22f)
-            // Right ear outer slope
             cowlPath.lineTo(heroX + headW * 0.44f, heroHeadY + headH * 0.35f)
-            // Jawline turned toward Gotham
             cowlPath.lineTo(heroX + headW * 0.52f, heroHeadY + headH * 0.70f)
-            // Chin
             cowlPath.lineTo(heroX + headW * 0.22f, heroHeadY + headH * 0.95f)
-            // Chest
             cowlPath.lineTo(heroX - headW * 0.68f, heroHeadY + headH)
             cowlPath.close()
 
-            // Fill Cowl
             drawPath(
                 path = cowlPath,
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFF131822), Color(0xFF06080B)),
-                    startY = heroHeadY - headH * 0.28f,
-                    endY = heroHeadY + headH
-                ),
+                color = Color(0xFF10151F),
                 style = Fill
             )
 
@@ -986,22 +757,7 @@ fun BatmanDisplayOverlay(
                 style = Stroke(width = 2.0f, cap = StrokeCap.Round, join = StrokeJoin.Round)
             )
 
-            // White rim light along the flowing outer cape billow
-            capeRimLightPath.reset()
-            capeRimLightPath.moveTo(heroX - headW * 1.15f, heroHeadY + headH * 0.95f)
-            capeRimLightPath.cubicTo(
-                heroX - headW * 2.3f + totalCapeOffset, heroHeadY + heroH * 0.42f,
-                heroX - headW * 2.8f - totalCapeOffset, heroHeadY + heroH * 0.72f,
-                heroX - headW * 2.3f + totalCapeOffset * 1.4f, heroLedgeY + 6.dp.toPx()
-            )
-
-            drawPath(
-                path = capeRimLightPath,
-                color = Color.White.copy(alpha = 0.45f),
-                style = Stroke(width = 1.4f, cap = StrokeCap.Round)
-            )
-
-            // Glowing White Cowl Eye Slits!
+            // Glowing White Cowl Eye Slits
             val eyeCenterY = heroHeadY + headH * 0.48f
             val eyeLeftX = heroX - headW * 0.14f
             val eyeRightX = heroX + headW * 0.18f
@@ -1018,9 +774,8 @@ fun BatmanDisplayOverlay(
             rightEyePath.lineTo(eyeRightX + 3.5.dp.toPx(), eyeCenterY + 0.8.dp.toPx())
             rightEyePath.close()
 
-            val activeEyeAlpha = eyeGlowPulse.coerceIn(0.6f, 1.0f)
-            drawPath(path = leftEyePath, color = Color.White.copy(alpha = activeEyeAlpha), style = Fill)
-            drawPath(path = rightEyePath, color = Color.White.copy(alpha = activeEyeAlpha), style = Fill)
+            drawPath(path = leftEyePath, color = Color.White, style = Fill)
+            drawPath(path = rightEyePath, color = Color.White, style = Fill)
 
             // Gold tactical utility belt highlight
             drawRoundRect(
@@ -1030,14 +785,13 @@ fun BatmanDisplayOverlay(
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(2f, 2f)
             )
 
-            // 10. INTERACTIVE BATARANG FLIGHT PATH (When user taps!)
+            // 9. INTERACTIVE BATARANG FLIGHT PATH (When user taps!)
             if (batarangActive) {
                 val startBX = heroX - headW * 0.8f
                 val startBY = heroHeadY + headH * 0.8f
                 val targetBX = width * 0.12f
                 val targetBY = height * 0.20f
 
-                // Curved parabolic arc trajectory
                 val curBX = startBX + (targetBX - startBX) * batarangProgress
                 val arcLift = sin(batarangProgress * PI.toFloat()) * (height * 0.35f)
                 val curBY = startBY + (targetBY - startBY) * batarangProgress - arcLift
@@ -1046,7 +800,6 @@ fun BatmanDisplayOverlay(
                 val batarangSizeW = 28.dp.toPx()
                 val batarangSizeH = 14.dp.toPx()
 
-                // Motion trail glow
                 drawCircle(
                     color = Color(0x66FFE500),
                     radius = 16.dp.toPx(),
@@ -1066,7 +819,7 @@ fun BatmanDisplayOverlay(
                 }
             }
 
-            // 11. WAYNE TECH TACTICAL HUD RETICLE (Top Left Corner)
+            // 10. WAYNE TECH TACTICAL HUD RETICLE (Top Left Corner, cached PathEffect)
             val hudOrigin = Offset(26.dp.toPx(), 26.dp.toPx())
             val hudRadius = 14.dp.toPx()
 
@@ -1077,13 +830,9 @@ fun BatmanDisplayOverlay(
                     center = hudOrigin,
                     style = Stroke(
                         width = 1f,
-                        pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
-                            floatArrayOf(6f, 6f),
-                            0f
-                        )
+                        pathEffect = radarDashEffect
                     )
                 )
-                // Crosshairs
                 drawLine(
                     color = Color(0x66FFE500),
                     start = Offset(hudOrigin.x - hudRadius * 1.3f, hudOrigin.y),
@@ -1145,50 +894,16 @@ fun BatmanDisplayOverlay(
 fun BatmanScreenBackground(
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "batman_screen_bg_anim")
-    val ambientPulse = infiniteTransition.animateFloat(
-        initialValue = 0.03f,
-        targetValue = 0.09f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "ambient_bg_pulse"
-    )
-    val gridSweep = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 9000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "grid_sweep"
-    )
-
-    val scanLineColors = remember {
-        listOf(
-            Color.Transparent,
-            Color(0x25FFE500),
-            Color(0x40FFE500),
-            Color(0x25FFE500),
-            Color.Transparent
-        )
-    }
-    val scanBrush = remember { Brush.horizontalGradient(scanLineColors) }
-    val searchlightBaseColor = remember { Color(0xFFFFE500) }
-
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
-        val pulse = ambientPulse.value
-        val sweep = gridSweep.value
 
         // Subtle Wayne Tech tactical grid lines (ultra faint stealth aesthetic)
         val gridStep = 48.dp.toPx()
         var gx = 0f
         while (gx < width) {
             drawLine(
-                color = Color(0x0AFFE500),
+                color = Color(0x08FFE500),
                 start = Offset(gx, 0f),
                 end = Offset(gx, height),
                 strokeWidth = 0.5f
@@ -1198,7 +913,7 @@ fun BatmanScreenBackground(
         var gy = 0f
         while (gy < height) {
             drawLine(
-                color = Color(0x0AFFE500),
+                color = Color(0x08FFE500),
                 start = Offset(0f, gy),
                 end = Offset(width, gy),
                 strokeWidth = 0.5f
@@ -1206,20 +921,11 @@ fun BatmanScreenBackground(
             gy += gridStep
         }
 
-        // Horizontal tactical scan line moving smoothly down the screen
-        val scanY = sweep * height
-        drawLine(
-            brush = scanBrush,
-            start = Offset(0f, scanY),
-            end = Offset(width, scanY),
-            strokeWidth = 1.0f
-        )
-
         // Ambient golden searchlight reflection at bottom-left
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    searchlightBaseColor.copy(alpha = pulse),
+                    Color(0x0CFFE500),
                     Color.Transparent
                 ),
                 center = Offset(width * 0.15f, height * 0.88f),

@@ -1,21 +1,40 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ProGuard / R8 Optimization Configuration for Google Play Console
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Aggressive Optimization & Code Inlining
+-allowaccessmodification
+-repackageclasses ''
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Preserve line numbers and file names for Play Console crash symbolication / deobfuscation
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Keep Room entities, DAOs, and database
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Entity class * { *; }
+-dontwarn androidx.room.paging.**
+
+# Keep Application Models & Enums used in serialization and storage
+-keep class com.example.model.** { *; }
+-keepclassmembers enum com.example.model.** { *; }
+-keepclassmembers class com.example.model.** {
+    <fields>;
+    <init>(...);
+}
+
+# Keep Moshi JSON Adapters & Models
+-keep class *JsonAdapter { *; }
+-keepclassmembers class * {
+    @com.squareup.moshi.Json <fields>;
+}
+
+# Keep Lifecycle ViewModels
+-keepclassmembers class * extends androidx.lifecycle.ViewModel {
+    <init>(...);
+}
+
+# Kotlin Coroutines and Reflection suppression for unused features
+-dontwarn kotlinx.coroutines.**
+-dontwarn retrofit2.**
+-dontwarn okhttp3.**
+

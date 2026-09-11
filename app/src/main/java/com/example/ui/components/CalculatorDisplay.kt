@@ -438,8 +438,8 @@ fun CalculatorDisplay(
                             }
                         }
 
-                        // Angle Mode Badge (DEG / RAD) - Tap to toggle!
-                        if (mode == CalculatorMode.STANDARD || mode == CalculatorMode.SCIENTIFIC) {
+                        // Angle Mode Badge (DEG / RAD) - Tap to toggle in Scientific mode
+                        if (mode == CalculatorMode.SCIENTIFIC) {
                             Surface(
                                 color = theme.secondaryAccent.copy(alpha = 0.22f),
                                 shape = RoundedCornerShape(6.dp),
