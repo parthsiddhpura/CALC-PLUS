@@ -153,31 +153,47 @@ fun CalculatorScreen(
                 .fillMaxSize()
                 .background(theme.backgroundBrush)
         ) {
-            if (theme.hasBatSignal) {
-                BatmanScreenBackground(modifier = Modifier.fillMaxSize())
-            } else if (theme.hasArcReactor) {
-                IronManScreenBackground(
-                    modifier = Modifier.fillMaxSize(),
-                    suitType = theme.ironManSuit ?: com.example.model.IronManSuitType.MARK_85_CLASSIC
-                )
-            } else if (theme.isOrtylMinimal) {
-                OrtylScreenBackground(modifier = Modifier.fillMaxSize())
-            } else if (theme.isOledStealthVoid) {
-                OledStealthVoidScreenBackground(modifier = Modifier.fillMaxSize())
-            } else if (theme.isStarryGotham) {
-                StarryGothamScreenBackground(modifier = Modifier.fillMaxSize())
-            } else if (theme.isCosmicSingularity) {
-                CosmicSingularityScreenBackground(modifier = Modifier.fillMaxSize())
-            } else if (theme.isGirlMath || theme.isNekoMochi || theme.isY2kGlossy || theme.isPixelArt) {
-                KawaiiScreenBackground(
-                    theme = theme,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else if (theme.isRetroCircuit || theme.isNothingDossier || theme.isBauhausDossier || theme.isTerracottaStudio) {
-                StudioScreenBackground(
-                    theme = theme,
-                    modifier = Modifier.fillMaxSize()
-                )
+            AnimatedContent(
+                targetState = theme,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing)) togetherWith
+                            fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing))
+                },
+                label = "theme_bg_transition",
+                modifier = Modifier.fillMaxSize()
+            ) { currentTheme ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(currentTheme.backgroundBrush)
+                ) {
+                    if (currentTheme.hasBatSignal) {
+                        BatmanScreenBackground(modifier = Modifier.fillMaxSize())
+                    } else if (currentTheme.hasArcReactor) {
+                        IronManScreenBackground(
+                            modifier = Modifier.fillMaxSize(),
+                            suitType = currentTheme.ironManSuit ?: com.example.model.IronManSuitType.MARK_85_CLASSIC
+                        )
+                    } else if (currentTheme.isOrtylMinimal) {
+                        OrtylScreenBackground(modifier = Modifier.fillMaxSize())
+                    } else if (currentTheme.isOledStealthVoid) {
+                        OledStealthVoidScreenBackground(modifier = Modifier.fillMaxSize())
+                    } else if (currentTheme.isStarryGotham) {
+                        StarryGothamScreenBackground(modifier = Modifier.fillMaxSize())
+                    } else if (currentTheme.isCosmicSingularity) {
+                        CosmicSingularityScreenBackground(modifier = Modifier.fillMaxSize())
+                    } else if (currentTheme.isGirlMath || currentTheme.isNekoMochi || currentTheme.isY2kGlossy || currentTheme.isPixelArt) {
+                        KawaiiScreenBackground(
+                            theme = currentTheme,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else if (currentTheme.isRetroCircuit || currentTheme.isNothingDossier || currentTheme.isBauhausDossier || currentTheme.isTerracottaStudio) {
+                        StudioScreenBackground(
+                            theme = currentTheme,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
             }
 
             val configuration = LocalConfiguration.current

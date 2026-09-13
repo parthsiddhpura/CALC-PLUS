@@ -59,20 +59,52 @@ private data class OrtylDustMote(
 )
 
 private data class OrtylTapShockwave(
+    val id: Long,
     val center: Offset,
-    val radius: Float,
-    val alpha: Float
+    val anim: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>
 )
 
 @Composable
 fun OrtylScreenBackground(
     modifier: Modifier = Modifier
 ) {
-    // Static values for butter-smooth zero-recomposition performance
-    val caliperProgress = 0.5f
-    val dialRotation = 30f
-    val energyPulse = 0.5f
-    val amberGlow = 0.75f
+    val infiniteTransition = rememberInfiniteTransition(label = "ortyl_bg_anim")
+    val caliperProgressAnim = infiniteTransition.animateFloat(
+        initialValue = 0.05f,
+        targetValue = 0.95f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 6000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "caliper_progress"
+    )
+    val dialRotationAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 24000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "dial_rotation"
+    )
+    val energyPulseAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "energy_pulse"
+    )
+    val amberGlowAnim = infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "amber_glow"
+    )
 
     // Suspended cleanroom amber micro-motes
     val dustMotes = remember {
@@ -100,19 +132,19 @@ fun OrtylScreenBackground(
             .fillMaxSize()
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
+                    val anim = Animatable(0f)
+                    val shockwave = OrtylTapShockwave(
+                        id = System.nanoTime(),
+                        center = offset,
+                        anim = anim
+                    )
+                    tapShockwaves = (tapShockwaves + shockwave).takeLast(4)
                     scope.launch {
-                        val steps = 30
-                        for (step in 1..steps) {
-                            val progress = step.toFloat() / steps
-                            val currentShockwave = OrtylTapShockwave(
-                                center = offset,
-                                radius = progress * 460f,
-                                alpha = (1f - progress) * 0.55f
-                            )
-                            tapShockwaves = listOf(currentShockwave)
-                            delay(16)
-                        }
-                        tapShockwaves = emptyList()
+                        anim.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
+                        )
+                        tapShockwaves = tapShockwaves.filter { it.id != shockwave.id }
                     }
                 }
             }
@@ -120,6 +152,10 @@ fun OrtylScreenBackground(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
+            val caliperProgress = caliperProgressAnim.value
+            val dialRotation = dialRotationAnim.value
+            val energyPulse = energyPulseAnim.value
+            val amberGlow = amberGlowAnim.value
 
             // 1. Deep Matte Charcoal Ceramic Surface (Braun / Dieter Rams aesthetic)
             drawRect(
@@ -315,29 +351,31 @@ fun OrtylScreenBackground(
 
             // 7. Interactive Multi-Ring Caliper Shockwaves on User Tap
             tapShockwaves.forEach { sw ->
-                if (sw.alpha > 0.01f) {
+                val p = sw.anim.value
+                val alpha = (1f - p) * 0.55f
+                val radius = p * 460f
+                if (alpha > 0.01f) {
                     // Outer expanding circular acoustic wave
                     drawCircle(
-                        color = Color(0xFFFFB703).copy(alpha = sw.alpha),
+                        color = Color(0xFFFFB703).copy(alpha = alpha),
                         center = sw.center,
-                        radius = sw.radius,
+                        radius = radius,
                         style = Stroke(width = 1.8.dp.toPx())
                     )
                     // Inner precision calibration reticle
                     drawCircle(
-                        color = Color(0xFFFFE082).copy(alpha = sw.alpha * 0.7f),
+                        color = Color(0xFFFFE082).copy(alpha = alpha * 0.7f),
                         center = sw.center,
-                        radius = sw.radius * 0.65f,
+                        radius = radius * 0.65f,
                         style = Stroke(width = 1.2.dp.toPx(), cap = StrokeCap.Round)
                     )
                     // 4 calibration ticks extending from outer ring
                     val tickLen = 12.dp.toPx()
-                    val r = sw.radius
-                    val tCol = Color(0xFFFFB703).copy(alpha = sw.alpha)
-                    drawLine(tCol, Offset(sw.center.x - r - tickLen, sw.center.y), Offset(sw.center.x - r, sw.center.y), strokeWidth = 1.5f)
-                    drawLine(tCol, Offset(sw.center.x + r, sw.center.y), Offset(sw.center.x + r + tickLen, sw.center.y), strokeWidth = 1.5f)
-                    drawLine(tCol, Offset(sw.center.x, sw.center.y - r - tickLen), Offset(sw.center.x, sw.center.y - r), strokeWidth = 1.5f)
-                    drawLine(tCol, Offset(sw.center.x, sw.center.y + r), Offset(sw.center.x, sw.center.y + r + tickLen), strokeWidth = 1.5f)
+                    val tCol = Color(0xFFFFB703).copy(alpha = alpha)
+                    drawLine(tCol, Offset(sw.center.x - radius - tickLen, sw.center.y), Offset(sw.center.x - radius, sw.center.y), strokeWidth = 1.5f)
+                    drawLine(tCol, Offset(sw.center.x + radius, sw.center.y), Offset(sw.center.x + radius + tickLen, sw.center.y), strokeWidth = 1.5f)
+                    drawLine(tCol, Offset(sw.center.x, sw.center.y - radius - tickLen), Offset(sw.center.x, sw.center.y - radius), strokeWidth = 1.5f)
+                    drawLine(tCol, Offset(sw.center.x, sw.center.y + radius), Offset(sw.center.x, sw.center.y + radius + tickLen), strokeWidth = 1.5f)
                 }
             }
         }
@@ -348,15 +386,33 @@ fun OrtylScreenBackground(
 fun OrtylDisplayOverlay(
     modifier: Modifier = Modifier
 ) {
-    // Static values for butter-smooth zero-recomposition performance
-    val wavePhase = 1.0f
-    val beaconPulse = 0.8f
+    val infiniteTransition = rememberInfiniteTransition(label = "ortyl_display_anim")
+    val wavePhaseAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "wave_phase"
+    )
+    val beaconPulseAnim = infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "beacon_pulse"
+    )
 
     val wavePath = remember { Path() }
 
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
+        val wavePhase = wavePhaseAnim.value
+        val beaconPulse = beaconPulseAnim.value
 
         // Subtle matte inner display border
         drawRoundRect(
@@ -449,11 +505,43 @@ private data class OledScreenTapEffect(
 fun OledStealthVoidScreenBackground(
     modifier: Modifier = Modifier
 ) {
-    // Static values for butter-smooth zero-recomposition performance
-    val titaniumSweepProgress = 0.5f
-    val horizonBreath = 1.0f
-    val reticleRotation = 45f
-    val starTwinkle = 0.7f
+    val infiniteTransition = rememberInfiniteTransition(label = "oled_stealth_bg_anim")
+    val titaniumSweepAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 7000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "titanium_sweep"
+    )
+    val horizonBreathAnim = infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "horizon_breath"
+    )
+    val reticleRotationAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 30000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "reticle_rot"
+    )
+    val starTwinkleAnim = infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "star_twinkle"
+    )
 
     // Celestial silver micro-stars pre-allocated
     val silverStars = remember {
@@ -505,6 +593,10 @@ fun OledStealthVoidScreenBackground(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
+            val titaniumSweepProgress = titaniumSweepAnim.value
+            val horizonBreath = horizonBreathAnim.value
+            val reticleRotation = reticleRotationAnim.value
+            val starTwinkle = starTwinkleAnim.value
 
             // 1. PURE TRUE OLED BLACK CANVAS (0-Lux Pixel Diodes Completely Shut Off)
             drawRect(color = Color(0xFF000000))
@@ -691,10 +783,34 @@ fun OledStealthVoidScreenBackground(
 fun OledStealthVoidDisplayOverlay(
     modifier: Modifier = Modifier
 ) {
-    // Static values for butter-smooth zero-recomposition performance
-    val beaconGlow = 0.85f
-    val wavePhase = 1.0f
-    val waveAmpFactor = 1.0f
+    val infiniteTransition = rememberInfiniteTransition(label = "oled_display_anim")
+    val beaconGlowAnim = infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "beacon_glow"
+    )
+    val wavePhaseAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "wave_phase"
+    )
+    val waveAmpFactorAnim = infiniteTransition.animateFloat(
+        initialValue = 0.7f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "wave_amp"
+    )
 
     // Interactive Tap Ripples in the Display - Smooth 60fps Animatable
     var displayTaps by remember { mutableStateOf<List<OledDisplayTapEffect>>(emptyList()) }
@@ -736,6 +852,9 @@ fun OledStealthVoidDisplayOverlay(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
+            val beaconGlow = beaconGlowAnim.value
+            val wavePhase = wavePhaseAnim.value
+            val waveAmpFactor = waveAmpFactorAnim.value
 
             // 1. Subtle Technical Dot-Matrix Display Grid (18dp spacing)
             val dotSpacing = 18.dp.toPx()
@@ -944,14 +1063,44 @@ fun OledStealthVoidDisplayOverlay(
 
 private data class StarryVortex(val cx: Float, val cy: Float, val radius: Float, val speedFactor: Float)
 
+private data class StarryGothamTapBurst(
+    val id: Long,
+    val center: Offset,
+    val anim: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>
+)
+
 @Composable
 fun StarryGothamScreenBackground(
     modifier: Modifier = Modifier
 ) {
-    // Static values for butter-smooth zero-recomposition performance
-    val vortexSpin = 0f
-    val starPulse = 1.0f
-    val batFlightProgress = 0.5f
+    val infiniteTransition = rememberInfiniteTransition(label = "starry_gotham_bg_anim")
+    val vortexSpinAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 18000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "vortex_spin"
+    )
+    val starPulseAnim = infiniteTransition.animateFloat(
+        initialValue = 0.7f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "star_pulse"
+    )
+    val batFlightProgressAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 8000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "bat_flight"
+    )
 
     // Pre-allocated starry whirlpool centers matching Photo 3's composition
     val vortexes = remember {
@@ -965,9 +1114,7 @@ fun StarryGothamScreenBackground(
     }
 
     // Tap starry burst
-    var tapBurstRadius by remember { mutableFloatStateOf(0f) }
-    var tapBurstAlpha by remember { mutableFloatStateOf(0f) }
-    var tapBurstCenter by remember { mutableStateOf(Offset.Zero) }
+    var tapBursts by remember { mutableStateOf<List<StarryGothamTapBurst>>(emptyList()) }
     val scope = rememberCoroutineScope()
     val vgCache = remember { VanGoghPathCache() }
 
@@ -976,17 +1123,19 @@ fun StarryGothamScreenBackground(
             .fillMaxSize()
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
-                    tapBurstCenter = offset
+                    val anim = Animatable(0f)
+                    val burst = StarryGothamTapBurst(
+                        id = System.nanoTime(),
+                        center = offset,
+                        anim = anim
+                    )
+                    tapBursts = (tapBursts + burst).takeLast(4)
                     scope.launch {
-                        tapBurstRadius = 0f
-                        tapBurstAlpha = 0.6f
-                        val steps = 28
-                        for (i in 1..steps) {
-                            tapBurstRadius = (i.toFloat() / steps) * 460f
-                            tapBurstAlpha = 0.6f * (1f - (i.toFloat() / steps))
-                            delay(16)
-                        }
-                        tapBurstAlpha = 0f
+                        anim.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
+                        )
+                        tapBursts = tapBursts.filter { it.id != burst.id }
                     }
                 }
             }
@@ -994,6 +1143,9 @@ fun StarryGothamScreenBackground(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
+            val vortexSpin = vortexSpinAnim.value
+            val starPulse = starPulseAnim.value
+            val batFlightProgress = batFlightProgressAnim.value
 
             // 1. Deep Midnight Blue Impressionist Canvas Gradient
             drawRect(
@@ -1068,19 +1220,24 @@ fun StarryGothamScreenBackground(
             drawBatSilhouette(center = Offset(batX - 45f, batY + 25f), size = 12.dp.toPx(), path = vgCache.batPath)
 
             // 7. Interactive Starry Tap Burst
-            if (tapBurstAlpha > 0.01f) {
-                drawCircle(
-                    color = Color(0xFFFFD166).copy(alpha = tapBurstAlpha),
-                    center = tapBurstCenter,
-                    radius = tapBurstRadius,
-                    style = Stroke(width = 2.5.dp.toPx())
-                )
-                drawCircle(
-                    color = Color(0xFF64B5F6).copy(alpha = tapBurstAlpha * 0.65f),
-                    center = tapBurstCenter,
-                    radius = tapBurstRadius * 0.7f,
-                    style = Stroke(width = 1.5.dp.toPx())
-                )
+            tapBursts.forEach { burst ->
+                val p = burst.anim.value
+                val alpha = (1f - p) * 0.6f
+                val radius = p * 460f
+                if (alpha > 0.01f) {
+                    drawCircle(
+                        color = Color(0xFFFFD166).copy(alpha = alpha),
+                        center = burst.center,
+                        radius = radius,
+                        style = Stroke(width = 2.5.dp.toPx())
+                    )
+                    drawCircle(
+                        color = Color(0xFF64B5F6).copy(alpha = alpha * 0.65f),
+                        center = burst.center,
+                        radius = radius * 0.7f,
+                        style = Stroke(width = 1.5.dp.toPx())
+                    )
+                }
             }
         }
     }
@@ -1274,12 +1431,31 @@ private fun DrawScope.drawBatSilhouette(center: Offset, size: Float, path: Path)
 fun StarryGothamDisplayOverlay(
     modifier: Modifier = Modifier
 ) {
-    // Static value for butter-smooth zero-recomposition performance
-    val starSpin = 0f
+    val infiniteTransition = rememberInfiniteTransition(label = "starry_gotham_display_anim")
+    val starSpinAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 15000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "star_spin"
+    )
+    val starPulseAnim = infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "star_pulse"
+    )
 
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
+        val starSpin = starSpinAnim.value
+        val starPulse = starPulseAnim.value
 
         // Radiant Van Gogh starlight whirlpool in top-left corner of display
         val starCenter = Offset(36.dp.toPx(), 28.dp.toPx())
@@ -1287,7 +1463,7 @@ fun StarryGothamDisplayOverlay(
             center = starCenter,
             baseRadius = 36.dp.toPx(),
             angle = starSpin,
-            pulse = 1.0f
+            pulse = starPulse
         )
     }
 }
@@ -1298,13 +1474,35 @@ fun StarryGothamDisplayOverlay(
 
 private data class CosmicStar(val x: Float, val y: Float, val radius: Float, val baseAlpha: Float)
 
+private data class CosmicTapLensing(
+    val id: Long,
+    val center: Offset,
+    val anim: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>
+)
+
 @Composable
 fun CosmicSingularityScreenBackground(
     modifier: Modifier = Modifier
 ) {
-    // Static values for butter-smooth zero-recomposition performance
-    val diskRotation = 25f
-    val lensingPulse = 1.0f
+    val infiniteTransition = rememberInfiniteTransition(label = "cosmic_bg_anim")
+    val diskRotationAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 20000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "disk_rotation"
+    )
+    val lensingPulseAnim = infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "lensing_pulse"
+    )
 
     // Pre-allocated distant cosmic stars
     val stars = remember {
@@ -1320,9 +1518,7 @@ fun CosmicSingularityScreenBackground(
     }
 
     // Interactive Gravitational Tap Lensing wave
-    var tapLensRadius by remember { mutableFloatStateOf(0f) }
-    var tapLensAlpha by remember { mutableFloatStateOf(0f) }
-    var tapLensCenter by remember { mutableStateOf(Offset.Zero) }
+    var tapLensings by remember { mutableStateOf<List<CosmicTapLensing>>(emptyList()) }
     val scope = rememberCoroutineScope()
     val ridgePath = remember { Path() }
 
@@ -1331,17 +1527,19 @@ fun CosmicSingularityScreenBackground(
             .fillMaxSize()
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
-                    tapLensCenter = offset
+                    val anim = Animatable(0f)
+                    val lens = CosmicTapLensing(
+                        id = System.nanoTime(),
+                        center = offset,
+                        anim = anim
+                    )
+                    tapLensings = (tapLensings + lens).takeLast(4)
                     scope.launch {
-                        tapLensRadius = 0f
-                        tapLensAlpha = 0.55f
-                        val steps = 28
-                        for (i in 1..steps) {
-                            tapLensRadius = (i.toFloat() / steps) * 480f
-                            tapLensAlpha = 0.55f * (1f - (i.toFloat() / steps))
-                            delay(16)
-                        }
-                        tapLensAlpha = 0f
+                        anim.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
+                        )
+                        tapLensings = tapLensings.filter { it.id != lens.id }
                     }
                 }
             }
@@ -1349,6 +1547,8 @@ fun CosmicSingularityScreenBackground(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
+            val diskRotation = diskRotationAnim.value
+            val lensingPulse = lensingPulseAnim.value
 
             // 1. Deep Space Void Background (from Photo 4)
             drawRect(
@@ -1390,19 +1590,24 @@ fun CosmicSingularityScreenBackground(
             drawIndigoPlanetRidge(width = width, height = height, path = ridgePath)
 
             // 6. Interactive Gravitational Lensing Ripple on tap
-            if (tapLensAlpha > 0.01f) {
-                drawCircle(
-                    color = Color(0xFFFF2A4D).copy(alpha = tapLensAlpha),
-                    center = tapLensCenter,
-                    radius = tapLensRadius,
-                    style = Stroke(width = 2.5.dp.toPx())
-                )
-                drawCircle(
-                    color = Color(0xFFFFAA00).copy(alpha = tapLensAlpha * 0.65f),
-                    center = tapLensCenter,
-                    radius = tapLensRadius * 0.75f,
-                    style = Stroke(width = 1.2.dp.toPx())
-                )
+            tapLensings.forEach { lens ->
+                val p = lens.anim.value
+                val alpha = (1f - p) * 0.55f
+                val radius = p * 480f
+                if (alpha > 0.01f) {
+                    drawCircle(
+                        color = Color(0xFFFF2A4D).copy(alpha = alpha),
+                        center = lens.center,
+                        radius = radius,
+                        style = Stroke(width = 2.5.dp.toPx())
+                    )
+                    drawCircle(
+                        color = Color(0xFFFFAA00).copy(alpha = alpha * 0.65f),
+                        center = lens.center,
+                        radius = radius * 0.75f,
+                        style = Stroke(width = 1.2.dp.toPx())
+                    )
+                }
             }
         }
     }
@@ -1570,12 +1775,21 @@ private fun DrawScope.drawIndigoPlanetRidge(width: Float, height: Float, path: P
 fun CosmicSingularityDisplayOverlay(
     modifier: Modifier = Modifier
 ) {
-    // Static value for butter-smooth zero-recomposition performance
-    val rot = 20f
+    val infiniteTransition = rememberInfiniteTransition(label = "cosmic_display_anim")
+    val rotAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 12000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rot"
+    )
 
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
+        val rot = rotAnim.value
 
         // Mini accretion vortex watermark in top-right of LCD
         val vortexCenter = Offset(width - 32.dp.toPx(), 28.dp.toPx())

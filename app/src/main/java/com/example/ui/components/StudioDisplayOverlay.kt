@@ -50,18 +50,42 @@ fun StudioScreenBackground(
     theme: ThemePalette,
     modifier: Modifier = Modifier
 ) {
-    // Static values for butter-smooth zero-recomposition performance
-    val flowProgressVal = 0.5f
-    val breathPulseVal = 0.85f
-    val glassSweepVal = 0.5f
+    val infiniteTransition = rememberInfiniteTransition(label = "studio_bg_anim")
+    val flowProgressAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "flow_progress"
+    )
+    val breathPulseAnim = infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "breath_pulse"
+    )
+    val glassSweepAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "glass_sweep"
+    )
     val studioCache = remember { StudioPathCache() }
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
-        val flow = flowProgressVal
-        val pulse = breathPulseVal
-        val sweep = glassSweepVal
+        val flow = flowProgressAnim.value
+        val pulse = breathPulseAnim.value
+        val sweep = glassSweepAnim.value
 
         when {
             theme.isRetroCircuit -> {

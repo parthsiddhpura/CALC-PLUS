@@ -84,6 +84,15 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -130,6 +139,8 @@ fun WorksheetTapeView(
     var redoStack by remember(activeDocument.id) { mutableStateOf(listOf<WorksheetDocument>()) }
 
     // Selection & Tape Weight
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var inputMode by remember { mutableStateOf(KeypadInputMode.NUMERIC_K1) }
     var selectedLineIndex by remember { mutableIntStateOf(-1) }
     var isKeyboardVisible by remember { mutableStateOf(true) }
     var tapeWeight by remember { mutableFloatStateOf(0.38f) }
@@ -151,6 +162,8 @@ fun WorksheetTapeView(
     var showCreateBackupDialog by remember { mutableStateOf(false) }
     var showRestoreBackupDialog by remember { mutableStateOf(false) }
     var showCustomKeyDialog by remember { mutableStateOf(false) }
+    var isEditKeyboardMode by remember { mutableStateOf(false) }
+    var keyNameToCustomize by remember { mutableStateOf<String?>(null) }
     var showHeaderEditDialog by remember { mutableStateOf(false) }
     var overflowMenuExpanded by remember { mutableStateOf(false) }
 
@@ -314,22 +327,6 @@ fun WorksheetTapeView(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Upgrade to Pro") },
-                        leadingIcon = { Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = accentColor) },
-                        onClick = {
-                            overflowMenuExpanded = false
-                            showUpgradeDialog = true
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Restore purchases") },
-                        leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
-                        onClick = {
-                            overflowMenuExpanded = false
-                            Toast.makeText(context, "All purchases restored", Toast.LENGTH_SHORT).show()
-                        }
-                    )
-                    DropdownMenuItem(
                         text = { Text("Share") },
                         leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
                         onClick = {
@@ -383,7 +380,7 @@ fun WorksheetTapeView(
                         leadingIcon = { Icon(Icons.Default.Keyboard, contentDescription = null) },
                         onClick = {
                             overflowMenuExpanded = false
-                            showCustomKeyDialog = true
+                            isEditKeyboardMode = true
                         }
                     )
                     DropdownMenuItem(
@@ -455,17 +452,35 @@ fun WorksheetTapeView(
                         line = line,
                         index = index,
                         isSelected = isSelected,
+                        isTextMode = inputMode == KeypadInputMode.TEXT_ABC,
                         settings = settings,
                         textColor = textColor,
                         subtextColor = subtextColor,
                         deductionColor = deductionColor,
                         accentColor = accentColor,
-                        onSelect = { selectedLineIndex = index },
-                        onEdit = { selectedLineIndex = index },
+                        onSelect = {
+                            selectedLineIndex = index
+                            if (line.lineType == WorksheetLineType.COMMENT_HEADER) {
+                                inputMode = KeypadInputMode.TEXT_ABC
+                                keyboardController?.show()
+                            }
+                        },
+                        onOpenKeyboard = {
+                            selectedLineIndex = index
+                            inputMode = KeypadInputMode.TEXT_ABC
+                            keyboardController?.show()
+                        },
+                        onUpdateNote = { newNote ->
+                            val lines = activeDocument.lines.toMutableList()
+                            if (index in lines.indices) {
+                                lines[index] = lines[index].copy(note = newNote)
+                                pushHistory(activeDocument.copy(lines = lines))
+                            }
+                        },
                         onDelete = {
                             val updatedLines = activeDocument.lines.filterIndexed { idx, _ -> idx != index }
                             val recalculated = WorksheetTapeEngine.recalculate(updatedLines)
-                            val grandTotal = recalculated.lastOrNull()?.runningTotal ?: 0.0
+                            val grandTotal = recalculated.lastOrNull { it.lineType != WorksheetLineType.COMMENT_HEADER }?.runningTotal ?: 0.0
                             pushHistory(activeDocument.copy(lines = recalculated, grandTotal = grandTotal))
                             selectedLineIndex = -1
                         }
@@ -487,11 +502,18 @@ fun WorksheetTapeView(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(16.dp)
-                        .clickable { isKeyboardVisible = !isKeyboardVisible }
+                        .clickable {
+                            if (inputMode == KeypadInputMode.TEXT_ABC) {
+                                inputMode = KeypadInputMode.NUMERIC_K1
+                                keyboardController?.hide()
+                            } else {
+                                isKeyboardVisible = !isKeyboardVisible
+                            }
+                        }
                 ) {
                     Box(modifier = Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = if (isKeyboardVisible) Icons.Default.KeyboardHide else Icons.Default.Keyboard,
+                            imageVector = if (isKeyboardVisible && inputMode == KeypadInputMode.NUMERIC_K1) Icons.Default.KeyboardHide else Icons.Default.Keyboard,
                             contentDescription = "Toggle Keyboard",
                             tint = textColor,
                             modifier = Modifier.size(20.dp)
@@ -503,155 +525,268 @@ fun WorksheetTapeView(
     }
 
     val keypadPaneContent = @Composable { kMod: Modifier ->
-        val activeLine = activeDocument.lines.getOrNull(selectedLineIndex)
-        val currentNote = activeLine?.note ?: ""
-        val activeRawValue = activeLine?.rawValue ?: ""
-
         WorksheetKeypadView(
             theme = theme,
             settings = settings,
-                grandTotal = activeDocument.grandTotal,
-                currentNote = currentNote,
-                quickVariableValue = if (memoryValue != 0.0) memoryValue else null,
-                canUndo = undoStack.isNotEmpty(),
-                canRedo = redoStack.isNotEmpty(),
-                onDigit = { digit ->
-                    val lines = activeDocument.lines.toMutableList()
-                    val targetIdx = if (selectedLineIndex in lines.indices) selectedLineIndex else lines.size - 1
+            grandTotal = activeDocument.grandTotal,
+            inputMode = inputMode,
+            onInputModeChange = { mode ->
+                inputMode = mode
+                if (mode == KeypadInputMode.TEXT_ABC) {
+                    isKeyboardVisible = true
+                    if (selectedLineIndex !in activeDocument.lines.indices) {
+                        selectedLineIndex = (activeDocument.lines.size - 1).coerceAtLeast(0)
+                    }
+                    val curr = activeDocument.lines.getOrNull(selectedLineIndex)
+                    if (curr != null && curr.lineType == WorksheetLineType.SUB_TOTAL) {
+                        val lines = activeDocument.lines.toMutableList()
+                        lines.add(
+                            WorksheetLine(
+                                lineType = WorksheetLineType.COMMENT_HEADER,
+                                operator = "",
+                                rawValue = "",
+                                note = ""
+                            )
+                        )
+                        selectedLineIndex = lines.size - 1
+                        val recalculated = WorksheetTapeEngine.recalculate(lines)
+                        val newTotal = recalculated.lastOrNull { it.lineType != WorksheetLineType.COMMENT_HEADER }?.runningTotal ?: 0.0
+                        pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
+                    }
+                    keyboardController?.show()
+                } else {
+                    keyboardController?.hide()
+                }
+            },
+            isEditKeyboardMode = isEditKeyboardMode,
+            onDoneEditKeyboard = { isEditKeyboardMode = false },
+            onOpenKeyCustomizer = { keyName -> keyNameToCustomize = keyName },
+            quickVariableValue = if (memoryValue != 0.0) memoryValue else null,
+            canUndo = undoStack.isNotEmpty(),
+            canRedo = redoStack.isNotEmpty(),
+            onDigit = { digit ->
+                val lines = activeDocument.lines.toMutableList()
+                val targetIdx = if (selectedLineIndex in lines.indices) selectedLineIndex else lines.size - 1
 
-                    if (lines.isEmpty() || targetIdx < 0) {
+                if (lines.isEmpty() || targetIdx < 0) {
+                    lines.add(WorksheetLine(operator = "+", rawValue = digit))
+                    selectedLineIndex = 0
+                } else {
+                    val curr = lines[targetIdx]
+                    if (curr.lineType == WorksheetLineType.SUB_TOTAL) {
                         lines.add(WorksheetLine(operator = "+", rawValue = digit))
-                        selectedLineIndex = 0
+                        selectedLineIndex = lines.size - 1
+                    } else if (curr.lineType == WorksheetLineType.COMMENT_HEADER) {
+                        if (curr.note.isBlank()) {
+                            lines[targetIdx] = WorksheetLine(operator = "+", rawValue = digit)
+                        } else {
+                            lines.add(WorksheetLine(operator = "+", rawValue = digit))
+                            selectedLineIndex = lines.size - 1
+                        }
                     } else {
-                        val curr = lines[targetIdx]
                         val newRaw = if (curr.rawValue == "0" && digit != ".") digit else curr.rawValue + digit
                         lines[targetIdx] = curr.copy(rawValue = newRaw)
                     }
-                    val recalculated = WorksheetTapeEngine.recalculate(lines)
-                    val newTotal = recalculated.lastOrNull()?.runningTotal ?: 0.0
-                    pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
-                },
-                onOperator = { op ->
-                    val lines = activeDocument.lines.toMutableList()
-                    val newLine = WorksheetLine(operator = op, rawValue = "0")
-                    lines.add(newLine)
-                    selectedLineIndex = lines.size - 1
-                    val recalculated = WorksheetTapeEngine.recalculate(lines)
-                    val newTotal = recalculated.lastOrNull()?.runningTotal ?: 0.0
-                    pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
-                },
-                onPercentage = {
-                    val lines = activeDocument.lines.toMutableList()
-                    val newLine = WorksheetLine(
-                        lineType = WorksheetLineType.PERCENTAGE,
-                        operator = "-",
-                        rawValue = "10"
-                    )
-                    lines.add(newLine)
-                    selectedLineIndex = lines.size - 1
-                    val recalculated = WorksheetTapeEngine.recalculate(lines)
-                    val newTotal = recalculated.lastOrNull()?.runningTotal ?: 0.0
-                    pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
-                },
-                onSubtotal = {
-                    val lines = activeDocument.lines.toMutableList()
-                    val newLine = WorksheetLine(
-                        lineType = WorksheetLineType.SUB_TOTAL,
-                        operator = "=",
-                        hasDividerBefore = true,
-                        rawValue = "0"
-                    )
-                    lines.add(newLine)
-                    selectedLineIndex = lines.size - 1
-                    val recalculated = WorksheetTapeEngine.recalculate(lines)
-                    val newTotal = recalculated.lastOrNull()?.runningTotal ?: 0.0
-                    pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
-                },
-                onBackspace = {
-                    val lines = activeDocument.lines.toMutableList()
-                    val targetIdx = if (selectedLineIndex in lines.indices) selectedLineIndex else lines.size - 1
-                    if (lines.isNotEmpty() && targetIdx in lines.indices) {
-                        val curr = lines[targetIdx]
-                        if (curr.rawValue.length > 1) {
-                            lines[targetIdx] = curr.copy(rawValue = curr.rawValue.dropLast(1))
-                        } else {
-                            lines[targetIdx] = curr.copy(rawValue = "0")
-                        }
-                        val recalculated = WorksheetTapeEngine.recalculate(lines)
-                        val newTotal = recalculated.lastOrNull()?.runningTotal ?: 0.0
-                        pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
-                    }
-                },
-                onClear = {
-                    val newDoc = activeDocument.copy(
-                        lines = listOf(WorksheetLine(operator = "+", rawValue = "0")),
-                        grandTotal = 0.0
-                    )
+                }
+                val recalculated = WorksheetTapeEngine.recalculate(lines)
+                val newTotal = recalculated.lastOrNull { it.lineType != WorksheetLineType.COMMENT_HEADER }?.runningTotal ?: 0.0
+                pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
+            },
+            onOperator = { op ->
+                val lines = activeDocument.lines.toMutableList()
+                val targetIdx = if (selectedLineIndex in lines.indices) selectedLineIndex else lines.size - 1
+
+                if (lines.isEmpty() || targetIdx < 0) {
+                    lines.add(WorksheetLine(operator = op, rawValue = "0"))
                     selectedLineIndex = 0
-                    pushHistory(newDoc)
-                },
-                onMemoryPlus = {
-                    val targetLine = activeDocument.lines.getOrNull(selectedLineIndex) ?: activeDocument.lines.lastOrNull()
-                    val amount = targetLine?.evaluatedNumber ?: activeDocument.grandTotal
-                    memoryValue += amount
-                    Toast.makeText(context, "M+: $memoryValue", Toast.LENGTH_SHORT).show()
-                },
-                onMemoryMinus = {
-                    val targetLine = activeDocument.lines.getOrNull(selectedLineIndex) ?: activeDocument.lines.lastOrNull()
-                    val amount = targetLine?.evaluatedNumber ?: activeDocument.grandTotal
-                    memoryValue -= amount
-                    Toast.makeText(context, "M-: $memoryValue", Toast.LENGTH_SHORT).show()
-                },
-                onMemoryRecall = {
-                    val lines = activeDocument.lines.toMutableList()
-                    lines.add(WorksheetLine(operator = "+", rawValue = memoryValue.toString()))
-                    selectedLineIndex = lines.size - 1
+                } else {
+                    val curr = lines[targetIdx]
+                    if (curr.lineType == WorksheetLineType.COMMENT_HEADER && curr.note.isBlank()) {
+                        lines[targetIdx] = WorksheetLine(operator = op, rawValue = "0")
+                    } else {
+                        lines.add(WorksheetLine(operator = op, rawValue = "0"))
+                        selectedLineIndex = lines.size - 1
+                    }
+                }
+                val recalculated = WorksheetTapeEngine.recalculate(lines)
+                val newTotal = recalculated.lastOrNull { it.lineType != WorksheetLineType.COMMENT_HEADER }?.runningTotal ?: 0.0
+                pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
+            },
+            onPercentage = {
+                val lines = activeDocument.lines.toMutableList()
+                val newLine = WorksheetLine(
+                    lineType = WorksheetLineType.PERCENTAGE,
+                    operator = "-",
+                    rawValue = "10"
+                )
+                lines.add(newLine)
+                selectedLineIndex = lines.size - 1
+                val recalculated = WorksheetTapeEngine.recalculate(lines)
+                val newTotal = recalculated.lastOrNull { it.lineType != WorksheetLineType.COMMENT_HEADER }?.runningTotal ?: 0.0
+                pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
+            },
+            onSubtotal = {
+                val lines = activeDocument.lines.toMutableList()
+                // 1. Subtotal line
+                val subtotalLine = WorksheetLine(
+                    lineType = WorksheetLineType.SUB_TOTAL,
+                    operator = "=",
+                    hasDividerBefore = true,
+                    rawValue = "0"
+                )
+                lines.add(subtotalLine)
+
+                // 2. Space line for comments
+                val commentLine = WorksheetLine(
+                    lineType = WorksheetLineType.COMMENT_HEADER,
+                    operator = "",
+                    rawValue = "",
+                    note = ""
+                )
+                lines.add(commentLine)
+
+                val recalculated = WorksheetTapeEngine.recalculate(lines)
+                val newTotal = recalculated.lastOrNull { it.lineType != WorksheetLineType.COMMENT_HEADER }?.runningTotal ?: 0.0
+                selectedLineIndex = lines.size - 1
+                pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
+            },
+            onBackspace = {
+                val lines = activeDocument.lines.toMutableList()
+                val targetIdx = if (selectedLineIndex in lines.indices) selectedLineIndex else lines.size - 1
+                if (lines.isNotEmpty() && targetIdx in lines.indices) {
+                    val curr = lines[targetIdx]
+                    if (curr.rawValue.length > 1) {
+                        lines[targetIdx] = curr.copy(rawValue = curr.rawValue.dropLast(1))
+                    } else {
+                        lines[targetIdx] = curr.copy(rawValue = "0")
+                    }
                     val recalculated = WorksheetTapeEngine.recalculate(lines)
-                    val newTotal = recalculated.lastOrNull()?.runningTotal ?: 0.0
+                    val newTotal = recalculated.lastOrNull { it.lineType != WorksheetLineType.COMMENT_HEADER }?.runningTotal ?: 0.0
                     pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
-                },
-                onMemoryClear = {
-                    memoryValue = 0.0
-                    Toast.makeText(context, "Memory cleared", Toast.LENGTH_SHORT).show()
-                },
-                onCustomKey = {
-                    val lines = activeDocument.lines.toMutableList()
+                }
+            },
+            onClear = {
+                val newDoc = activeDocument.copy(
+                    lines = listOf(WorksheetLine(operator = "+", rawValue = "0")),
+                    grandTotal = 0.0
+                )
+                selectedLineIndex = 0
+                pushHistory(newDoc)
+            },
+            onMemoryPlus = {
+                val targetLine = activeDocument.lines.getOrNull(selectedLineIndex) ?: activeDocument.lines.lastOrNull()
+                val amount = targetLine?.evaluatedNumber ?: activeDocument.grandTotal
+                memoryValue += amount
+                Toast.makeText(context, "M+: $memoryValue", Toast.LENGTH_SHORT).show()
+            },
+            onMemoryMinus = {
+                val targetLine = activeDocument.lines.getOrNull(selectedLineIndex) ?: activeDocument.lines.lastOrNull()
+                val amount = targetLine?.evaluatedNumber ?: activeDocument.grandTotal
+                memoryValue -= amount
+                Toast.makeText(context, "M-: $memoryValue", Toast.LENGTH_SHORT).show()
+            },
+            onMemoryRecall = {
+                val lines = activeDocument.lines.toMutableList()
+                lines.add(WorksheetLine(operator = "+", rawValue = memoryValue.toString()))
+                selectedLineIndex = lines.size - 1
+                val recalculated = WorksheetTapeEngine.recalculate(lines)
+                val newTotal = recalculated.lastOrNull { it.lineType != WorksheetLineType.COMMENT_HEADER }?.runningTotal ?: 0.0
+                pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
+            },
+            onMemoryClear = {
+                memoryValue = 0.0
+                Toast.makeText(context, "Memory cleared", Toast.LENGTH_SHORT).show()
+            },
+            onCustomKey = {
+                val lines = activeDocument.lines.toMutableList()
+                val isHelpText = settings.customKeyType == "HELP_TEXT" ||
+                        settings.customKeyType == "Customise Button" ||
+                        settings.customKeyLabel.contains("Customise", ignoreCase = true)
+
+                if (isHelpText) {
+                    lines.add(
+                        WorksheetLine(
+                            lineType = WorksheetLineType.COMMENT_HEADER,
+                            operator = "",
+                            rawValue = "",
+                            note = "This and other keys can be customized via \"Edit keyboard\" in the menu [:] at the top right."
+                        )
+                    )
+                } else if (settings.customKeyType.startsWith("+") || settings.customKeyType.startsWith("-") || settings.customKeyType == "GST") {
                     val rate = settings.customKeyRate.toDoubleOrNull() ?: 18.0
-                    val isTax = settings.customKeyType == "GST"
+                    val isTax = !settings.customKeyType.startsWith("-")
+                    val label = if (settings.customKeyType.contains("GST")) "GST" else if (isTax) "Tax" else "Reduced"
                     val newLine = WorksheetLine(
                         lineType = WorksheetLineType.PERCENTAGE,
                         operator = if (isTax) "+" else "-",
                         rawValue = rate.toString(),
-                        note = if (isTax) "GST" else "Discount"
+                        note = label
                     )
                     lines.add(newLine)
-                    selectedLineIndex = lines.size - 1
-                    val recalculated = WorksheetTapeEngine.recalculate(lines)
-                    val newTotal = recalculated.lastOrNull()?.runningTotal ?: 0.0
-                    pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
-                },
-                onOpenCustomKeyDialog = { showCustomKeyDialog = true },
-                onOpenVariables = { showVariablesSheet = true },
-                onUndo = { applyUndo() },
-                onRedo = { applyRedo() },
-                onUpdateNote = { newNote ->
-                    val lines = activeDocument.lines.toMutableList()
-                    val targetIdx = if (selectedLineIndex in lines.indices) selectedLineIndex else lines.size - 1
-                    if (targetIdx in lines.indices) {
-                        lines[targetIdx] = lines[targetIdx].copy(note = newNote)
-                        pushHistory(activeDocument.copy(lines = lines))
+                } else if (settings.customKeyType.startsWith("SYSTEM_")) {
+                    val sysKey = settings.customKeyType.removePrefix("SYSTEM_")
+                    if (sysKey == "AC") {
+                        val newDoc = activeDocument.copy(
+                            lines = listOf(WorksheetLine(operator = "+", rawValue = "0")),
+                            grandTotal = 0.0
+                        )
+                        selectedLineIndex = 0
+                        pushHistory(newDoc)
+                        return@WorksheetKeypadView
+                    } else {
+                        lines.add(WorksheetLine(operator = "+", rawValue = sysKey))
                     }
-                },
-                onInsertQuickVariable = { varVal ->
-                    val lines = activeDocument.lines.toMutableList()
-                    lines.add(WorksheetLine(operator = "+", rawValue = varVal.toString()))
-                    selectedLineIndex = lines.size - 1
-                    val recalculated = WorksheetTapeEngine.recalculate(lines)
-                    val newTotal = recalculated.lastOrNull()?.runningTotal ?: 0.0
-                    pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
-                },
-                modifier = kMod
-            )
+                } else {
+                    val rate = settings.customKeyRate.toDoubleOrNull()
+                    if (rate != null) {
+                        lines.add(
+                            WorksheetLine(
+                                lineType = WorksheetLineType.PERCENTAGE,
+                                operator = "+",
+                                rawValue = rate.toString(),
+                                note = settings.customKeyLabel.ifBlank { "Custom" }
+                            )
+                        )
+                    } else {
+                        lines.add(
+                            WorksheetLine(
+                                lineType = WorksheetLineType.COMMENT_HEADER,
+                                operator = "",
+                                rawValue = "",
+                                note = settings.customKeyLabel.ifBlank { "Note" }
+                            )
+                        )
+                    }
+                }
+                selectedLineIndex = lines.size - 1
+                val recalculated = WorksheetTapeEngine.recalculate(lines)
+                val newTotal = recalculated.lastOrNull { it.lineType != WorksheetLineType.COMMENT_HEADER }?.runningTotal ?: 0.0
+                pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
+            },
+            onOpenCustomKeyDialog = {
+                keyNameToCustomize = settings.customKeyLabel.ifBlank { "Customise Button" }
+            },
+            onOpenVariables = { showVariablesSheet = true },
+            onUndo = { applyUndo() },
+            onRedo = { applyRedo() },
+            onToggleKeyboard = {
+                if (inputMode == KeypadInputMode.TEXT_ABC) {
+                    inputMode = KeypadInputMode.NUMERIC_K1
+                    keyboardController?.hide()
+                } else {
+                    isKeyboardVisible = !isKeyboardVisible
+                }
+            },
+            onInsertQuickVariable = { varVal ->
+                val lines = activeDocument.lines.toMutableList()
+                lines.add(WorksheetLine(operator = "+", rawValue = varVal.toString()))
+                selectedLineIndex = lines.size - 1
+                val recalculated = WorksheetTapeEngine.recalculate(lines)
+                val newTotal = recalculated.lastOrNull { it.lineType != WorksheetLineType.COMMENT_HEADER }?.runningTotal ?: 0.0
+                pushHistory(activeDocument.copy(lines = recalculated, grandTotal = newTotal))
+            },
+            modifier = kMod
+        )
     }
 
     if (isLandscape) {
@@ -691,32 +826,40 @@ fun WorksheetTapeView(
                 .fillMaxSize()
                 .background(paperBg)
         ) {
-            tapePaneContent(Modifier.fillMaxWidth().weight(if (isKeyboardVisible) tapeWeight else 1f))
-
             if (isKeyboardVisible) {
-                // RESIZABLE SPLIT DRAG HANDLE
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(14.dp)
-                        .background(if (isLightCanvas) Color(0xFFE2E8F0) else Color(0xFF1B202A))
-                        .pointerInput(Unit) {
-                            detectVerticalDragGestures { _, dragAmount ->
-                                val delta = dragAmount / 1200f
-                                tapeWeight = (tapeWeight + delta).coerceIn(0.25f, 0.72f)
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DragHandle,
-                        contentDescription = "Resize split",
-                        tint = subtextColor,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
+                if (inputMode == KeypadInputMode.NUMERIC_K1) {
+                    tapePaneContent(Modifier.fillMaxWidth().weight(tapeWeight))
 
-                keypadPaneContent(Modifier.fillMaxWidth().weight(1f - tapeWeight))
+                    // RESIZABLE SPLIT DRAG HANDLE
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(14.dp)
+                            .background(if (isLightCanvas) Color(0xFFE2E8F0) else Color(0xFF1B202A))
+                            .pointerInput(Unit) {
+                                detectVerticalDragGestures { _, dragAmount ->
+                                    val delta = dragAmount / 1200f
+                                    tapeWeight = (tapeWeight + delta).coerceIn(0.25f, 0.72f)
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DragHandle,
+                            contentDescription = "Resize split",
+                            tint = subtextColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    keypadPaneContent(Modifier.fillMaxWidth().weight(1f - tapeWeight))
+                } else {
+                    // In TEXT_ABC mode, tape pane takes top area and the dock sits right above system keyboard
+                    tapePaneContent(Modifier.fillMaxWidth().weight(1f))
+                    keypadPaneContent(Modifier.fillMaxWidth().wrapContentHeight().imePadding())
+                }
+            } else {
+                tapePaneContent(Modifier.fillMaxWidth().weight(1f))
             }
         }
     }
@@ -967,17 +1110,24 @@ fun WorksheetTapeView(
         )
     }
 
-    // Custom Key Dialog
-    if (showCustomKeyDialog) {
-        CustomKeyDialog(
-            currentRate = settings.customKeyRate,
-            currentType = settings.customKeyType,
+    // Button Customization Dialog (CalcTape Pro video)
+    if (keyNameToCustomize != null) {
+        ButtonCustomizationDialog(
+            keyName = keyNameToCustomize!!,
+            currentCustomType = settings.customKeyType,
+            currentCustomRate = settings.customKeyRate,
             theme = theme,
-            onSave = { rate, type ->
-                onUpdateSettings(settings.copy(customKeyRate = rate, customKeyType = type))
-                showCustomKeyDialog = false
+            onSave = { label, actionType, rate ->
+                onUpdateSettings(
+                    settings.copy(
+                        customKeyLabel = label,
+                        customKeyType = actionType,
+                        customKeyRate = rate
+                    )
+                )
+                keyNameToCustomize = null
             },
-            onDismiss = { showCustomKeyDialog = false }
+            onDismiss = { keyNameToCustomize = null }
         )
     }
 }
@@ -990,13 +1140,15 @@ private fun TapeLineRow(
     line: WorksheetLine,
     index: Int,
     isSelected: Boolean,
+    isTextMode: Boolean,
     settings: WorksheetSettings,
     textColor: Color,
     subtextColor: Color,
     deductionColor: Color,
     accentColor: Color,
     onSelect: () -> Unit,
-    onEdit: () -> Unit,
+    onOpenKeyboard: () -> Unit,
+    onUpdateNote: (String) -> Unit,
     onDelete: () -> Unit
 ) {
     val isDeduction = line.operator == "-" || line.evaluatedNumber < 0
@@ -1006,7 +1158,12 @@ private fun TapeLineRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onSelect() }
+            .clickable {
+                onSelect()
+                if (line.lineType == WorksheetLineType.COMMENT_HEADER) {
+                    onOpenKeyboard()
+                }
+            }
             .background(if (isSelected) accentColor.copy(alpha = 0.12f) else Color.Transparent, RoundedCornerShape(4.dp))
             .padding(horizontal = 4.dp, vertical = 2.dp)
     ) {
@@ -1019,61 +1176,157 @@ private fun TapeLineRow(
             )
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        if (line.lineType == WorksheetLineType.COMMENT_HEADER) {
+            // Pure Comment Line (space left when pressing = or typing remarks)
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 28.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Operator
-                Text(
-                    text = line.operator,
-                    color = textColor,
-                    fontSize = settings.fontSize.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(18.dp)
-                )
-
-                // Number
-                Text(
-                    text = numFormatted,
-                    color = numColor,
-                    fontSize = settings.fontSize.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                // Inline Remark / Note (e.g. "chai", "wax & wick")
-                if (line.note.isNotBlank()) {
+                if (isSelected && isTextMode) {
+                    val focusRequester = remember { FocusRequester() }
+                    LaunchedEffect(isSelected, isTextMode) {
+                        try {
+                            focusRequester.requestFocus()
+                        } catch (_: Exception) {}
+                    }
+                    BasicTextField(
+                        value = line.note,
+                        onValueChange = onUpdateNote,
+                        textStyle = TextStyle(
+                            color = textColor,
+                            fontSize = settings.fontSize.sp,
+                            fontFamily = FontFamily.Default
+                        ),
+                        cursorBrush = SolidColor(accentColor),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester),
+                        decorationBox = { innerTextField ->
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                if (line.note.isEmpty()) {
+                                    Text(
+                                        text = "|",
+                                        color = accentColor.copy(alpha = 0.8f),
+                                        fontSize = settings.fontSize.sp
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        }
+                    )
+                } else {
                     Text(
-                        text = line.note,
-                        color = subtextColor,
-                        fontSize = (settings.fontSize - 2).sp,
-                        fontFamily = FontFamily.Default
+                        text = if (line.note.isNotBlank()) line.note else if (isSelected) "|" else "",
+                        color = if (line.note.isNotBlank()) textColor else accentColor.copy(alpha = 0.7f),
+                        fontSize = settings.fontSize.sp,
+                        fontFamily = FontFamily.Default,
+                        modifier = Modifier.weight(1f)
                     )
                 }
 
-                // Variable assignment if any
-                if (!line.variableName.isNullOrBlank()) {
-                    Text(
-                        text = "= ${line.variableName}",
-                        color = accentColor,
-                        fontSize = (settings.fontSize - 2).sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            // If selected, show subtle action icons
-            if (isSelected) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isSelected) {
                     IconButton(onClick = onDelete, modifier = Modifier.size(26.dp)) {
                         Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = deductionColor, modifier = Modifier.size(15.dp))
+                    }
+                }
+            }
+        } else {
+            // Calculation / Subtotal / Operator line
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    // Operator
+                    Text(
+                        text = line.operator,
+                        color = textColor,
+                        fontSize = settings.fontSize.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.width(18.dp)
+                    )
+
+                    // Number
+                    Text(
+                        text = numFormatted,
+                        color = numColor,
+                        fontSize = settings.fontSize.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    // Inline Remark / Note (editable in text mode)
+                    if (isSelected && isTextMode) {
+                        val noteFocusRequester = remember { FocusRequester() }
+                        LaunchedEffect(isSelected, isTextMode) {
+                            try {
+                                noteFocusRequester.requestFocus()
+                            } catch (_: Exception) {}
+                        }
+                        BasicTextField(
+                            value = line.note,
+                            onValueChange = onUpdateNote,
+                            textStyle = TextStyle(
+                                color = subtextColor,
+                                fontSize = (settings.fontSize - 1).sp,
+                                fontFamily = FontFamily.Default
+                            ),
+                            cursorBrush = SolidColor(accentColor),
+                            singleLine = true,
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(noteFocusRequester),
+                            decorationBox = { innerTextField ->
+                                Box {
+                                    if (line.note.isEmpty()) {
+                                        Text(
+                                            text = "note...",
+                                            color = subtextColor.copy(alpha = 0.4f),
+                                            fontSize = (settings.fontSize - 1).sp
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        )
+                    } else if (line.note.isNotBlank()) {
+                        Text(
+                            text = line.note,
+                            color = subtextColor,
+                            fontSize = (settings.fontSize - 2).sp,
+                            fontFamily = FontFamily.Default,
+                            modifier = Modifier.clickable {
+                                onSelect()
+                                onOpenKeyboard()
+                            }
+                        )
+                    }
+
+                    // Variable assignment if any
+                    if (!line.variableName.isNullOrBlank()) {
+                        Text(
+                            text = "= ${line.variableName}",
+                            color = accentColor,
+                            fontSize = (settings.fontSize - 2).sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                // If selected, show subtle action icons
+                if (isSelected) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onDelete, modifier = Modifier.size(26.dp)) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = deductionColor, modifier = Modifier.size(15.dp))
+                        }
                     }
                 }
             }

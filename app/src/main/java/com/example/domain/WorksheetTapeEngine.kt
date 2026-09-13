@@ -85,14 +85,17 @@ object WorksheetTapeEngine {
 
                 WorksheetLineType.SUB_TOTAL -> {
                     // Subtotal captures the accumulator and optionally assigns it to a variable
+                    val subtotal = accumulator
                     line.variableName?.let { varName ->
                         if (varName.isNotBlank()) {
-                            variables[varName.trim().lowercase()] = accumulator
+                            variables[varName.trim().lowercase()] = subtotal
                         }
                     }
+                    accumulator = 0.0
+                    isFirstInBlock = true
                     line.copy(
-                        evaluatedNumber = accumulator,
-                        runningTotal = accumulator
+                        evaluatedNumber = subtotal,
+                        runningTotal = subtotal
                     )
                 }
 

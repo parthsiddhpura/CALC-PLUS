@@ -45,7 +45,8 @@ data class WorksheetSettings(
     val spellCheck: Boolean = false,
     val sortOrder: String = "Date descending",
     val customKeyRate: String = "18",
-    val customKeyType: String = "GST" // "GST" or "DISC"
+    val customKeyType: String = "Customise Button",
+    val customKeyLabel: String = "Customise\nButton"
 )
 
 data class WorksheetDocument(

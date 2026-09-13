@@ -208,10 +208,10 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
 
     init {
         val savedThemeName = prefs.getString("saved_theme_id", null)
-        val hasAppliedDarkKnightDefault = prefs.getBoolean("has_applied_dark_knight_default_v9", false)
+        val hasAppliedDarkKnightDefault = prefs.getBoolean("has_applied_dark_knight_default_v10", false)
         val initialTheme = if (!hasAppliedDarkKnightDefault) {
             prefs.edit()
-                .putBoolean("has_applied_dark_knight_default_v9", true)
+                .putBoolean("has_applied_dark_knight_default_v10", true)
                 .putString("saved_theme_id", ThemeId.BATMAN_DARK_KNIGHT.name)
                 .apply()
             ThemeId.BATMAN_DARK_KNIGHT
@@ -648,7 +648,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
 
         _uiState.update {
             it.copy(
-                currentThemeId = ThemeId.RETRO_CIRCUIT_RED,
+                currentThemeId = ThemeId.BATMAN_DARK_KNIGHT,
                 customAccentColor = null,
                 customShapeType = null,
                 customDisplayFont = null,

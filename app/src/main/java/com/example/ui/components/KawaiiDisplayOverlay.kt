@@ -50,20 +50,52 @@ fun KawaiiScreenBackground(
     theme: ThemePalette,
     modifier: Modifier = Modifier
 ) {
-    // Static values for butter-smooth zero-recomposition performance
-    val floatProgressVal = 0.5f
-    val breathPulseVal = 1.0f
-    val sparkleRotationVal = 45f
-    val kittyBlinkVal = 0.5f
+    val infiniteTransition = rememberInfiniteTransition(label = "kawaii_bg_anim")
+    val floatProgressAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "float_progress"
+    )
+    val breathPulseAnim = infiniteTransition.animateFloat(
+        initialValue = 0.7f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "breath_pulse"
+    )
+    val sparkleRotationAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 8000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "sparkle_rotation"
+    )
+    val kittyBlinkAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "kitty_blink"
+    )
     val pathCache = remember { KawaiiPathCache() }
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
-        val progress = floatProgressVal
-        val pulse = breathPulseVal
-        val rot = sparkleRotationVal
-        val blink = kittyBlinkVal
+        val progress = floatProgressAnim.value
+        val pulse = breathPulseAnim.value
+        val rot = sparkleRotationAnim.value
+        val blink = kittyBlinkAnim.value
 
         when {
             // 1. GIRL MATH PASTEL (Sample: 80f1f24af853bfe7a09e6afbe7ee3c6b.jpg)
