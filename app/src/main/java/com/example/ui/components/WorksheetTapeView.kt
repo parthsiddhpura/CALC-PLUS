@@ -32,10 +32,12 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Functions
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -46,8 +48,10 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Title
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -62,6 +66,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -88,8 +93,14 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -165,6 +176,8 @@ fun WorksheetTapeView(
     var isEditKeyboardMode by remember { mutableStateOf(false) }
     var keyNameToCustomize by remember { mutableStateOf<String?>(null) }
     var showHeaderEditDialog by remember { mutableStateOf(false) }
+    var showTutorialDialog by remember { mutableStateOf(false) }
+    var noteUndoCheckpoint by remember(activeDocument.id) { mutableStateOf<WorksheetDocument?>(null) }
     var overflowMenuExpanded by remember { mutableStateOf(false) }
 
     // Color canvas setup (Dark Slate look from video)
@@ -280,6 +293,18 @@ fun WorksheetTapeView(
                 }
             }
 
+            // Tutorial Button
+            IconButton(
+                onClick = { showTutorialDialog = true },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.School,
+                    contentDescription = "Paper Tape Tutorial",
+                    tint = accentColor
+                )
+            }
+
             // 3-Dots Overflow Menu
             Box {
                 IconButton(
@@ -293,6 +318,33 @@ fun WorksheetTapeView(
                     expanded = overflowMenuExpanded,
                     onDismissRequest = { overflowMenuExpanded = false }
                 ) {
+                    DropdownMenuItem(
+                        text = { Text("Paper Tape Tutorial") },
+                        leadingIcon = { Icon(Icons.Default.School, contentDescription = null, tint = accentColor) },
+                        onClick = {
+                            overflowMenuExpanded = false
+                            showTutorialDialog = true
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (activeDocument.headerNote.isNotBlank()) "Edit header note" else "Add header note") },
+                        leadingIcon = { Icon(Icons.Default.Title, contentDescription = null, tint = accentColor) },
+                        onClick = {
+                            overflowMenuExpanded = false
+                            showHeaderEditDialog = true
+                        }
+                    )
+                    if (activeDocument.headerNote.isNotBlank()) {
+                        DropdownMenuItem(
+                            text = { Text("Remove header note") },
+                            leadingIcon = { Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = deductionColor) },
+                            onClick = {
+                                overflowMenuExpanded = false
+                                pushHistory(activeDocument.copy(headerNote = ""))
+                                Toast.makeText(context, "Header note removed", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("Share as Photo (PNG)") },
                         leadingIcon = { Icon(Icons.Default.Image, contentDescription = null, tint = Color(0xFF38BDF8)) },
@@ -423,29 +475,85 @@ fun WorksheetTapeView(
                     .fillMaxSize()
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                // Top Header note (e.g. "Total - 70,000/-" in video)
-                item {
-                    val headerText = activeDocument.headerNote.ifBlank { "Total - 70,000/-" }
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = Color.Transparent,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showHeaderEditDialog = true }
-                            .padding(vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = headerText,
-                            color = textColor,
-                            fontSize = (settings.fontSize + 1).sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
-                        )
+                // Top Header note (removable & optional)
+                if (activeDocument.headerNote.isNotBlank()) {
+                    item(key = "header_note") {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isLightCanvas) Color(0xFFF1F5F9) else Color(0xFF222834),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isLightCanvas) Color(0xFFE2E8F0) else Color(0xFF334155)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showHeaderEditDialog = true }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Title,
+                                        contentDescription = null,
+                                        tint = accentColor,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = activeDocument.headerNote,
+                                        color = textColor,
+                                        fontSize = (settings.fontSize + 1).sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = { showHeaderEditDialog = true },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit header note",
+                                            tint = subtextColor,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            pushHistory(activeDocument.copy(headerNote = ""))
+                                            Toast.makeText(context, "Header note removed", Toast.LENGTH_SHORT).show()
+                                        },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Remove header note",
+                                            tint = deductionColor,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
                 // Tape calculation rows
-                itemsIndexed(activeDocument.lines) { index, line ->
+                itemsIndexed(
+                    items = activeDocument.lines,
+                    key = { _, line -> line.id }
+                ) { index, line ->
                     val isSelected = index == selectedLineIndex
 
                     TapeLineRow(
@@ -459,6 +567,11 @@ fun WorksheetTapeView(
                         deductionColor = deductionColor,
                         accentColor = accentColor,
                         onSelect = {
+                            if (noteUndoCheckpoint != null && selectedLineIndex != index) {
+                                undoStack = undoStack + noteUndoCheckpoint!!
+                                redoStack = emptyList()
+                                noteUndoCheckpoint = null
+                            }
                             selectedLineIndex = index
                             if (line.lineType == WorksheetLineType.COMMENT_HEADER) {
                                 inputMode = KeypadInputMode.TEXT_ABC
@@ -466,18 +579,30 @@ fun WorksheetTapeView(
                             }
                         },
                         onOpenKeyboard = {
+                            if (noteUndoCheckpoint != null && selectedLineIndex != index) {
+                                undoStack = undoStack + noteUndoCheckpoint!!
+                                redoStack = emptyList()
+                                noteUndoCheckpoint = null
+                            }
                             selectedLineIndex = index
                             inputMode = KeypadInputMode.TEXT_ABC
                             keyboardController?.show()
                         },
                         onUpdateNote = { newNote ->
+                            if (noteUndoCheckpoint == null) {
+                                noteUndoCheckpoint = activeDocument
+                            }
                             val lines = activeDocument.lines.toMutableList()
                             if (index in lines.indices) {
                                 lines[index] = lines[index].copy(note = newNote)
-                                pushHistory(activeDocument.copy(lines = lines))
+                                onSaveDocument(activeDocument.copy(lines = lines))
                             }
                         },
                         onDelete = {
+                            if (noteUndoCheckpoint != null) {
+                                undoStack = undoStack + noteUndoCheckpoint!!
+                                noteUndoCheckpoint = null
+                            }
                             val updatedLines = activeDocument.lines.filterIndexed { idx, _ -> idx != index }
                             val recalculated = WorksheetTapeEngine.recalculate(updatedLines)
                             val grandTotal = recalculated.lastOrNull { it.lineType != WorksheetLineType.COMMENT_HEADER }?.runningTotal ?: 0.0
@@ -943,6 +1068,10 @@ fun WorksheetTapeView(
                     showDrawer = false
                     showRestoreBackupDialog = true
                 },
+                onOpenTutorial = {
+                    showDrawer = false
+                    showTutorialDialog = true
+                },
                 onDismiss = { showDrawer = false }
             )
         }
@@ -1013,28 +1142,61 @@ fun WorksheetTapeView(
 
     // Top Header Edit Dialog
     if (showHeaderEditDialog) {
-        var headerInput by remember { mutableStateOf(activeDocument.headerNote.ifBlank { "Total - 70,000/-" }) }
+        var headerInput by remember(activeDocument.headerNote) { mutableStateOf(activeDocument.headerNote) }
         AlertDialog(
             onDismissRequest = { showHeaderEditDialog = false },
-            title = { Text("Edit Worksheet Header", color = textColor, fontWeight = FontWeight.Bold) },
-            text = {
-                OutlinedTextField(
-                    value = headerInput,
-                    onValueChange = { headerInput = it },
-                    label = { Text("Header note (e.g. Total - 70,000/-)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+            title = {
+                Text(
+                    text = if (activeDocument.headerNote.isNotBlank()) "Edit Header Note" else "Add Header Note",
+                    color = textColor,
+                    fontWeight = FontWeight.Bold
                 )
             },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = headerInput,
+                        onValueChange = { headerInput = it },
+                        label = { Text("Header note") },
+                        placeholder = { Text("e.g. Total - 70,000/- or Project Budget") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        text = "The header note appears at the top of your paper tape. It is optional — clear it or tap Remove to delete it completely.",
+                        color = subtextColor,
+                        fontSize = 12.sp
+                    )
+                }
+            },
             confirmButton = {
-                Button(
-                    onClick = {
-                        pushHistory(activeDocument.copy(headerNote = headerInput))
-                        showHeaderEditDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Save", color = Color.White)
+                    if (activeDocument.headerNote.isNotBlank()) {
+                        TextButton(
+                            onClick = {
+                                pushHistory(activeDocument.copy(headerNote = ""))
+                                showHeaderEditDialog = false
+                                Toast.makeText(context, "Header note removed", Toast.LENGTH_SHORT).show()
+                            }
+                        ) {
+                            Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = deductionColor, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Remove", color = deductionColor)
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            pushHistory(activeDocument.copy(headerNote = headerInput.trim()))
+                            showHeaderEditDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                    ) {
+                        Text("Save", color = Color.White)
+                    }
                 }
             },
             dismissButton = {
@@ -1164,6 +1326,14 @@ fun WorksheetTapeView(
             onDismiss = { keyNameToCustomize = null }
         )
     }
+
+    // Paper Tape Interactive Tutorial Dialog
+    if (showTutorialDialog) {
+        PaperTapeTutorialDialog(
+            theme = theme,
+            onDismiss = { showTutorialDialog = false }
+        )
+    }
 }
 
 /**
@@ -1185,9 +1355,29 @@ private fun TapeLineRow(
     onUpdateNote: (String) -> Unit,
     onDelete: () -> Unit
 ) {
+    val keyboardController = LocalSoftwareKeyboardController.current
     val isDeduction = line.operator == "-" || line.evaluatedNumber < 0
     val numColor = if (isDeduction) deductionColor else textColor
     val numFormatted = WorksheetTapeEngine.formatNumber(line.evaluatedNumber, settings.indianDigitGrouping, settings.decimals)
+
+    // Robust local text field state to eliminate IME / Gboard cursor jumping and note glitching
+    var commentFieldValue by remember(line.id) {
+        mutableStateOf(TextFieldValue(line.note, TextRange(line.note.length)))
+    }
+    LaunchedEffect(line.note) {
+        if (line.note != commentFieldValue.text) {
+            commentFieldValue = TextFieldValue(line.note, TextRange(line.note.length))
+        }
+    }
+
+    var inlineNoteFieldValue by remember(line.id) {
+        mutableStateOf(TextFieldValue(line.note, TextRange(line.note.length)))
+    }
+    LaunchedEffect(line.note) {
+        if (line.note != inlineNoteFieldValue.text) {
+            inlineNoteFieldValue = TextFieldValue(line.note, TextRange(line.note.length))
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -1226,20 +1416,36 @@ private fun TapeLineRow(
                         } catch (_: Exception) {}
                     }
                     BasicTextField(
-                        value = line.note,
-                        onValueChange = onUpdateNote,
+                        value = commentFieldValue,
+                        onValueChange = { newTfv ->
+                            commentFieldValue = newTfv
+                            if (newTfv.text != line.note) {
+                                onUpdateNote(newTfv.text)
+                            }
+                        },
                         textStyle = TextStyle(
                             color = textColor,
                             fontSize = settings.fontSize.sp,
                             fontFamily = FontFamily.Default
                         ),
                         cursorBrush = SolidColor(accentColor),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Sentences,
+                            autoCorrectEnabled = true,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                keyboardController?.hide()
+                            }
+                        ),
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(focusRequester),
                         decorationBox = { innerTextField ->
                             Box(modifier = Modifier.fillMaxWidth()) {
-                                if (line.note.isEmpty()) {
+                                if (commentFieldValue.text.isEmpty()) {
                                     Text(
                                         text = "|",
                                         color = accentColor.copy(alpha = 0.8f),
@@ -1306,8 +1512,13 @@ private fun TapeLineRow(
                             } catch (_: Exception) {}
                         }
                         BasicTextField(
-                            value = line.note,
-                            onValueChange = onUpdateNote,
+                            value = inlineNoteFieldValue,
+                            onValueChange = { newTfv ->
+                                inlineNoteFieldValue = newTfv
+                                if (newTfv.text != line.note) {
+                                    onUpdateNote(newTfv.text)
+                                }
+                            },
                             textStyle = TextStyle(
                                 color = subtextColor,
                                 fontSize = (settings.fontSize - 1).sp,
@@ -1315,12 +1526,22 @@ private fun TapeLineRow(
                             ),
                             cursorBrush = SolidColor(accentColor),
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Sentences,
+                                autoCorrectEnabled = true,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    keyboardController?.hide()
+                                }
+                            ),
                             modifier = Modifier
                                 .weight(1f)
                                 .focusRequester(noteFocusRequester),
                             decorationBox = { innerTextField ->
                                 Box {
-                                    if (line.note.isEmpty()) {
+                                    if (inlineNoteFieldValue.text.isEmpty()) {
                                         Text(
                                             text = "note...",
                                             color = subtextColor.copy(alpha = 0.4f),

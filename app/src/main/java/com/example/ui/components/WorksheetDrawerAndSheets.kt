@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -108,6 +109,7 @@ fun DocumentsDrawerContent(
     onOpenTemplates: () -> Unit,
     onOpenBackup: () -> Unit,
     onOpenRestore: () -> Unit,
+    onOpenTutorial: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val isLightCanvas = theme.backgroundColor.luminance() > 0.45f
@@ -376,6 +378,17 @@ fun DocumentsDrawerContent(
                 textColor = textColor,
                 onClick = {
                     onOpenSettings()
+                    onDismiss()
+                }
+            )
+
+            // Tutorial & Guide
+            DrawerActionRow(
+                icon = Icons.Default.School,
+                title = "Paper Tape Tutorial & Guide",
+                textColor = textColor,
+                onClick = {
+                    onOpenTutorial()
                     onDismiss()
                 }
             )
