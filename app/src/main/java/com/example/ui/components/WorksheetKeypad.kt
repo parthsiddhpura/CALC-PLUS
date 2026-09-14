@@ -371,11 +371,19 @@ fun WorksheetKeypadView(
                             if (isEditKeyboardMode) onOpenKeyCustomizer("MR") else onMemoryRecall()
                         }
                     )
+                    val customKeyRawLabel = settings.customKeyLabel.ifBlank { "Customise\nButton" }
+                    val customKeyFontSize = when {
+                        customKeyRawLabel.length <= 2 -> 22.sp // Digits and single operators like "8", "+", "00"
+                        customKeyRawLabel.length <= 5 -> 17.sp // Short codes like "+18%", "GST", "MR"
+                        customKeyRawLabel.contains("\n") -> 13.sp // Multiline labels like "Customise\nButton", "+GST\n(18%)"
+                        customKeyRawLabel.length <= 9 -> 14.sp
+                        else -> 12.sp
+                    }
                     KeyButton(
-                        label = settings.customKeyLabel.ifBlank { "Customise\nButton" },
+                        label = customKeyRawLabel,
                         bg = steelBlueBg,
                         textColor = steelBlueText,
-                        fontSize = 11.sp,
+                        fontSize = customKeyFontSize,
                         modifier = Modifier.weight(1f),
                         onClick = {
                             playFeedback()

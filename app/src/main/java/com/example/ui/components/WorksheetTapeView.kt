@@ -733,8 +733,42 @@ fun WorksheetTapeView(
                         selectedLineIndex = 0
                         pushHistory(newDoc)
                         return@WorksheetKeypadView
+                    } else if (sysKey == "⌫") {
+                        val targetIdx = if (selectedLineIndex in lines.indices) selectedLineIndex else lines.size - 1
+                        if (targetIdx in lines.indices) {
+                            val curr = lines[targetIdx]
+                            if (curr.rawValue.length > 1) {
+                                lines[targetIdx] = curr.copy(rawValue = curr.rawValue.dropLast(1))
+                            } else {
+                                lines[targetIdx] = curr.copy(rawValue = "0")
+                            }
+                        }
+                    } else if (sysKey in listOf("+", "-", "x", "÷")) {
+                        lines.add(WorksheetLine(operator = sysKey, rawValue = "0"))
+                        selectedLineIndex = lines.size - 1
+                    } else if (sysKey == "=" || sysKey == "=/↵") {
+                        lines.add(WorksheetLine(lineType = WorksheetLineType.SUB_TOTAL, operator = "=", hasDividerBefore = true, rawValue = "0"))
+                        lines.add(WorksheetLine(lineType = WorksheetLineType.COMMENT_HEADER, operator = "", rawValue = "", note = ""))
+                        selectedLineIndex = lines.size - 1
+                    } else if (sysKey in listOf("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", ",", "00", "000")) {
+                        val targetIdx = if (selectedLineIndex in lines.indices) selectedLineIndex else lines.size - 1
+                        val digitStr = if (sysKey == ",") "." else sysKey
+                        if (lines.isEmpty() || targetIdx < 0) {
+                            lines.add(WorksheetLine(operator = "+", rawValue = digitStr))
+                            selectedLineIndex = 0
+                        } else {
+                            val curr = lines[targetIdx]
+                            if (curr.lineType == WorksheetLineType.SUB_TOTAL || curr.lineType == WorksheetLineType.COMMENT_HEADER) {
+                                lines.add(WorksheetLine(operator = "+", rawValue = digitStr))
+                                selectedLineIndex = lines.size - 1
+                            } else {
+                                val newRaw = if (curr.rawValue == "0" && !digitStr.startsWith(".")) digitStr else curr.rawValue + digitStr
+                                lines[targetIdx] = curr.copy(rawValue = newRaw)
+                            }
+                        }
                     } else {
                         lines.add(WorksheetLine(operator = "+", rawValue = sysKey))
+                        selectedLineIndex = lines.size - 1
                     }
                 } else {
                     val rate = settings.customKeyRate.toDoubleOrNull()

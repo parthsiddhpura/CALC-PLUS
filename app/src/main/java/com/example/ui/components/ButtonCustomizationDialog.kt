@@ -82,15 +82,28 @@ fun ButtonCustomizationDialog(
     var selectedSystemKey by remember { mutableStateOf<String?>(null) }
     var selectedLayoutType by remember { mutableStateOf("Single") }
 
-    // User Tab Presets matching video frame 00:10
+    // User Tab Presets matching video frame 00:10 with rich options
     var userKeysList by remember {
         mutableStateOf(
             listOf(
-                UserCustomKeyOption("GST_PLUS_18", "+GST (18%)", "+GST\n(18%)", "+GST", "18"),
-                UserCustomKeyOption("RED_PLUS_12", "+Reduced (12%)", "+Red\n(12%)", "+Reduced", "12"),
-                UserCustomKeyOption("GST_MINUS_18", "-GST (18%)", "-GST\n(18%)", "-GST", "18"),
-                UserCustomKeyOption("RED_MINUS_12", "-Reduced (12%)", "-Red\n(12%)", "-Reduced", "12"),
-                UserCustomKeyOption("CUSTOMISE_BUTTON", "Customise Button", "Customise\nButton", "Customise Button", "18")
+                UserCustomKeyOption("GST_PLUS_18", "+GST (18%)", "+GST\n(18%)", "+GST", "18", isSystemPreset = true),
+                UserCustomKeyOption("GST_PLUS_12", "+GST (12%)", "+GST\n(12%)", "+GST", "12", isSystemPreset = true),
+                UserCustomKeyOption("GST_PLUS_5", "+GST (5%)", "+GST\n(5%)", "+GST", "5", isSystemPreset = true),
+                UserCustomKeyOption("GST_PLUS_28", "+GST (28%)", "+GST\n(28%)", "+GST", "28", isSystemPreset = true),
+                UserCustomKeyOption("GST_MINUS_18", "-GST (18%)", "-GST\n(18%)", "-GST", "18", isSystemPreset = true),
+                UserCustomKeyOption("GST_MINUS_12", "-GST (12%)", "-GST\n(12%)", "-GST", "12", isSystemPreset = true),
+                UserCustomKeyOption("RED_PLUS_12", "+Reduced (12%)", "+Red\n(12%)", "+Reduced", "12", isSystemPreset = true),
+                UserCustomKeyOption("RED_MINUS_12", "-Reduced (12%)", "-Red\n(12%)", "-Reduced", "12", isSystemPreset = true),
+                UserCustomKeyOption("TAX_PLUS_10", "+Tax (10%)", "+Tax\n(10%)", "+Tax", "10", isSystemPreset = true),
+                UserCustomKeyOption("TAX_MINUS_10", "-Tax (10%)", "-Tax\n(10%)", "-Tax", "10", isSystemPreset = true),
+                UserCustomKeyOption("VAT_PLUS_20", "+VAT (20%)", "+VAT\n(20%)", "+VAT", "20", isSystemPreset = true),
+                UserCustomKeyOption("VAT_MINUS_20", "-VAT (20%)", "-VAT\n(20%)", "-VAT", "20", isSystemPreset = true),
+                UserCustomKeyOption("DISC_10", "-Discount (10%)", "-Disc\n(10%)", "-Discount", "10", isSystemPreset = true),
+                UserCustomKeyOption("DISC_20", "-Discount (20%)", "-Disc\n(20%)", "-Discount", "20", isSystemPreset = true),
+                UserCustomKeyOption("MARKUP_15", "+Markup (15%)", "+Mark\n(15%)", "+Markup", "15", isSystemPreset = true),
+                UserCustomKeyOption("DOUBLE_ZERO", "00", "00", "SYSTEM_00", "0", isSystemPreset = true),
+                UserCustomKeyOption("TRIPLE_ZERO", "000", "000", "SYSTEM_000", "0", isSystemPreset = true),
+                UserCustomKeyOption("CUSTOMISE_BUTTON", "Customise Button", "Customise\nButton", "Customise Button", "18", isSystemPreset = true)
             )
         )
     }
@@ -211,7 +224,7 @@ fun ButtonCustomizationDialog(
                     onClick = { selectedTabIndex = 1 },
                     text = {
                         Text(
-                            text = "USER",
+                            text = "CUSTOMISE",
                             fontSize = 13.sp,
                             fontWeight = if (selectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTabIndex == 1) Color.White else Color(0xFF94A3B8)
@@ -254,19 +267,22 @@ fun ButtonCustomizationDialog(
                                     shape = RoundedCornerShape(12.dp),
                                     color = if (isSelected) Color(0xFF38BDF8).copy(alpha = 0.35f) else Color(0xFF293240),
                                     border = androidx.compose.foundation.BorderStroke(
-                                        1.dp,
+                                        if (isSelected) 2.dp else 1.dp,
                                         if (isSelected) Color(0xFF38BDF8) else Color(0xFF3D4B60)
                                     ),
                                     modifier = Modifier
                                         .height(52.dp)
-                                        .clickable { selectedSystemKey = sysKey }
+                                        .clickable {
+                                            selectedSystemKey = sysKey
+                                            selectedUserKeyId = ""
+                                        }
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
                                             text = sysKey,
                                             color = Color.White,
-                                            fontSize = 17.sp,
-                                            fontWeight = FontWeight.Medium
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold
                                         )
                                     }
                                 }
@@ -275,94 +291,104 @@ fun ButtonCustomizationDialog(
                     }
 
                     1 -> {
-                        // USER TAB: User custom presets grid + bottom actions
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
+                        // CUSTOMISE TAB: User custom presets grid + bottom actions
+                        Box(modifier = Modifier.fillMaxSize()) {
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(3),
+                                contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 84.dp),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.fillMaxSize()
                             ) {
                                 items(userKeysList) { item ->
                                     val isSelected = selectedUserKeyId == item.id
-                                    Box(
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isSelected) Color(0xFF38BDF8).copy(alpha = 0.32f) else Color(0xFF293240),
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            if (isSelected) 2.dp else 1.dp,
+                                            if (isSelected) Color(0xFF38BDF8) else Color(0xFF3D4B60)
+                                        ),
                                         modifier = Modifier
-                                            .height(60.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(
-                                                if (isSelected) Color(0xFF38BDF8).copy(alpha = 0.3f)
-                                                else Color(0xFF2B3444)
-                                            )
-                                            .border(
-                                                1.dp,
-                                                if (isSelected) Color(0xFF38BDF8) else Color(0xFF3D4B60),
-                                                RoundedCornerShape(12.dp)
-                                            )
+                                            .height(68.dp)
                                             .clickable {
                                                 selectedUserKeyId = item.id
                                                 selectedSystemKey = null
                                             }
-                                            .padding(6.dp)
                                     ) {
-                                        // Orange SYS / USER badge
-                                        Surface(
-                                            shape = RoundedCornerShape(4.dp),
-                                            color = Color(0xFFD97706),
-                                            modifier = Modifier.align(Alignment.TopStart)
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(6.dp)
                                         ) {
+                                            // Badge: SYS / USER
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = if (item.isSystemPreset) Color(0xFFD97706) else Color(0xFF0D9488),
+                                                modifier = Modifier.align(Alignment.TopStart)
+                                            ) {
+                                                Text(
+                                                    text = if (item.isSystemPreset) "SYS" else "USER",
+                                                    color = Color.White,
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+
+                                            // Centered label with readable font
                                             Text(
-                                                text = if (item.isSystemPreset) "SYS" else "USER",
+                                                text = item.title,
                                                 color = Color.White,
-                                                fontSize = 8.sp,
+                                                fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 2,
+                                                modifier = Modifier
+                                                    .align(Alignment.Center)
+                                                    .padding(top = 10.dp)
                                             )
                                         }
-
-                                        Text(
-                                            text = item.title,
-                                            color = Color.White,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            textAlign = TextAlign.Center,
-                                            modifier = Modifier.align(Alignment.Center)
-                                        )
                                     }
                                 }
                             }
 
-                            // Bottom Action Bar: New | Edit | Delete matching video frame 00:10
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                HorizontalDivider(color = Color(0xFF293240), thickness = 1.dp)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.SpaceAround,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    TextButton(onClick = { showNewKeyDialog = true }) {
-                                        Text("✧ New", color = Color(0xFFE2E8F0), fontSize = 14.sp)
-                                    }
-                                    TextButton(onClick = {
-                                        val cur = userKeysList.find { it.id == selectedUserKeyId }
-                                        if (cur != null) {
-                                            newKeyName = cur.title
-                                            newKeyRate = cur.rate
-                                            showNewKeyDialog = true
+                            // Bottom Action Bar: New | Edit | Reset
+                            Surface(
+                                color = Color(0xFF1E242F),
+                                shadowElevation = 10.dp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .align(Alignment.BottomCenter)
+                            ) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    HorizontalDivider(color = Color(0xFF293240), thickness = 1.dp)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                                        horizontalArrangement = Arrangement.SpaceAround,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        TextButton(onClick = { showNewKeyDialog = true }) {
+                                            Text("✧ New Key", color = Color(0xFF38BDF8), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                         }
-                                    }) {
-                                        Text("Edit", color = Color(0xFFE2E8F0), fontSize = 14.sp)
-                                    }
-                                    TextButton(onClick = {
-                                        selectedUserKeyId = "CUSTOMISE_BUTTON"
-                                    }) {
-                                        Text("Reset", color = Color(0xFFE2E8F0), fontSize = 14.sp)
+                                        TextButton(onClick = {
+                                            val cur = userKeysList.find { it.id == selectedUserKeyId }
+                                            if (cur != null) {
+                                                newKeyName = cur.title
+                                                newKeyRate = cur.rate
+                                                showNewKeyDialog = true
+                                            }
+                                        }) {
+                                            Text("Edit", color = Color(0xFFE2E8F0), fontSize = 14.sp)
+                                        }
+                                        TextButton(onClick = {
+                                            selectedUserKeyId = "CUSTOMISE_BUTTON"
+                                            selectedSystemKey = null
+                                        }) {
+                                            Text("Reset", color = Color(0xFFE2E8F0), fontSize = 14.sp)
+                                        }
                                     }
                                 }
                             }
