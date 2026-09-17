@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.chromacalc.bbduoj"
     minSdk = 24
     targetSdk = 36
-    versionCode = 91
-    versionName = "9.1"
+    versionCode = 92
+    versionName = "92.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
