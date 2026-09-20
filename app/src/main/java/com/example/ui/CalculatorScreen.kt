@@ -685,8 +685,8 @@ fun CalculatorScreen(
                                             onOpenDecimalConverter = { viewModel.setShowDecimalConverterSheet(true) },
                                             onToggleNotation = { viewModel.toggleDisplayNotation(haptics) },
                                             modifier = Modifier
-                                                .weight(1f)
-                                                .padding(bottom = 6.dp)
+                                                .weight(0.24f)
+                                                .padding(bottom = 4.dp)
                                         )
 
                                         ScientificKeypad(
@@ -707,7 +707,9 @@ fun CalculatorScreen(
                                             onMemoryRecall = onMemoryRecallCallback,
                                             onMemoryClear = onMemoryClearCallback,
                                             onEng = onEngCallback,
-                                            modifier = Modifier.padding(bottom = 4.dp)
+                                            modifier = Modifier
+                                                .weight(0.76f)
+                                                .padding(bottom = 2.dp)
                                         )
                                     }
                                 }

@@ -463,12 +463,12 @@ fun CalculatorDisplay(
                         // Memory Badge
                         if (hasMemory) {
                             Surface(
-                                color = Color(0xFFFFB703).copy(alpha = 0.2f),
+                                color = theme.accentColor.copy(alpha = 0.2f),
                                 shape = RoundedCornerShape(6.dp)
                             ) {
                                 Text(
                                     text = "M",
-                                    color = Color(0xFFFFB703),
+                                    color = theme.accentColor,
                                     fontSize = if (isCompact) 9.sp else 11.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontFamily = fontFamily,

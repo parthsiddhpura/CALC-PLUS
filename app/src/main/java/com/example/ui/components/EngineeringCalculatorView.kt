@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,7 +30,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
@@ -41,10 +45,13 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,6 +83,7 @@ fun EngineeringCalculatorView(
     modifier: Modifier = Modifier
 ) {
     var selectedCategory by remember { mutableStateOf(EngineeringCategory.OHMS_LAW) }
+    var showMenuDialog by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val categoryScrollState = rememberScrollState()
 
@@ -84,9 +92,86 @@ fun EngineeringCalculatorView(
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // --- 1. Top Category Bar (Horizontally scrollable) ---
+        // --- 1. Professional Calculation Menu Card ---
+        Card(
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
+            border = androidx.compose.foundation.BorderStroke(1.dp, theme.accentColor.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showMenuDialog = true }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(theme.accentColor.copy(alpha = 0.18f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(selectedCategory.iconName, fontSize = 20.sp)
+                    }
+                    Column {
+                        Text(
+                            text = selectedCategory.displayName,
+                            color = theme.screenTextColor,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = getDisciplineForCategory(selectedCategory),
+                            color = theme.screenExpressionColor,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = theme.accentColor.copy(alpha = 0.15f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, theme.accentColor.copy(alpha = 0.6f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MenuBook,
+                            contentDescription = "Calculations Menu",
+                            tint = theme.accentColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Options",
+                            color = theme.accentColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = null,
+                            tint = theme.accentColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // --- 2. Top Category Bar (Horizontally scrollable) ---
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -119,7 +204,7 @@ fun EngineeringCalculatorView(
             }
         }
 
-        // --- 2. Category Content ---
+        // --- 3. Category Content ---
         when (selectedCategory) {
             EngineeringCategory.OHMS_LAW -> OhmsLawSection(theme)
             EngineeringCategory.CIRCUITS -> CircuitsSection(theme)
@@ -136,6 +221,348 @@ fun EngineeringCalculatorView(
             EngineeringCategory.GEARS_PULLEYS -> GearsTransmissionSection(theme)
             EngineeringCategory.ENG_PREFIXES -> EngPrefixSection(theme)
             EngineeringCategory.CONSTANTS -> EngineeringConstantsSection(theme)
+        }
+    }
+
+    if (showMenuDialog) {
+        EngineeringCalculationMenuDialog(
+            selectedCategory = selectedCategory,
+            theme = theme,
+            onSelect = {
+                selectedCategory = it
+                showMenuDialog = false
+            },
+            onDismiss = { showMenuDialog = false }
+        )
+    }
+}
+
+private fun getDisciplineForCategory(cat: EngineeringCategory): String = when (cat) {
+    EngineeringCategory.OHMS_LAW,
+    EngineeringCategory.CIRCUITS,
+    EngineeringCategory.RLC_RESONANCE,
+    EngineeringCategory.THREE_PHASE_POWER -> "Electrical & Electronics"
+    EngineeringCategory.MECHANICS,
+    EngineeringCategory.KINEMATICS,
+    EngineeringCategory.ENERGY_POWER,
+    EngineeringCategory.GEARS_PULLEYS -> "Mechanical & Motion"
+    EngineeringCategory.STRESS_STRAIN,
+    EngineeringCategory.STRUCTURAL -> "Civil & Materials"
+    EngineeringCategory.REYNOLDS_PIPE,
+    EngineeringCategory.FLUID_THERMAL,
+    EngineeringCategory.THERMAL_EXPANSION -> "Fluid & Thermal Dynamics"
+    EngineeringCategory.ENG_PREFIXES,
+    EngineeringCategory.CONSTANTS -> "Reference Tables & Constants"
+}
+
+private fun getCategoryDescription(cat: EngineeringCategory): String = when (cat) {
+    EngineeringCategory.OHMS_LAW -> "V = I·R, P = V·I voltage, current, resistance & power relationships"
+    EngineeringCategory.CIRCUITS -> "Series/Parallel equivalent resistance & RC charge/discharge time constant (τ)"
+    EngineeringCategory.RLC_RESONANCE -> "Resonant frequency (f₀ = 1/(2π√LC)) with inductive (XL) & capacitive (XC) reactance"
+    EngineeringCategory.THREE_PHASE_POWER -> "Real (kW), Reactive (kVAR), Apparent (kVA) power & power factor (PF)"
+    EngineeringCategory.MECHANICS -> "Newton's 2nd Law (F = m·a), Torque (τ = r·F) & Centripetal acceleration (ac)"
+    EngineeringCategory.KINEMATICS -> "Constant acceleration SUVAT equations & 2D projectile motion metrics"
+    EngineeringCategory.ENERGY_POWER -> "Kinetic energy (½mv²), Gravitational potential (mgh) & Mechanical power"
+    EngineeringCategory.STRESS_STRAIN -> "Normal stress (σ = F/A), Strain (ε = ΔL/L₀) & Young's modulus elasticity"
+    EngineeringCategory.STRUCTURAL -> "Simply supported beam maximum bending moment & center deflection (δ)"
+    EngineeringCategory.REYNOLDS_PIPE -> "Reynolds number (Re), laminar vs turbulent flow regime & Darcy pipe friction loss"
+    EngineeringCategory.FLUID_THERMAL -> "Hydrostatic pressure (P = ρgh) & Bernoulli fluid exit velocity"
+    EngineeringCategory.THERMAL_EXPANSION -> "Linear (ΔL = αL₀ΔT) & Volumetric thermal expansion across temperature shifts"
+    EngineeringCategory.GEARS_PULLEYS -> "Gear ratio (N₁/N₂), speed reduction ratio & output torque transmission"
+    EngineeringCategory.ENG_PREFIXES -> "Comprehensive SI metric decimal multipliers from Yotta (10²⁴) down to Yocto (10⁻²⁴)"
+    EngineeringCategory.CONSTANTS -> "Universal fundamental physical constants (c, h, G, k_B, ε₀, μ₀, e)"
+}
+
+@Composable
+private fun EngineeringCalculationMenuDialog(
+    selectedCategory: EngineeringCategory,
+    theme: ThemePalette,
+    onSelect: (EngineeringCategory) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedDisciplineFilter by remember { mutableStateOf("All") }
+
+    val disciplines = listOf("All", "Electrical", "Mechanical", "Civil/Materials", "Fluids/Thermal", "Reference")
+
+    val filteredCategories = remember(searchQuery, selectedDisciplineFilter) {
+        EngineeringCategory.values().filter { cat ->
+            val matchesSearch = searchQuery.isBlank() ||
+                cat.displayName.contains(searchQuery, ignoreCase = true) ||
+                getCategoryDescription(cat).contains(searchQuery, ignoreCase = true) ||
+                getDisciplineForCategory(cat).contains(searchQuery, ignoreCase = true)
+
+            val matchesFilter = when (selectedDisciplineFilter) {
+                "All" -> true
+                "Electrical" -> getDisciplineForCategory(cat).startsWith("Electrical")
+                "Mechanical" -> getDisciplineForCategory(cat).startsWith("Mechanical")
+                "Civil/Materials" -> getDisciplineForCategory(cat).contains("Civil")
+                "Fluids/Thermal" -> getDisciplineForCategory(cat).contains("Fluid")
+                "Reference" -> getDisciplineForCategory(cat).contains("Reference")
+                else -> true
+            }
+            matchesSearch && matchesFilter
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
+            border = androidx.compose.foundation.BorderStroke(1.5.dp, theme.accentColor.copy(alpha = 0.6f)),
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .fillMaxHeight(0.85f)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Header Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(theme.accentColor.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MenuBook,
+                                contentDescription = null,
+                                tint = theme.accentColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Engineering Calculations",
+                                color = theme.screenTextColor,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                            Text(
+                                text = "Choose from 15 professional engineering calculators",
+                                color = theme.screenExpressionColor,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = theme.screenExpressionColor
+                        )
+                    }
+                }
+
+                // Search Bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = {
+                        Text(
+                            "Search calculations (e.g. Ohm, Beam, Reynolds...)",
+                            fontSize = 12.sp,
+                            color = theme.screenExpressionColor.copy(alpha = 0.6f)
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = theme.accentColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear",
+                                    tint = theme.screenExpressionColor,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = theme.accentColor,
+                        unfocusedBorderColor = theme.backgroundColor.copy(alpha = 0.8f),
+                        focusedTextColor = theme.screenTextColor,
+                        unfocusedTextColor = theme.screenTextColor
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Filter Chips Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    disciplines.forEach { disc ->
+                        val isSelected = selectedDisciplineFilter == disc
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) theme.accentColor else theme.backgroundColor.copy(alpha = 0.6f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isSelected) theme.accentColor else theme.screenExpressionColor.copy(alpha = 0.25f)
+                            ),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { selectedDisciplineFilter = disc }
+                        ) {
+                            Text(
+                                text = disc,
+                                color = if (isSelected) theme.backgroundColor else theme.screenTextColor,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = theme.accentColor.copy(alpha = 0.2f))
+
+                // List of Calculations
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (filteredCategories.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No engineering calculations match \"$searchQuery\"",
+                                color = theme.screenExpressionColor,
+                                fontSize = 13.sp
+                            )
+                        }
+                    } else {
+                        filteredCategories.forEach { cat ->
+                            val isSelected = cat == selectedCategory
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isSelected) theme.accentColor.copy(alpha = 0.16f) else theme.backgroundColor.copy(alpha = 0.5f),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    width = if (isSelected) 1.5.dp else 1.dp,
+                                    color = if (isSelected) theme.accentColor else theme.surfaceColor
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { onSelect(cat) }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(
+                                                if (isSelected) theme.accentColor.copy(alpha = 0.25f)
+                                                else theme.surfaceColor
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(cat.iconName, fontSize = 20.sp)
+                                    }
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = cat.displayName,
+                                                color = if (isSelected) theme.accentColor else theme.screenTextColor,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = theme.accentColor.copy(alpha = 0.12f)
+                                            ) {
+                                                Text(
+                                                    text = getDisciplineForCategory(cat),
+                                                    color = theme.accentColor,
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(2.dp))
+
+                                        Text(
+                                            text = getCategoryDescription(cat),
+                                            color = theme.screenExpressionColor,
+                                            fontSize = 11.sp,
+                                            lineHeight = 14.sp,
+                                            maxLines = 2
+                                        )
+                                    }
+
+                                    if (isSelected) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .clip(CircleShape)
+                                                .background(theme.accentColor),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = theme.backgroundColor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -411,21 +411,21 @@ object LanguageStrings {
     }
 
     fun rateSelectionHeader(lang: AppLanguage): String = when (lang) {
-        AppLanguage.SPANISH -> "── SELECCIÓN DE TASA DE IVA ──"
-        AppLanguage.HINDI -> "── जीएसटी दर चयन ──"
-        AppLanguage.GUJARATI -> "── જીએસટી દર પસંદગી ──"
-        AppLanguage.FRENCH -> "── SÉLECTION DU TAUX TVA ──"
-        AppLanguage.GERMAN -> "── STEUERSATZ AUSWAHL ──"
-        AppLanguage.JAPANESE -> "── 消費税率選択 ──"
-        AppLanguage.CHINESE -> "── 税率快捷选择 ──"
-        AppLanguage.ARABIC -> "── اختيار نسبة الضريبة ──"
-        AppLanguage.PORTUGUESE -> "── SELEÇÃO DE TAXA IVA ──"
-        AppLanguage.RUSSIAN -> "── ВЫБОР СТАВКИ НАЛОГА ──"
-        AppLanguage.ITALIAN -> "── SELEZIONE ALIQUOTA IVA ──"
-        AppLanguage.INDONESIAN -> "── PILIHAN TARIF PPN ──"
-        AppLanguage.KOREAN -> "── 부가세율 선택 ──"
-        AppLanguage.TURKISH -> "── KDV ORANI SEÇİMİ ──"
-        else -> "── GST RATE SELECTION ──"
+        AppLanguage.SPANISH -> "SELECCIÓN DE TASA DE IVA"
+        AppLanguage.HINDI -> "जीएसटी दर चयन"
+        AppLanguage.GUJARATI -> "જીએસટી દર પસંદગી"
+        AppLanguage.FRENCH -> "SÉLECTION DU TAUX TVA"
+        AppLanguage.GERMAN -> "STEUERSATZ AUSWAHL"
+        AppLanguage.JAPANESE -> "消費税率選択"
+        AppLanguage.CHINESE -> "税率快捷选择"
+        AppLanguage.ARABIC -> "اختيار نسبة الضريبة"
+        AppLanguage.PORTUGUESE -> "SELEÇÃO DE TAXA IVA"
+        AppLanguage.RUSSIAN -> "ВЫБОР СТАВКИ НАЛОГА"
+        AppLanguage.ITALIAN -> "SELEZIONE ALIQUOTA IVA"
+        AppLanguage.INDONESIAN -> "PILIHAN TARIF PPN"
+        AppLanguage.KOREAN -> "부가세율 선택"
+        AppLanguage.TURKISH -> "KDV ORANI SEÇİMİ"
+        else -> "GST RATE SELECTION"
     }
 
     fun grandTotal(lang: AppLanguage): String = when (lang) {

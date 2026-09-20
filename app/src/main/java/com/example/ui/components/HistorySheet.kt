@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
@@ -130,6 +131,15 @@ fun HistorySheet(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (historyList.isNotEmpty()) {
+                        IconButton(onClick = {
+                            com.example.domain.CalculationHistoryPrintAdapter.printHistory(context, historyList)
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Print,
+                                contentDescription = "Export History to PDF or Print",
+                                tint = theme.accentColor
+                            )
+                        }
                         IconButton(onClick = { showClearConfirmation = true }) {
                             Icon(
                                 imageVector = Icons.Default.DeleteSweep,

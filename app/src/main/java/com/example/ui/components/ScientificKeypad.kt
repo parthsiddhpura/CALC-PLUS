@@ -40,8 +40,6 @@ fun ScientificKeypad(
 ) {
     val rowSpacing = 3.dp
     val colSpacing = 3.dp
-    val sciKeyHeight = 32.dp
-    val stdKeyHeight = 40.dp
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -49,7 +47,7 @@ fun ScientificKeypad(
     ) {
         // Sci Row 1: 2nd, DEG/RAD, sin/asin, cos/acos, tan/atan
         Row(
-            modifier = Modifier.fillMaxWidth().height(sciKeyHeight),
+            modifier = Modifier.fillMaxWidth().weight(0.95f),
             horizontalArrangement = Arrangement.spacedBy(colSpacing)
         ) {
             CalculatorButton(
@@ -113,7 +111,7 @@ fun ScientificKeypad(
 
         // Sci Row 2: ln / eˣ, log / 10ˣ, xʸ, √ / ∛, x!
         Row(
-            modifier = Modifier.fillMaxWidth().height(sciKeyHeight),
+            modifier = Modifier.fillMaxWidth().weight(0.95f),
             horizontalArrangement = Arrangement.spacedBy(colSpacing)
         ) {
             CalculatorButton(
@@ -187,7 +185,7 @@ fun ScientificKeypad(
 
         // Sci Row 3: π, e, φ, 1/x, |x|
         Row(
-            modifier = Modifier.fillMaxWidth().height(sciKeyHeight),
+            modifier = Modifier.fillMaxWidth().weight(0.95f),
             horizontalArrangement = Arrangement.spacedBy(colSpacing)
         ) {
             CalculatorButton(
@@ -250,7 +248,7 @@ fun ScientificKeypad(
 
         // Memory & Bracket Row: MC, MR, M+, (, )
         Row(
-            modifier = Modifier.fillMaxWidth().height(sciKeyHeight),
+            modifier = Modifier.fillMaxWidth().weight(0.95f),
             horizontalArrangement = Arrangement.spacedBy(colSpacing)
         ) {
             CalculatorButton(
@@ -313,7 +311,7 @@ fun ScientificKeypad(
         // Main Digits & Arithmetic Grid
         // Row 1: AC, ⌫, %, ÷
         Row(
-            modifier = Modifier.fillMaxWidth().height(stdKeyHeight),
+            modifier = Modifier.fillMaxWidth().weight(1.15f),
             horizontalArrangement = Arrangement.spacedBy(colSpacing)
         ) {
             CalculatorButton(
@@ -323,6 +321,7 @@ fun ScientificKeypad(
                 backgroundColor = theme.functionButtonBg,
                 textColor = theme.functionButtonText,
                 borderColor = theme.functionButtonBorder,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_ac_sci"
@@ -334,6 +333,7 @@ fun ScientificKeypad(
                 backgroundColor = theme.functionButtonBg,
                 textColor = theme.functionButtonText,
                 borderColor = theme.functionButtonBorder,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_backspace_sci"
@@ -345,6 +345,8 @@ fun ScientificKeypad(
                 backgroundColor = theme.functionButtonBg,
                 textColor = theme.functionButtonText,
                 borderColor = theme.functionButtonBorder,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_percent_sci"
             )
@@ -363,13 +365,15 @@ fun ScientificKeypad(
 
         // Row 2: 7, 8, 9, ×
         Row(
-            modifier = Modifier.fillMaxWidth().height(stdKeyHeight),
+            modifier = Modifier.fillMaxWidth().weight(1.15f),
             horizontalArrangement = Arrangement.spacedBy(colSpacing)
         ) {
             CalculatorButton(
                 text = "7",
                 onClick = { onInput("7") },
                 theme = theme,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_7_sci"
             )
@@ -377,6 +381,8 @@ fun ScientificKeypad(
                 text = "8",
                 onClick = { onInput("8") },
                 theme = theme,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_8_sci"
             )
@@ -384,6 +390,8 @@ fun ScientificKeypad(
                 text = "9",
                 onClick = { onInput("9") },
                 theme = theme,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_9_sci"
             )
@@ -402,13 +410,15 @@ fun ScientificKeypad(
 
         // Row 3: 4, 5, 6, −
         Row(
-            modifier = Modifier.fillMaxWidth().height(stdKeyHeight),
+            modifier = Modifier.fillMaxWidth().weight(1.15f),
             horizontalArrangement = Arrangement.spacedBy(colSpacing)
         ) {
             CalculatorButton(
                 text = "4",
                 onClick = { onInput("4") },
                 theme = theme,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_4_sci"
             )
@@ -416,6 +426,8 @@ fun ScientificKeypad(
                 text = "5",
                 onClick = { onInput("5") },
                 theme = theme,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_5_sci"
             )
@@ -423,6 +435,8 @@ fun ScientificKeypad(
                 text = "6",
                 onClick = { onInput("6") },
                 theme = theme,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_6_sci"
             )
@@ -441,13 +455,15 @@ fun ScientificKeypad(
 
         // Row 4: 1, 2, 3, +
         Row(
-            modifier = Modifier.fillMaxWidth().height(stdKeyHeight),
+            modifier = Modifier.fillMaxWidth().weight(1.15f),
             horizontalArrangement = Arrangement.spacedBy(colSpacing)
         ) {
             CalculatorButton(
                 text = "1",
                 onClick = { onInput("1") },
                 theme = theme,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_1_sci"
             )
@@ -455,6 +471,8 @@ fun ScientificKeypad(
                 text = "2",
                 onClick = { onInput("2") },
                 theme = theme,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_2_sci"
             )
@@ -462,6 +480,8 @@ fun ScientificKeypad(
                 text = "3",
                 onClick = { onInput("3") },
                 theme = theme,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_3_sci"
             )
@@ -480,13 +500,15 @@ fun ScientificKeypad(
 
         // Row 5: ±, 0, ., =
         Row(
-            modifier = Modifier.fillMaxWidth().height(stdKeyHeight),
+            modifier = Modifier.fillMaxWidth().weight(1.15f),
             horizontalArrangement = Arrangement.spacedBy(colSpacing)
         ) {
             CalculatorButton(
                 text = "±",
                 onClick = onNegate,
                 theme = theme,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_negate_sci"
             )
@@ -494,6 +516,8 @@ fun ScientificKeypad(
                 text = "0",
                 onClick = { onInput("0") },
                 theme = theme,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 testTag = "btn_0_sci"
             )

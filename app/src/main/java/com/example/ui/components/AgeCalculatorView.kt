@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import android.app.TimePickerDialog
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
@@ -281,6 +283,44 @@ fun AgeCalculatorView(
                             }
                         }
 
+                        // PDF Export / Print Button
+                        Surface(
+                            color = theme.surfaceColor,
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, theme.accentColor.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    Toast.makeText(context, "Generating PDF Report...", Toast.LENGTH_SHORT).show()
+                                    com.example.domain.AgeReportPrintAdapter.printAgeReport(
+                                        context = context,
+                                        personName = currentPersonName,
+                                        birthDateTime = birthDateTime,
+                                        ageResult = ageResult,
+                                        astrologyResult = astrologyResult
+                                    )
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Print,
+                                    contentDescription = "Export PDF",
+                                    tint = theme.accentColor,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "PDF",
+                                    color = theme.accentColor,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
                         // Share / Export Button
                         Surface(
                             color = theme.accentColor,
@@ -342,9 +382,10 @@ fun AgeCalculatorView(
                             .clickable {
                                 onSaveProfile(
                                     currentPersonName.ifBlank { "Profile" },
-                                    "Friend",
+                                    "",
                                     notes
                                 )
+                                Toast.makeText(context, "Saved successfully!", Toast.LENGTH_SHORT).show()
                             }
                     ) {
                         Row(
@@ -645,7 +686,7 @@ fun AgeCalculatorView(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .border(theme.borderWidthDp, Color(0xFFFFB703).copy(alpha = 0.6f), RoundedCornerShape(20.dp)),
+                .border(theme.borderWidthDp, theme.accentColor.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
             colors = CardDefaults.cardColors(containerColor = theme.screenBackground)
         ) {
             Column(
@@ -666,12 +707,12 @@ fun AgeCalculatorView(
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
                             contentDescription = null,
-                            tint = Color(0xFFFFB703),
+                            tint = theme.accentColor,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = "ASTROSAGE VEDIC HOROSCOPE",
-                            color = Color(0xFFFFB703),
+                            color = theme.accentColor,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = 0.5.sp
@@ -679,12 +720,12 @@ fun AgeCalculatorView(
                     }
 
                     Surface(
-                        color = Color(0xFFFFB703).copy(alpha = 0.15f),
+                        color = theme.accentColor.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
                             text = "AstroSage Ephemeris",
-                            color = Color(0xFFFFB703),
+                            color = theme.accentColor,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -697,9 +738,14 @@ fun AgeCalculatorView(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    val isChandra = rashiViewType == RashiViewType.CHANDRA_MOON
+                    val isNaam = rashiViewType == RashiViewType.NAAM_NAME
+                    val isSurya = rashiViewType == RashiViewType.SURYA_SUN
+                    val activeTextColor = if (theme.accentColor.luminance() > 0.6f) Color(0xFF1E293B) else Color.White
+
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = if (rashiViewType == RashiViewType.CHANDRA_MOON) Color(0xFFFFB703) else theme.surfaceColor,
+                        color = if (isChandra) theme.accentColor else theme.surfaceColor,
                         modifier = Modifier
                             .weight(1.3f)
                             .clip(RoundedCornerShape(8.dp))
@@ -707,7 +753,7 @@ fun AgeCalculatorView(
                     ) {
                         Text(
                             text = "🌙 Moon Sign (Chandra)",
-                            color = if (rashiViewType == RashiViewType.CHANDRA_MOON) Color.Black else theme.screenTextColor,
+                            color = if (isChandra) activeTextColor else theme.screenTextColor,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
@@ -717,7 +763,7 @@ fun AgeCalculatorView(
 
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = if (rashiViewType == RashiViewType.NAAM_NAME) Color(0xFFFFB703) else theme.surfaceColor,
+                        color = if (isNaam) theme.accentColor else theme.surfaceColor,
                         modifier = Modifier
                             .weight(1.1f)
                             .clip(RoundedCornerShape(8.dp))
@@ -725,7 +771,7 @@ fun AgeCalculatorView(
                     ) {
                         Text(
                             text = "🔤 By Name",
-                            color = if (rashiViewType == RashiViewType.NAAM_NAME) Color.Black else theme.screenTextColor,
+                            color = if (isNaam) activeTextColor else theme.screenTextColor,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
@@ -735,7 +781,7 @@ fun AgeCalculatorView(
 
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = if (rashiViewType == RashiViewType.SURYA_SUN) Color(0xFFFFB703) else theme.surfaceColor,
+                        color = if (isSurya) theme.accentColor else theme.surfaceColor,
                         modifier = Modifier
                             .weight(1.1f)
                             .clip(RoundedCornerShape(8.dp))
@@ -743,7 +789,7 @@ fun AgeCalculatorView(
                     ) {
                         Text(
                             text = "☀️ Sun Sign",
-                            color = if (rashiViewType == RashiViewType.SURYA_SUN) Color.Black else theme.screenTextColor,
+                            color = if (isSurya) activeTextColor else theme.screenTextColor,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
@@ -860,7 +906,7 @@ fun AgeCalculatorView(
                     ) {
                         Text(
                             text = "DAILY PLANETARY GUIDANCE (ASTROSAGE JYOTISH)",
-                            color = Color(0xFFFFB703),
+                            color = theme.accentColor,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp
@@ -929,7 +975,7 @@ fun AgeCalculatorView(
                         Icon(
                             imageVector = Icons.Default.Cake,
                             contentDescription = null,
-                            tint = Color(0xFFFFB703),
+                            tint = theme.accentColor,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
@@ -953,7 +999,7 @@ fun AgeCalculatorView(
                 ) {
                     Text(
                         text = "${ageResult.nextBirthdayMonths}m ${ageResult.nextBirthdayDays}d  ${String.format("%02d", ageResult.nextBirthdayHours)}h ${String.format("%02d", ageResult.nextBirthdayMinutes)}m ${String.format("%02d", ageResult.nextBirthdaySeconds)}s",
-                        color = Color(0xFFFFB703),
+                        color = theme.accentColor,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
                         fontFamily = FontFamily.Monospace
@@ -1496,8 +1542,13 @@ private fun SavedProfilesBottomSheet(
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold
                                         )
+                                        val displayRelOrNote = when {
+                                            profile.relationship.isNotBlank() && !profile.relationship.equals("Friend", ignoreCase = true) -> " • ${profile.relationship}"
+                                            profile.notes.isNotBlank() && !profile.notes.equals("Friend", ignoreCase = true) -> " • ${profile.notes}"
+                                            else -> ""
+                                        }
                                         Text(
-                                            text = "${profile.birthDay}/${profile.birthMonth}/${profile.birthYear} • ${profile.relationship}",
+                                            text = "${profile.birthDay}/${profile.birthMonth}/${profile.birthYear}$displayRelOrNote",
                                             color = theme.screenExpressionColor,
                                             fontSize = 11.sp
                                         )

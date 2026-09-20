@@ -1484,7 +1484,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         _uiState.update { it.copy(ageProfileNotes = notes) }
     }
 
-    fun saveCurrentAgeProfile(name: String, relation: String = "Self", notes: String = "") {
+    fun saveCurrentAgeProfile(name: String, relation: String = "", notes: String = "") {
         viewModelScope.launch {
             val state = _uiState.value
             val profile = AgeProfile(

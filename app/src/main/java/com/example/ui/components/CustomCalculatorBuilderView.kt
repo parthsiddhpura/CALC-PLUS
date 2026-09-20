@@ -3,6 +3,11 @@ package com.example.ui.components
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -221,10 +226,28 @@ fun CustomCalculatorBuilderView(
                 )
             }
 
+            val aiPulseTransition = rememberInfiniteTransition(label = "ai_button_pulse")
+            val aiPulseAlpha by aiPulseTransition.animateFloat(
+                initialValue = 0.45f,
+                targetValue = 1.0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1200, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "ai_pulse_alpha"
+            )
+
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = theme.accentColor.copy(alpha = if (isPromptExpanded) 0.25f else 0.12f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, theme.accentColor),
+                color = if (isPromptExpanded) {
+                    theme.accentColor.copy(alpha = 0.28f)
+                } else {
+                    theme.accentColor.copy(alpha = 0.12f + (aiPulseAlpha * 0.12f))
+                },
+                border = androidx.compose.foundation.BorderStroke(
+                    width = if (isPromptExpanded) 1.5.dp else (1.dp + (aiPulseAlpha * 0.8f).dp),
+                    color = if (isPromptExpanded) theme.accentColor else theme.accentColor.copy(alpha = aiPulseAlpha)
+                ),
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .clickable { isPromptExpanded = !isPromptExpanded }
@@ -242,7 +265,7 @@ fun CustomCalculatorBuilderView(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = if (isPromptExpanded) "Close AI" else "✨ Build with AI",
+                        text = if (isPromptExpanded) "Close AI" else "Build with AI",
                         color = theme.accentColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
