@@ -685,7 +685,7 @@ fun CalculatorScreen(
                                             onOpenDecimalConverter = { viewModel.setShowDecimalConverterSheet(true) },
                                             onToggleNotation = { viewModel.toggleDisplayNotation(haptics) },
                                             modifier = Modifier
-                                                .weight(0.24f)
+                                                .weight(0.33f)
                                                 .padding(bottom = 4.dp)
                                         )
 
@@ -708,7 +708,7 @@ fun CalculatorScreen(
                                             onMemoryClear = onMemoryClearCallback,
                                             onEng = onEngCallback,
                                             modifier = Modifier
-                                                .weight(0.76f)
+                                                .weight(0.67f)
                                                 .padding(bottom = 2.dp)
                                         )
                                     }
@@ -901,7 +901,7 @@ fun CalculatorScreen(
 
                             CalculatorMode.WORKSHEET_TAPE -> {
                                 WorksheetTapeView(
-                                    theme = toolTheme,
+                                    theme = theme,
                                     documents = uiState.worksheetDocuments,
                                     activeDocument = uiState.activeWorksheetDocument,
                                     settings = uiState.worksheetSettings,
@@ -1071,10 +1071,10 @@ private fun TopBarBrandIcon(theme: ThemePalette) {
             fontSize = 14.sp
         )
     } else {
-        Surface(
-            shape = CircleShape,
-            color = theme.accentColor,
-            modifier = Modifier.size(10.dp)
-        ) {}
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_app_logo),
+            contentDescription = "Official App Logo",
+            modifier = Modifier.size(17.dp)
+        )
     }
 }

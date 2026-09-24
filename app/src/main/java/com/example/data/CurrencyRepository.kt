@@ -150,7 +150,32 @@ object CurrencyRepository {
         CurrencyInfo("BZD", "Belize Dollar", "BZ$", "🇧🇿", "Belize", priority = 133),
         CurrencyInfo("GIP", "Gibraltar Pound", "£", "🇬🇮", "Gibraltar", priority = 134),
         CurrencyInfo("FKP", "Falkland Islands Pound", "£", "🇫🇰", "Falkland Islands", priority = 135),
-        CurrencyInfo("SHP", "Saint Helena Pound", "£", "🇸🇭", "Saint Helena", priority = 136)
+        CurrencyInfo("SHP", "Saint Helena Pound", "£", "🇸🇭", "Saint Helena", priority = 136),
+        // Additional Sovereign Countries to Complete 195+ Countries Globally
+        CurrencyInfo("ALL", "Albanian Lek", "L", "🇦🇱", "Albania", priority = 137),
+        CurrencyInfo("ANG", "NL Antillean Guilder", "ƒ", "🇨🇼", "Curacao & Sint Maarten", priority = 138),
+        CurrencyInfo("AOA", "Angolan Kwanza", "Kz", "🇦🇴", "Angola", priority = 139),
+        CurrencyInfo("AWG", "Aruban Florin", "ƒ", "🇦🇼", "Aruba", priority = 140),
+        CurrencyInfo("BAM", "Bosnia Convertible Mark", "KM", "🇧🇦", "Bosnia & Herzegovina", priority = 141),
+        CurrencyInfo("BTN", "Bhutanese Ngultrum", "Nu.", "🇧🇹", "Bhutan", priority = 142),
+        CurrencyInfo("BYN", "Belarusian Ruble", "Br", "🇧🇾", "Belarus", priority = 143),
+        CurrencyInfo("CUP", "Cuban Peso", "$", "🇨🇺", "Cuba", priority = 144),
+        CurrencyInfo("ERN", "Eritrean Nakfa", "Nfk", "🇪🇷", "Eritrea", priority = 145),
+        CurrencyInfo("GMD", "Gambian Dalasi", "D", "🇬🇲", "Gambia", priority = 146),
+        CurrencyInfo("IRR", "Iranian Rial", "﷼", "🇮🇷", "Iran", priority = 147),
+        CurrencyInfo("KMF", "Comorian Franc", "CF", "🇰🇲", "Comoros", priority = 148),
+        CurrencyInfo("KPW", "North Korean Won", "₩", "🇰🇵", "North Korea", priority = 149),
+        CurrencyInfo("LRD", "Liberian Dollar", "L$", "🇱🇷", "Liberia", priority = 150),
+        CurrencyInfo("LYD", "Libyan Dinar", "LD", "🇱🇾", "Libya", priority = 151),
+        CurrencyInfo("MGA", "Malagasy Ariary", "Ar", "🇲🇬", "Madagascar", priority = 152),
+        CurrencyInfo("MKD", "Macedonian Denar", "den", "🇲🇰", "North Macedonia", priority = 153),
+        CurrencyInfo("MRU", "Mauritanian Ouguiya", "UM", "🇲🇷", "Mauritania", priority = 154),
+        CurrencyInfo("SDG", "Sudanese Pound", "SDG", "🇸🇩", "Sudan", priority = 155),
+        CurrencyInfo("SLE", "Sierra Leonean Leone", "Le", "🇸🇱", "Sierra Leone", priority = 156),
+        CurrencyInfo("SSP", "South Sudanese Pound", "SSP", "🇸🇸", "South Sudan", priority = 157),
+        CurrencyInfo("TVD", "Tuvaluan Dollar", "$", "🇹🇻", "Tuvalu", priority = 158),
+        CurrencyInfo("VES", "Venezuelan Bolivar", "Bs.S", "🇻🇪", "Venezuela", priority = 159),
+        CurrencyInfo("ZWL", "Zimbabwean Dollar", "Z$", "🇿🇼", "Zimbabwe", priority = 160)
     )
 
     // Baseline robust rates against 1 INR (Base: INR)
@@ -256,7 +281,31 @@ object CurrencyRepository {
         "KGS" to 1.00500,
         "CDF" to 32.5000,
         "XOF" to 6.92000,
-        "XAF" to 6.92000
+        "XAF" to 6.92000,
+        "ALL" to 1.05000,
+        "ANG" to 0.02070,
+        "AOA" to 10.5500,
+        "AWG" to 0.02070,
+        "BAM" to 0.02060,
+        "BTN" to 1.00000,
+        "BYN" to 0.03750,
+        "CUP" to 0.27600,
+        "ERN" to 0.17250,
+        "GMD" to 0.81500,
+        "IRR" to 483.000,
+        "KMF" to 5.20000,
+        "KPW" to 10.3500,
+        "LRD" to 2.24000,
+        "LYD" to 0.05580,
+        "MGA" to 52.8000,
+        "MKD" to 0.65000,
+        "MRU" to 0.45800,
+        "SDG" to 6.92000,
+        "SLE" to 0.26000,
+        "SSP" to 15.2000,
+        "TVD" to 0.01772,
+        "VES" to 0.62500,
+        "ZWL" to 0.29800
     )
 
     private var cachedInrRates: MutableMap<String, Double> = DEFAULT_INR_RATES.toMutableMap()
@@ -271,6 +320,8 @@ object CurrencyRepository {
     suspend fun fetchLiveRates(): Result<Map<String, Double>> = withContext(Dispatchers.IO) {
         try {
             val urlEndpoints = listOf(
+                "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/inr.json",
+                "https://latest.currency-api.pages.dev/v1/currencies/inr.json",
                 "https://open.er-api.com/v6/latest/INR",
                 "https://api.exchangerate-api.com/v4/latest/INR"
             )
@@ -282,9 +333,10 @@ object CurrencyRepository {
                     val url = URL(endpoint)
                     val conn = (url.openConnection() as HttpURLConnection).apply {
                         requestMethod = "GET"
-                        connectTimeout = 8000
-                        readTimeout = 8000
+                        connectTimeout = 7000
+                        readTimeout = 7000
                         setRequestProperty("Accept", "application/json")
+                        setRequestProperty("User-Agent", "Mozilla/5.0 (Android; CalcPlus/9.0)")
                     }
 
                     if (conn.responseCode == 200) {
@@ -301,7 +353,7 @@ object CurrencyRepository {
 
             if (jsonString != null) {
                 val json = JSONObject(jsonString)
-                val ratesObj = json.optJSONObject("rates")
+                val ratesObj = json.optJSONObject("inr") ?: json.optJSONObject("rates")
                 if (ratesObj != null) {
                     val newRates = mutableMapOf<String, Double>()
                     val keys = ratesObj.keys()

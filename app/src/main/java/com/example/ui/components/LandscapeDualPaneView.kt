@@ -54,7 +54,7 @@ fun LandscapeDualPaneView(
             onMemoryRecall = { viewModel.onMemoryRecall(haptics) },
             onMemoryClear = { viewModel.onMemoryClear(haptics) },
             modifier = Modifier
-                .weight(if (isScientific) 0.32f else 0.38f)
+                .weight(if (isScientific) 0.35f else 0.38f)
                 .fillMaxHeight()
         )
 
@@ -81,7 +81,7 @@ fun LandscapeDualPaneView(
                 onAns = { viewModel.onAnsKey(haptics) },
                 onDecimalConverter = { viewModel.setShowDecimalConverterSheet(true) },
                 modifier = Modifier
-                    .weight(0.68f)
+                    .weight(0.65f)
                     .fillMaxHeight()
             )
         } else {

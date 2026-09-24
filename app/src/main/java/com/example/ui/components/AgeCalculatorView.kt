@@ -175,7 +175,7 @@ fun AgeCalculatorView(
             appendLine("   • ${df.format(ageResult.totalSeconds)} Seconds")
             appendLine("🎉 Next Birthday: in ${ageResult.nextBirthdayMonths}m ${ageResult.nextBirthdayDays}d (on ${ageResult.nextBirthdayDayOfWeek})")
             appendLine()
-            appendLine("🔮 ASTROSAGE VEDIC JYOTISH REPORT")
+            appendLine("🔮 AGE AND VEDIC HOROSCOPE REPORT")
             appendLine("   • Chandra Rashi (Moon Sign): ${astrologyResult.vedicMoonRashi.sanskritName} (${astrologyResult.vedicMoonRashi.hindiName}) ${astrologyResult.vedicMoonRashi.symbol}")
             appendLine("   • Moon Position: ${astrologyResult.rashiDegreeStr}")
             appendLine("   • Nakshatra: ${astrologyResult.nakshatraName} (Pada ${astrologyResult.nakshatraPada}, Lord: ${astrologyResult.nakshatraLord})")
@@ -193,11 +193,11 @@ fun AgeCalculatorView(
             appendLine("   • Chinese Zodiac: ${astrologyResult.chineseZodiac} (${astrologyResult.chineseElement})")
             appendLine("   • Birthstone: ${astrologyResult.birthStone}")
             appendLine()
-            appendLine("✨ AstroSage Planetary Guidance:")
-            appendLine("   ${astrologyResult.dailyHoroscopeReading}")
+            appendLine("✨ Planetary Guidance:")
+            appendLine("   ${astrologyResult.dailyHoroscopeReading.replace("AstroSage Transit:", "Planetary Transit:").replace("AstroSage", "Vedic")}")
             appendLine("🕉️ Vedic Mantra: ${activeRashi.mantra}")
             appendLine()
-            appendLine("— Generated with CALC +")
+            appendLine("— Developed by Parth Siddhpur • CALC +")
         }
 
         val sendIntent = Intent().apply {
@@ -711,7 +711,7 @@ fun AgeCalculatorView(
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = "ASTROSAGE VEDIC HOROSCOPE",
+                            text = "AGE & VEDIC HOROSCOPE",
                             color = theme.accentColor,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
@@ -724,7 +724,7 @@ fun AgeCalculatorView(
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
-                            text = "AstroSage Ephemeris",
+                            text = "Vedic Ephemeris",
                             color = theme.accentColor,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
@@ -905,14 +905,14 @@ fun AgeCalculatorView(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = "DAILY PLANETARY GUIDANCE (ASTROSAGE JYOTISH)",
+                            text = "DAILY PLANETARY GUIDANCE (VEDIC JYOTISH)",
                             color = theme.accentColor,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp
                         )
                         Text(
-                            text = astrologyResult.dailyHoroscopeReading,
+                            text = astrologyResult.dailyHoroscopeReading.replace("AstroSage Transit:", "Planetary Transit:").replace("AstroSage", "Vedic"),
                             color = theme.screenTextColor,
                             fontSize = 12.sp,
                             lineHeight = 16.sp

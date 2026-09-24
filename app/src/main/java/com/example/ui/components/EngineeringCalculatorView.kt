@@ -85,7 +85,6 @@ fun EngineeringCalculatorView(
     var selectedCategory by remember { mutableStateOf(EngineeringCategory.OHMS_LAW) }
     var showMenuDialog by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
-    val categoryScrollState = rememberScrollState()
 
     Column(
         modifier = modifier
@@ -94,7 +93,7 @@ fun EngineeringCalculatorView(
             .padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // --- 1. Professional Calculation Menu Card ---
+        // --- 1. Professional Calculation Selector Card ---
         Card(
             shape = RoundedCornerShape(14.dp),
             colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
@@ -139,23 +138,23 @@ fun EngineeringCalculatorView(
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = theme.accentColor.copy(alpha = 0.15f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, theme.accentColor.copy(alpha = 0.6f))
+                    shape = RoundedCornerShape(10.dp),
+                    color = theme.accentColor.copy(alpha = 0.18f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, theme.accentColor.copy(alpha = 0.7f))
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MenuBook,
-                            contentDescription = "Calculations Menu",
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = "Select Calculation",
                             tint = theme.accentColor,
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "Options",
+                            text = "Select Calculation",
                             color = theme.accentColor,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
@@ -171,40 +170,7 @@ fun EngineeringCalculatorView(
             }
         }
 
-        // --- 2. Top Category Bar (Horizontally scrollable) ---
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(categoryScrollState),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            EngineeringCategory.values().forEach { cat ->
-                val isSelected = cat == selectedCategory
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) theme.accentColor else theme.surfaceColor,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { selectedCategory = cat }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(cat.iconName, fontSize = 14.sp)
-                        Text(
-                            text = cat.displayName,
-                            color = if (isSelected) theme.backgroundColor else theme.screenTextColor,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                        )
-                    }
-                }
-            }
-        }
-
-        // --- 3. Category Content ---
+        // --- 2. Category Content ---
         when (selectedCategory) {
             EngineeringCategory.OHMS_LAW -> OhmsLawSection(theme)
             EngineeringCategory.CIRCUITS -> CircuitsSection(theme)

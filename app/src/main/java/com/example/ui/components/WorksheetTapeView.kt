@@ -180,16 +180,16 @@ fun WorksheetTapeView(
     var noteUndoCheckpoint by remember(activeDocument.id) { mutableStateOf<WorksheetDocument?>(null) }
     var overflowMenuExpanded by remember { mutableStateOf(false) }
 
-    // Color canvas setup (Dark Slate look from video)
-    val isLightCanvas = theme.backgroundColor.luminance() > 0.45f
-    val paperBg = if (isLightCanvas) Color(0xFFFAFAFA) else Color(0xFF191D24)
-    val textColor = if (isLightCanvas) Color(0xFF0F172A) else Color(0xFFF1F5F9)
-    val subtextColor = if (isLightCanvas) Color(0xFF64748B) else Color(0xFF94A3B8)
-    val deductionColor = Color(0xFFE57373) // Authentic salmon red deduction color from video
+    // Color canvas setup dynamically adapted to user selected theme
+    val isLightCanvas = !theme.isDark && theme.backgroundColor.luminance() > 0.45f
+    val paperBg = theme.screenBackground
+    val textColor = theme.screenTextColor
+    val subtextColor = theme.screenExpressionColor
+    val deductionColor = Color(0xFFE57373) // Authentic deduction indicator
     val ruledLineColor = when (settings.lineColorName) {
         "Slate" -> if (isLightCanvas) Color(0xFFCBD5E1) else Color(0xFF263242)
         "Gray" -> Color.Gray.copy(alpha = 0.25f)
-        else -> if (isLightCanvas) Color(0xFFBFDBFE) else Color(0xFF1E3A5F) // Light blue default
+        else -> theme.screenBorderColor.copy(alpha = 0.25f)
     }
     val accentColor = theme.accentColor
 
@@ -233,7 +233,7 @@ fun WorksheetTapeView(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
-                .background(if (isLightCanvas) Color(0xFFF1F5F9) else Color(0xFF151921))
+                .background(theme.surfaceColor)
                 .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -962,7 +962,7 @@ fun WorksheetTapeView(
                     .weight(0.46f)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, if (isLightCanvas) Color(0xFFCBD5E1) else Color(0xFF334155), RoundedCornerShape(12.dp))
+                    .border(1.dp, theme.screenBorderColor.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
             ) {
                 tapePaneContent(Modifier.fillMaxWidth().weight(1f))
             }
@@ -973,8 +973,8 @@ fun WorksheetTapeView(
                     .weight(0.54f)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF1F242B))
-                    .border(1.dp, Color(0xFF334155), RoundedCornerShape(12.dp))
+                    .background(theme.backgroundColor)
+                    .border(1.dp, theme.screenBorderColor.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
             ) {
                 keypadPaneContent(Modifier.fillMaxSize())
             }

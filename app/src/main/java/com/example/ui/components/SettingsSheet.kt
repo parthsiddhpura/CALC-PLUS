@@ -1,11 +1,15 @@
 package com.example.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -381,281 +386,35 @@ fun SettingsSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            val configuration = LocalConfiguration.current
+            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-            // Navigation Segmented Bar (Appearance, Display, Language, Haptics, About)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(activeTheme.cardBackground)
-                    .then(
-                        if (activeTheme.surfaceColor.luminance() > 0.45f) {
-                            Modifier.border(1.dp, activeTheme.accentColor.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                        } else Modifier
-                    )
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                listOf(
-                    Triple("appearance", LanguageStrings.tabThemes(currentLanguage), Icons.Default.Palette),
-                    Triple("display", LanguageStrings.tabDisplay(currentLanguage), Icons.Default.Tv),
-                    Triple("language", LanguageStrings.tabLanguage(currentLanguage), Icons.Default.Translate),
-                    Triple("haptics", LanguageStrings.tabHaptics(currentLanguage), Icons.Default.Vibration),
-                    Triple("about", LanguageStrings.tabAbout(currentLanguage), Icons.Default.Info)
-                ).forEach { (sectionKey, label, icon) ->
-                    val isSelected = selectedSection == sectionKey
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isSelected) activeTheme.accentColor else Color.Transparent,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { selectedSection = sectionKey }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 2.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                tint = if (isSelected) {
-                                    if (activeTheme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
-                                } else cardSubtextColor,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = label,
-                                color = if (isSelected) {
-                                    if (activeTheme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
-                                } else cardSubtextColor,
-                                fontSize = 10.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Section Content
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
-            ) {
-                if (selectedSection == "appearance") {
-                    // --- 1. ACCENT COLOR CUSTOMIZATION ---
-                    item {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = activeTheme.cardBackground,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ColorLens,
-                                            contentDescription = null,
-                                            tint = activeTheme.accentColor,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Text(
-                                            text = "Accent Color",
-                                            color = activeTheme.screenTextColor,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-
-                                    if (customAccentColor != null) {
-                                        Text(
-                                            text = "Reset",
-                                            color = activeTheme.accentColor,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            modifier = Modifier.clickable { onSelectAccentColor(null) }
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    // Default Option
-                                    item {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            modifier = Modifier.clickable { onSelectAccentColor(null) }
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(38.dp)
-                                                    .clip(CircleShape)
-                                                    .background(activeTheme.accentColor)
-                                                    .border(
-                                                        width = if (customAccentColor == null) 3.dp else 1.dp,
-                                                        color = if (customAccentColor == null) activeTheme.screenTextColor else Color.Transparent,
-                                                        shape = CircleShape
-                                                    ),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                if (customAccentColor == null) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Check,
-                                                        contentDescription = "Default active",
-                                                        tint = activeTheme.backgroundColor,
-                                                        modifier = Modifier.size(18.dp)
-                                                    )
-                                                }
-                                            }
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text(
-                                                text = "Theme",
-                                                color = activeTheme.screenExpressionColor,
-                                                fontSize = 10.sp
-                                            )
-                                        }
-                                    }
-
-                                    // Presets
-                                    items(ACCENT_PRESETS) { preset ->
-                                        val isSelected = customAccentColor == preset.colorValue
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            modifier = Modifier.clickable { onSelectAccentColor(preset.colorValue) }
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(38.dp)
-                                                    .clip(CircleShape)
-                                                    .background(preset.color)
-                                                    .border(
-                                                        width = if (isSelected) 3.dp else 1.dp,
-                                                        color = if (isSelected) activeTheme.screenTextColor else Color.Transparent,
-                                                        shape = CircleShape
-                                                    ),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                if (isSelected) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Check,
-                                                        contentDescription = "Selected",
-                                                        tint = if (preset.name == "Mac White" || preset.name == "Cyber Yellow") Color.Black else Color.White,
-                                                        modifier = Modifier.size(18.dp)
-                                                    )
-                                                }
-                                            }
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text(
-                                                text = preset.name.split(" ").first(),
-                                                color = activeTheme.screenExpressionColor,
-                                                fontSize = 10.sp
-                                            )
-                                        }
-                                    }
-                                }
+            val settingsContentList = @Composable { contentModifier: Modifier ->
+                LazyColumn(
+                    modifier = contentModifier,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    if (selectedSection == "appearance") {
+                        if (!isLandscape) {
+                            item {
+                                SettingsAccentColorCard(
+                                    activeTheme = activeTheme,
+                                    customAccentColor = customAccentColor,
+                                    onSelectAccentColor = onSelectAccentColor
+                                )
+                            }
+                            item {
+                                SettingsButtonShapeCard(
+                                    activeTheme = activeTheme,
+                                    customShapeType = customShapeType,
+                                    onSelectShapeType = onSelectShapeType
+                                )
                             }
                         }
-                    }
 
-                    // --- 2. BUTTON SHAPE CUSTOMIZATION ---
-                    item {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = activeTheme.cardBackground,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.GridView,
-                                            contentDescription = null,
-                                            tint = activeTheme.accentColor,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Text(
-                                            text = "Button Shape",
-                                            color = activeTheme.screenTextColor,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-
-                                    if (customShapeType != null) {
-                                        Text(
-                                            text = "Reset",
-                                            color = activeTheme.accentColor,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            modifier = Modifier.clickable { onSelectShapeType(null) }
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    val shapes = listOf(
-                                        Pair(null, "Theme"),
-                                        Pair(ButtonShapeType.SQUIRCLE, "Squircle"),
-                                        Pair(ButtonShapeType.PILL, "Pill"),
-                                        Pair(ButtonShapeType.ROUNDED_SQUARE, "Square"),
-                                        Pair(ButtonShapeType.BRUTALIST_RECT, "Sharp")
-                                    )
-
-                                    shapes.forEach { (shape, name) ->
-                                        val isSelected = (shape == null && customShapeType == null) || (shape == customShapeType)
-                                        Surface(
-                                            color = if (isSelected) activeTheme.accentColor else activeTheme.surfaceColor,
-                                            shape = RoundedCornerShape(8.dp),
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .clickable { onSelectShapeType(shape) }
-                                        ) {
-                                            Text(
-                                                text = name,
-                                                color = if (isSelected) activeTheme.backgroundColor else activeTheme.screenTextColor,
-                                                fontSize = 11.sp,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                textAlign = TextAlign.Center,
-                                                modifier = Modifier.padding(vertical = 8.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // --- 3. THEMES SEARCH & CATEGORY BAR ---
-                    item {
+                        // --- 3. THEMES SEARCH & CATEGORY BAR ---
+                        item {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1783,20 +1542,30 @@ fun SettingsSheet(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Column {
-                                        Text(
-                                            text = "CALC +",
-                                            color = activeTheme.screenTextColor,
-                                            fontSize = 24.sp,
-                                            fontWeight = FontWeight.Black,
-                                            letterSpacing = 1.sp
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        androidx.compose.foundation.Image(
+                                            painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_app_logo),
+                                            contentDescription = "Official App Logo",
+                                            modifier = Modifier.size(46.dp)
                                         )
-                                        Text(
-                                            text = "Precision Studio & Hardware Calculator",
-                                            color = activeTheme.accentColor,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
+                                        Column {
+                                            Text(
+                                                text = "CALC +",
+                                                color = activeTheme.screenTextColor,
+                                                fontSize = 24.sp,
+                                                fontWeight = FontWeight.Black,
+                                                letterSpacing = 1.sp
+                                            )
+                                            Text(
+                                                text = "Precision Studio & Hardware Calculator",
+                                                color = activeTheme.accentColor,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
                                     }
 
                                     Surface(
@@ -2060,6 +1829,622 @@ fun SettingsSheet(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+            }
+
+            if (!isLandscape) {
+                // --- PORTRAIT MODE: Top horizontal navigation bar ---
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(activeTheme.cardBackground)
+                        .then(
+                            if (activeTheme.surfaceColor.luminance() > 0.45f) {
+                                Modifier.border(1.dp, activeTheme.accentColor.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                            } else Modifier
+                        )
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    listOf(
+                        Triple("appearance", LanguageStrings.tabThemes(currentLanguage), Icons.Default.Palette),
+                        Triple("display", LanguageStrings.tabDisplay(currentLanguage), Icons.Default.Tv),
+                        Triple("language", LanguageStrings.tabLanguage(currentLanguage), Icons.Default.Translate),
+                        Triple("haptics", LanguageStrings.tabHaptics(currentLanguage), Icons.Default.Vibration),
+                        Triple("about", LanguageStrings.tabAbout(currentLanguage), Icons.Default.Info)
+                    ).forEach { (sectionKey, label, icon) ->
+                        val isSelected = selectedSection == sectionKey
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) activeTheme.accentColor else Color.Transparent,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { selectedSection = sectionKey }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 2.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = if (isSelected) {
+                                        if (activeTheme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
+                                    } else cardSubtextColor,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = label,
+                                    color = if (isSelected) {
+                                        if (activeTheme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
+                                    } else cardSubtextColor,
+                                    fontSize = 10.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                settingsContentList(Modifier.fillMaxWidth().weight(1f))
+            } else {
+                // --- LANDSCAPE MODE: Interactive Split-Pane Navigation ---
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Left Column: Interactive Navigation Header Bar + Controls for Selected Section
+                    Column(
+                        modifier = Modifier
+                            .weight(0.44f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Sticky Navigation Header Bar (Always visible at the top)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = activeTheme.cardBackground,
+                            border = if (activeTheme.surfaceColor.luminance() > 0.45f) {
+                                androidx.compose.foundation.BorderStroke(1.dp, activeTheme.accentColor.copy(alpha = 0.3f))
+                            } else null,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                listOf(
+                                    Triple("appearance", LanguageStrings.tabThemes(currentLanguage), Icons.Default.Palette),
+                                    Triple("display", LanguageStrings.tabDisplay(currentLanguage), Icons.Default.Tv),
+                                    Triple("language", LanguageStrings.tabLanguage(currentLanguage), Icons.Default.Translate),
+                                    Triple("haptics", LanguageStrings.tabHaptics(currentLanguage), Icons.Default.Vibration),
+                                    Triple("about", LanguageStrings.tabAbout(currentLanguage), Icons.Default.Info)
+                                ).forEach { (sectionKey, label, icon) ->
+                                    val isSelected = selectedSection == sectionKey
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = if (isSelected) activeTheme.accentColor else Color.Transparent,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable { selectedSection = sectionKey }
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(vertical = 6.dp, horizontal = 2.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = icon,
+                                                contentDescription = null,
+                                                tint = if (isSelected) {
+                                                    if (activeTheme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
+                                                } else cardSubtextColor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = label,
+                                                color = if (isSelected) {
+                                                    if (activeTheme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
+                                                } else cardSubtextColor,
+                                                fontSize = 9.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                maxLines = 1,
+                                                softWrap = false,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Scrollable content area for the Left Pane
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            if (selectedSection == "appearance") {
+                                SettingsAccentColorCard(
+                                    activeTheme = activeTheme,
+                                    customAccentColor = customAccentColor,
+                                    onSelectAccentColor = onSelectAccentColor
+                                )
+                                SettingsButtonShapeCard(
+                                    activeTheme = activeTheme,
+                                    customShapeType = customShapeType,
+                                    onSelectShapeType = onSelectShapeType
+                                )
+                            } else if (selectedSection == "display") {
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = activeTheme.cardBackground,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "Display Customization",
+                                            color = activeTheme.screenTextColor,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "Active Font: ${(customDisplayFont ?: activeTheme.displayFont).name.replace("_", " ")}",
+                                            color = activeTheme.accentColor,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = "Number Grouping: ${displayConfig.separatorStyle.displayName}",
+                                            color = activeTheme.screenExpressionColor,
+                                            fontSize = 11.sp
+                                        )
+                                        Text(
+                                            text = "Precision: ${displayConfig.precisionMode.displayName}",
+                                            color = activeTheme.screenExpressionColor,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            } else if (selectedSection == "language") {
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = activeTheme.cardBackground,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "Active Language",
+                                            color = activeTheme.screenTextColor,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "${currentLanguage.nativeName} (${currentLanguage.displayName})",
+                                            color = activeTheme.accentColor,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "Regional numeric formatting active.",
+                                            color = activeTheme.screenExpressionColor,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            } else if (selectedSection == "haptics") {
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = activeTheme.cardBackground,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "Feedback Controls",
+                                            color = activeTheme.screenTextColor,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("Sound Clicks", color = activeTheme.screenTextColor, fontSize = 12.sp)
+                                            Switch(
+                                                checked = isSoundEnabled,
+                                                onCheckedChange = { onToggleSound() }
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("Haptic Feedback", color = activeTheme.screenTextColor, fontSize = 12.sp)
+                                            Switch(
+                                                checked = isHapticsEnabled,
+                                                onCheckedChange = { onToggleHaptics() }
+                                            )
+                                        }
+                                    }
+                                }
+                            } else if (selectedSection == "about") {
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = activeTheme.cardBackground,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        androidx.compose.foundation.Image(
+                                            painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_app_logo),
+                                            contentDescription = "Official App Logo",
+                                            modifier = Modifier.size(36.dp)
+                                        )
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = "CALC + Ultra",
+                                                color = activeTheme.screenTextColor,
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "Version 9.0 (Smooth Performance)",
+                                                color = activeTheme.accentColor,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                text = "All calculation engines running at zero latency with butter-smooth 60fps animations.",
+                                                color = activeTheme.screenExpressionColor,
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Right Column: Results Gallery and Detail Content for the selected option
+                    settingsContentList(Modifier.weight(0.56f).fillMaxHeight())
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsAccentColorCard(
+    activeTheme: ThemePalette,
+    customAccentColor: Long?,
+    onSelectAccentColor: (Long?) -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = activeTheme.cardBackground,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ColorLens,
+                        contentDescription = null,
+                        tint = activeTheme.accentColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Accent Color",
+                        color = activeTheme.screenTextColor,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (customAccentColor != null) {
+                    val activePreset = ACCENT_PRESETS.find { it.colorValue == customAccentColor }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(customAccentColor).copy(alpha = 0.2f)
+                        ) {
+                            Text(
+                                text = activePreset?.name ?: "Custom",
+                                color = Color(customAccentColor),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                        Text(
+                            text = "Reset",
+                            color = activeTheme.accentColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable { onSelectAccentColor(null) }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Default Theme Accent Option
+                item {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .widthIn(min = 52.dp)
+                            .clickable { onSelectAccentColor(null) }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(activeTheme.accentColor)
+                                .border(
+                                    width = if (customAccentColor == null) 2.5.dp else 1.dp,
+                                    color = if (customAccentColor == null) activeTheme.screenTextColor else Color.Transparent,
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (customAccentColor == null) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Default active",
+                                    tint = if (activeTheme.accentColor.luminance() > 0.6f) Color.Black else Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Theme",
+                            color = activeTheme.screenExpressionColor,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                // Presets
+                items(ACCENT_PRESETS) { preset ->
+                    val isSelected = customAccentColor == preset.colorValue
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .widthIn(min = 52.dp)
+                            .clickable { onSelectAccentColor(preset.colorValue) }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(preset.color)
+                                .border(
+                                    width = if (isSelected) 2.5.dp else 1.dp,
+                                    color = if (isSelected) activeTheme.screenTextColor else Color.Transparent,
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Selected",
+                                    tint = if (preset.name == "Mac White" || preset.name == "Cyber Yellow") Color.Black else Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = preset.name.split(" ").first(),
+                            color = activeTheme.screenExpressionColor,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsButtonShapeCard(
+    activeTheme: ThemePalette,
+    customShapeType: ButtonShapeType?,
+    onSelectShapeType: (ButtonShapeType?) -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = activeTheme.cardBackground,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.GridView,
+                        contentDescription = null,
+                        tint = activeTheme.accentColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Button Shape",
+                        color = activeTheme.screenTextColor,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (customShapeType != null) {
+                    Text(
+                        text = "Reset",
+                        color = activeTheme.accentColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clickable { onSelectShapeType(null) }
+                    )
+                }
+            }
+
+            // 2-Row Balanced Layout: Prevents text wrapping and gives generous touch targets
+            val row1 = listOf(
+                Pair(null, "Theme"),
+                Pair(ButtonShapeType.SQUIRCLE, "Squircle"),
+                Pair(ButtonShapeType.PILL, "Pill")
+            )
+            val row2 = listOf(
+                Pair(ButtonShapeType.ROUNDED_SQUARE, "Square"),
+                Pair(ButtonShapeType.BRUTALIST_RECT, "Sharp Edge")
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                row1.forEach { (shape, name) ->
+                    val isSelected = (shape == null && customShapeType == null) || (shape == customShapeType)
+                    Surface(
+                        color = if (isSelected) activeTheme.accentColor else activeTheme.surfaceColor,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onSelectShapeType(shape) }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 9.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = if (activeTheme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                            }
+                            Text(
+                                text = name,
+                                color = if (isSelected) {
+                                    if (activeTheme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
+                                } else activeTheme.screenTextColor,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                row2.forEach { (shape, name) ->
+                    val isSelected = (shape == null && customShapeType == null) || (shape == customShapeType)
+                    Surface(
+                        color = if (isSelected) activeTheme.accentColor else activeTheme.surfaceColor,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onSelectShapeType(shape) }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 9.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = if (activeTheme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                            }
+                            Text(
+                                text = name,
+                                color = if (isSelected) {
+                                    if (activeTheme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White
+                                } else activeTheme.screenTextColor,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                softWrap = false
+                            )
                         }
                     }
                 }

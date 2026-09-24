@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -341,26 +342,28 @@ fun GstCalculatorView(
                             thickness = 1.dp
                         )
 
-                        // Row 1: Net Amount (left) & Total Tax / Extracted Tax (right)
+                        // Row 1: Net Amount / Input Gross (left) & Total Tax / Extracted Tax (right)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Net Amount
+                            // Net Amount or Original Gross
                             Row(
                                 modifier = Modifier.weight(1f),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = LanguageStrings.netAmount(language),
+                                    text = if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE) "Gross (Input)" else LanguageStrings.netAmount(language),
                                     color = theme.screenExpressionColor,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = GstEngine.formatCurrency(currentResultToDisplay.netAmount),
+                                    text = GstEngine.formatCurrency(
+                                        if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE) currentResultToDisplay.grossAmount else currentResultToDisplay.netAmount
+                                    ),
                                     color = theme.screenTextColor,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
@@ -449,7 +452,7 @@ fun GstCalculatorView(
                             }
                         }
 
-                        // Emphasized Gross Total Banner (Shows on both Extract & Add mode)
+                        // Emphasized Bottom Banner: Shows Extracted Amount in Extract mode, and Total Gross in Add mode
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE)
@@ -471,7 +474,10 @@ fun GstCalculatorView(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Text(
-                                        text = LanguageStrings.totalGross(language),
+                                        text = if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE)
+                                            "EXTRACTED AMOUNT"
+                                        else
+                                            LanguageStrings.totalGross(language),
                                         color = theme.screenTextColor,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
@@ -484,7 +490,7 @@ fun GstCalculatorView(
                                         ) {
                                             Text(
                                                 text = "EXTRACTED",
-                                                color = theme.backgroundColor,
+                                                color = if (theme.accentColor.luminance() > 0.6f) Color.Black else Color.White,
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Black,
                                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
@@ -493,8 +499,13 @@ fun GstCalculatorView(
                                     }
                                 }
                                 Text(
-                                    text = GstEngine.formatCurrency(currentResultToDisplay.grossAmount),
-                                    color = theme.secondaryAccent,
+                                    text = GstEngine.formatCurrency(
+                                        if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE)
+                                            currentResultToDisplay.netAmount
+                                        else
+                                            currentResultToDisplay.grossAmount
+                                    ),
+                                    color = if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE) theme.accentColor else theme.secondaryAccent,
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Black,
                                     fontFamily = FontFamily.Monospace
@@ -519,40 +530,32 @@ fun GstCalculatorView(
                     .padding(vertical = if (isLandscape) 0.dp else 2.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                // Label indicator
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = LanguageStrings.rateSelectionHeader(language),
-                        color = theme.screenExpressionColor.copy(alpha = 0.7f),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp
-                    )
-                }
-
                 // The Casio GST Slab Buttons row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(if (isLandscape) 38.dp else 46.dp),
+                        .height(if (isLandscape) 42.dp else 48.dp),
                     horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 4.dp else 6.dp)
                 ) {
                     slabs.forEach { slab ->
                         val isSelected = slab.id == selectedSlabId
+                        val slabText = if (isLandscape) {
+                            slab.label
+                        } else {
+                            "${slab.name}\n${slab.label}"
+                        }
+                        val slabTextColor = if (isSelected) {
+                            if (theme.accentColor.luminance() > 0.6f) Color.Black else Color.White
+                        } else theme.functionButtonText
+
                         CalculatorButton(
-                            text = "${slab.name}\n${slab.label}",
+                            text = slabText,
                             onClick = { onSelectSlab(slab) },
                             theme = theme,
                             backgroundColor = if (isSelected) theme.accentColor else theme.functionButtonBg,
-                            textColor = if (isSelected) theme.backgroundColor else theme.functionButtonText,
+                            textColor = slabTextColor,
                             borderColor = if (isSelected) theme.accentColor else theme.functionButtonBorder,
-                            fontSize = 11.sp,
+                            fontSize = if (isLandscape) 13.sp else 11.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.weight(1f),
                             testTag = "btn_slab_${slab.id}"
@@ -561,13 +564,13 @@ fun GstCalculatorView(
 
                     // GST GT (Grand Total) button
                     CalculatorButton(
-                        text = "GST GT",
+                        text = if (isLandscape) "GT" else "GST GT",
                         onClick = { showGtBreakdown = true },
                         theme = theme,
                         backgroundColor = if (calculationCount > 0) Color(0xFFFFB703) else theme.functionButtonBg,
                         textColor = if (calculationCount > 0) Color.Black else theme.functionButtonText,
                         borderColor = theme.functionButtonBorder,
-                        fontSize = 11.sp,
+                        fontSize = if (isLandscape) 13.sp else 11.sp,
                         fontWeight = FontWeight.Black,
                         modifier = Modifier.weight(1f),
                         testTag = "btn_gst_gt"

@@ -352,6 +352,8 @@ fun RealCurrencyConverterView(
         }
 
         // --- 4. Live Multi-Currency Global Comparison Board ---
+        var comparisonBaseInr by remember { mutableStateOf(1.0) }
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -369,21 +371,75 @@ fun RealCurrencyConverterView(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "GLOBAL CURRENCY COMPARISON",
-                        color = theme.accentColor,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                    Text("For $inputAmount ${fromCurrency.code}", color = theme.screenExpressionColor, fontSize = 11.sp)
+                    Column {
+                        Text(
+                            text = "GLOBAL CURRENCY COMPARISON",
+                            color = theme.accentColor,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            text = "Base: ₹${if (comparisonBaseInr == 1.0) "1 Rupee (INR)" else df.format(comparisonBaseInr) + " INR"}",
+                            color = theme.screenTextColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = theme.accentColor.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = "₹1 INR Base",
+                            color = theme.accentColor,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
+                // Quick Indian Rupee Comparison Base Chips
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(
+                        1.0 to "₹1 (1 Rupee)",
+                        100.0 to "₹100",
+                        1000.0 to "₹1,000",
+                        100000.0 to "1 Lakh ₹"
+                    ).forEach { (amt, label) ->
+                        val isSelected = comparisonBaseInr == amt
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) theme.accentColor else theme.cardBackground,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { comparisonBaseInr = amt }
+                        ) {
+                            Text(
+                                text = label,
+                                color = if (isSelected) (if (theme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White) else theme.screenExpressionColor,
+                                fontSize = 10.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                modifier = Modifier.padding(vertical = 6.dp)
+                            )
+                        }
+                    }
                 }
 
                 val majorCurrencies = listOf("USD", "EUR", "GBP", "AED", "CAD", "AUD", "SAR", "KWD", "SGD", "JPY", "CNY", "CHF", "QAR", "MYR", "NZD", "THB")
 
-                majorCurrencies.filter { it != fromCode }.take(10).forEach { code ->
+                majorCurrencies.forEach { code ->
                     val info = CurrencyRepository.getCurrencyInfo(code)
-                    val converted = CurrencyRepository.convert(amountNum, fromCode, code)
+                    val converted = CurrencyRepository.convert(comparisonBaseInr, "INR", code)
+                    val oneForeignInInr = CurrencyRepository.convert(1.0, code, "INR")
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -393,20 +449,28 @@ fun RealCurrencyConverterView(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(info.flag, fontSize = 16.sp)
+                            Text(info.flag, fontSize = 18.sp)
                             Column {
                                 Text(info.code, color = theme.screenTextColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                 Text(info.name, color = theme.screenExpressionColor, fontSize = 10.sp)
                             }
                         }
 
-                        Text(
-                            text = "${info.symbol} ${df.format(converted)}",
-                            color = theme.accentColor,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
-                        )
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "${info.symbol} ${if (converted < 0.01) String.format(Locale.US, "%.4f", converted) else if (converted < 1.0) String.format(Locale.US, "%.4f", converted) else df.format(converted)}",
+                                color = theme.accentColor,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            Text(
+                                text = "1 ${info.code} = ₹${df.format(oneForeignInInr)}",
+                                color = theme.screenExpressionColor,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                     HorizontalDivider(color = theme.screenBorderColor.copy(alpha = 0.15f))
                 }

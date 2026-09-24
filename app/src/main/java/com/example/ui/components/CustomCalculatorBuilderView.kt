@@ -192,6 +192,16 @@ fun CustomCalculatorBuilderView(
         "Liters to gallons (US) volume"
     )
 
+    val physicsPresets = listOf(
+        "Measure fluid pressure",
+        "Hydrostatic liquid depth pressure",
+        "Appliance electricity bill & kWh",
+        "Kinetic energy & momentum",
+        "Material density & volume",
+        "Loan EMI & interest calculator",
+        "Concrete slab & cement bags"
+    )
+
     val businessPresets = listOf(
         "Monthly factory production cost",
         "Bakery cake & recipe pricing",
@@ -554,7 +564,50 @@ fun CustomCalculatorBuilderView(
                         }
                     }
 
-                    // 3. Business & Costing Models
+                    // 3. Science & Physics Models
+                    Text(
+                        text = "🔬 Science, Physics & Pressure:",
+                        color = theme.accentColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        physicsPresets.forEach { prompt ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = theme.cardBackground,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, theme.accentColor.copy(alpha = 0.35f)),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable(enabled = !isGenerating) {
+                                        aiPromptText = prompt
+                                        coroutineScope.launch {
+                                            isGenerating = true
+                                            val newCalc = CustomCalculatorEngine.buildFromPromptWithInternet(prompt)
+                                            onSaveCustomCalculator(newCalc)
+                                            onSelectCalculator(newCalc)
+                                            isGenerating = false
+                                            isPromptExpanded = false
+                                        }
+                                    }
+                            ) {
+                                Text(
+                                    text = prompt,
+                                    color = theme.screenTextColor,
+                                    fontSize = 10.sp,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // 4. Business & Costing Models
                     Text(
                         text = "💼 Business & Engineering Models:",
                         color = theme.screenExpressionColor,
@@ -789,6 +842,37 @@ fun CustomCalculatorBuilderView(
                                             )
                                         }
                                     }
+                                }
+                            }
+                        } else if (activeCalculator.dataSourceLabel.isNotBlank()) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = theme.cardBackground,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    theme.screenBorderColor.copy(alpha = 0.25f)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = theme.accentColor,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Text(
+                                        text = activeCalculator.dataSourceLabel,
+                                        color = theme.screenExpressionColor,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
                                 }
                             }
                         }

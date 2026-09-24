@@ -102,18 +102,18 @@ fun WorksheetKeypadView(
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
 
-    // Authentic colors from CalcTape Pro screenshot
-    val barBg = Color(0xFF242A33)
-    val numBtnBg = Color(0xFF32373F) // Dark charcoal for digits
-    val numBtnText = Color(0xFFF1F5F9) // Off-white/clean white
-    val steelBlueBg = Color(0xFF759AB4) // Steel-blue for operators
-    val steelBlueText = Color(0xFF1E2E3C) // Dark navy text on steel-blue
-    val memoryBtnBg = Color(0xFF4C5561) // Slate gray for MR, M+, M-
-    val memoryBtnText = Color(0xFF8E9BA8) // Slate muted text
-    val clearBtnBg = Color(0xFFCD6126) // Burnt orange for AC
-    val clearBtnText = Color.White
-    val textColor = Color(0xFFF8FAFC)
-    val subtextColor = Color(0xFF94A3B8)
+    // Dynamic theme colors applied from user selected theme
+    val barBg = theme.surfaceColor
+    val numBtnBg = theme.numberButtonBg
+    val numBtnText = theme.numberButtonText
+    val steelBlueBg = theme.operatorButtonBg
+    val steelBlueText = theme.operatorButtonText
+    val memoryBtnBg = theme.functionButtonBg
+    val memoryBtnText = theme.functionButtonText
+    val clearBtnBg = if (theme.isDark) Color(0xFFCD6126) else theme.accentColor
+    val clearBtnText = if (theme.isDark) Color.White else (if (theme.accentColor.luminance() > 0.6f) Color(0xFF211118) else Color.White)
+    val textColor = theme.screenTextColor
+    val subtextColor = theme.screenExpressionColor
     val accentColor = theme.accentColor
 
     fun playFeedback() {
@@ -125,7 +125,7 @@ fun WorksheetKeypadView(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color(0xFF1F242B))
+            .background(theme.backgroundColor)
             .padding(horizontal = 4.dp, vertical = 2.dp)
     ) {
         // --- DOCK CONTROL BAR ---

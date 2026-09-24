@@ -233,11 +233,20 @@ fun CalculatorDisplay(
         val innerPadding = if (isVeryCompact) 6.dp else if (isCompact) 8.dp else 12.dp
 
         // Responsive font scaling factors based on actual available display height
-        val heightFactor = (maxHeight.value / 200f).coerceIn(0.60f, 1.15f)
-        val configResultSp = displayConfig.scaleSize.resultSp.toFloat()
-        val configExprSp = displayConfig.scaleSize.exprSp.toFloat()
-        val baseSp = configResultSp * heightFactor
-        val exprBaseSize = (configExprSp * heightFactor).toInt().coerceAtLeast(16)
+        val isScientific = mode == CalculatorMode.SCIENTIFIC
+        val heightFactor = (maxHeight.value / (if (isScientific) 160f else 190f)).coerceIn(0.85f, 1.25f)
+        val configResultSp = displayConfig.scaleSize.resultSp.toFloat() * (if (isScientific) 0.84f else 1.0f)
+        val configExprSp = displayConfig.scaleSize.exprSp.toFloat() * (if (isScientific) 0.88f else 1.0f)
+        val baseSp = if (isScientific) {
+            (configResultSp * heightFactor).coerceIn(48f, 66f)
+        } else {
+            (configResultSp * heightFactor).coerceIn(64f, 92f)
+        }
+        val exprBaseSize = if (isScientific) {
+            (configExprSp * heightFactor).toInt().coerceIn(20, 28)
+        } else {
+            (configExprSp * heightFactor).toInt().coerceIn(24, 38)
+        }
 
         // CRT Scanline Overlay if enabled
         if (theme.hasScanlines) {
@@ -858,21 +867,21 @@ fun CalculatorDisplay(
                     }
                 }
 
-                // Main Result dynamic auto-scaling: dynamically reduces font size so big amounts fit without truncation
+                // Main Result dynamic auto-scaling: maintains prominent, bold readability while scaling smoothly
                 val charCount = formattedResult.length
                 val dynamicScale = when {
                     charCount <= 7 -> 1.0f
-                    charCount <= 9 -> 0.82f
-                    charCount <= 11 -> 0.68f
-                    charCount <= 13 -> 0.54f // For 4,770,644,268 (13 chars) - fits comfortably on screen!
-                    charCount <= 15 -> 0.44f
-                    charCount <= 18 -> 0.36f
-                    charCount <= 22 -> 0.30f
-                    charCount <= 26 -> 0.25f
-                    charCount <= 32 -> 0.21f
-                    else -> 0.18f
+                    charCount <= 9 -> 0.90f
+                    charCount <= 11 -> 0.80f
+                    charCount <= 13 -> 0.70f
+                    charCount <= 16 -> 0.60f
+                    charCount <= 20 -> 0.50f
+                    charCount <= 24 -> 0.42f
+                    charCount <= 30 -> 0.36f
+                    else -> 0.30f
                 }
-                val targetSp = (baseSp * dynamicScale).coerceIn(12f, baseSp)
+                val minResultSp = if (isScientific) 22f else 28f
+                val targetSp = (baseSp * dynamicScale).coerceIn(minResultSp, baseSp)
                 val animatedSp by animateFloatAsState(
                     targetValue = targetSp,
                     animationSpec = tween(durationMillis = 80, easing = FastOutSlowInEasing),

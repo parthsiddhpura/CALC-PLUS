@@ -120,36 +120,11 @@ fun OrtylScreenBackground(
         }
     }
 
-    // Interactive multi-ring caliper shockwaves on user tap
-    var tapShockwaves by remember { mutableStateOf<List<OrtylTapShockwave>>(emptyList()) }
-    val scope = rememberCoroutineScope()
     val tracePath1 = remember { Path() }
     val tracePath2 = remember { Path() }
     val diamondPath = remember { Path() }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    val anim = Animatable(0f)
-                    val shockwave = OrtylTapShockwave(
-                        id = System.nanoTime(),
-                        center = offset,
-                        anim = anim
-                    )
-                    tapShockwaves = (tapShockwaves + shockwave).takeLast(4)
-                    scope.launch {
-                        anim.animateTo(
-                            targetValue = 1f,
-                            animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
-                        )
-                        tapShockwaves = tapShockwaves.filter { it.id != shockwave.id }
-                    }
-                }
-            }
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+    Canvas(modifier = modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
             val caliperProgress = caliperProgressAnim.value
@@ -348,39 +323,8 @@ fun OrtylScreenBackground(
                     center = Offset(mx, my)
                 )
             }
-
-            // 7. Interactive Multi-Ring Caliper Shockwaves on User Tap
-            tapShockwaves.forEach { sw ->
-                val p = sw.anim.value
-                val alpha = (1f - p) * 0.55f
-                val radius = p * 460f
-                if (alpha > 0.01f) {
-                    // Outer expanding circular acoustic wave
-                    drawCircle(
-                        color = Color(0xFFFFB703).copy(alpha = alpha),
-                        center = sw.center,
-                        radius = radius,
-                        style = Stroke(width = 1.8.dp.toPx())
-                    )
-                    // Inner precision calibration reticle
-                    drawCircle(
-                        color = Color(0xFFFFE082).copy(alpha = alpha * 0.7f),
-                        center = sw.center,
-                        radius = radius * 0.65f,
-                        style = Stroke(width = 1.2.dp.toPx(), cap = StrokeCap.Round)
-                    )
-                    // 4 calibration ticks extending from outer ring
-                    val tickLen = 12.dp.toPx()
-                    val tCol = Color(0xFFFFB703).copy(alpha = alpha)
-                    drawLine(tCol, Offset(sw.center.x - radius - tickLen, sw.center.y), Offset(sw.center.x - radius, sw.center.y), strokeWidth = 1.5f)
-                    drawLine(tCol, Offset(sw.center.x + radius, sw.center.y), Offset(sw.center.x + radius + tickLen, sw.center.y), strokeWidth = 1.5f)
-                    drawLine(tCol, Offset(sw.center.x, sw.center.y - radius - tickLen), Offset(sw.center.x, sw.center.y - radius), strokeWidth = 1.5f)
-                    drawLine(tCol, Offset(sw.center.x, sw.center.y + radius), Offset(sw.center.x, sw.center.y + radius + tickLen), strokeWidth = 1.5f)
-                }
-            }
         }
     }
-}
 
 @Composable
 fun OrtylDisplayOverlay(
@@ -557,40 +501,7 @@ fun OledStealthVoidScreenBackground(
         }
     }
 
-    // Interactive Liquid Silver Tap Ripples with smooth 60fps Animatable
-    var screenTaps by remember { mutableStateOf<List<OledScreenTapEffect>>(emptyList()) }
-    val scope = rememberCoroutineScope()
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        val downChange = event.changes.firstOrNull { it.changedToDown() }
-                        if (downChange != null) {
-                            val tapPos = downChange.position
-                            val anim = Animatable(0f)
-                            val effect = OledScreenTapEffect(
-                                id = System.nanoTime(),
-                                center = tapPos,
-                                anim = anim
-                            )
-                            screenTaps = (screenTaps + effect).takeLast(4)
-                            scope.launch {
-                                anim.animateTo(
-                                    targetValue = 1f,
-                                    animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
-                                )
-                                screenTaps = screenTaps.filter { it.id != effect.id }
-                            }
-                        }
-                    }
-                }
-            }
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+    Canvas(modifier = modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
             val titaniumSweepProgress = titaniumSweepAnim.value
@@ -753,31 +664,8 @@ fun OledStealthVoidScreenBackground(
             drawLine(bracketColor, Offset(16.dp.toPx(), bPadY), Offset(16.dp.toPx(), bPadY - bLen), strokeWidth = 1f)
             drawLine(bracketColor, Offset(width - 16.dp.toPx() - bLen, bPadY), Offset(width - 16.dp.toPx(), bPadY), strokeWidth = 1f)
             drawLine(bracketColor, Offset(width - 16.dp.toPx(), bPadY), Offset(width - 16.dp.toPx(), bPadY - bLen), strokeWidth = 1f)
-
-            // 7. Interactive Liquid Silver Acoustic Shockwaves on Tap (Butter Smooth)
-            screenTaps.forEach { effect ->
-                val p = effect.anim.value
-                val alpha = (1f - p) * 0.65f
-                if (alpha > 0.01f) {
-                    // Crisp expanding silver ring
-                    drawCircle(
-                        color = Color(0xFFFFFFFF).copy(alpha = alpha),
-                        center = effect.center,
-                        radius = p * 380f,
-                        style = Stroke(width = 1.4.dp.toPx())
-                    )
-                    // Inner refined calibration ring
-                    drawCircle(
-                        color = Color(0xFFCBD5E1).copy(alpha = alpha * 0.55f),
-                        center = effect.center,
-                        radius = p * 240f,
-                        style = Stroke(width = 0.8.dp.toPx())
-                    )
-                }
-            }
         }
     }
-}
 
 @Composable
 fun OledStealthVoidDisplayOverlay(
@@ -812,44 +700,11 @@ fun OledStealthVoidDisplayOverlay(
         label = "wave_amp"
     )
 
-    // Interactive Tap Ripples in the Display - Smooth 60fps Animatable
-    var displayTaps by remember { mutableStateOf<List<OledDisplayTapEffect>>(emptyList()) }
-    val scope = rememberCoroutineScope()
-
     val wavePath = remember { Path() }
     val glowPath = remember { Path() }
     val echoPath = remember { Path() }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        val downChange = event.changes.firstOrNull { it.changedToDown() }
-                        if (downChange != null) {
-                            val tapPos = downChange.position
-                            val anim = Animatable(0f)
-                            val effect = OledDisplayTapEffect(
-                                id = System.nanoTime(),
-                                center = tapPos,
-                                anim = anim
-                            )
-                            displayTaps = (displayTaps + effect).takeLast(4)
-                            scope.launch {
-                                anim.animateTo(
-                                    targetValue = 1f,
-                                    animationSpec = tween(durationMillis = 620, easing = FastOutSlowInEasing)
-                                )
-                                displayTaps = displayTaps.filter { it.id != effect.id }
-                            }
-                        }
-                    }
-                }
-            }
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+    Canvas(modifier = modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
             val beaconGlow = beaconGlowAnim.value
@@ -981,81 +836,8 @@ fun OledStealthVoidDisplayOverlay(
                 radius = 2.0.dp.toPx(),
                 center = ledOffset
             )
-
-            // 4. Interactive Display Tap Animation (Butter Smooth Optical Caliper & Ripple)
-            displayTaps.forEach { effect ->
-                val p = effect.anim.value
-                val alpha = (1f - p) * 0.85f
-                val center = effect.center
-
-                if (alpha > 0.01f) {
-                    // (a) Expanding Optical Caliper Ring in Pure White / Platinum
-                    val ringRadius = p * 160.dp.toPx()
-                    drawCircle(
-                        color = Color(0xFFFFFFFF).copy(alpha = alpha),
-                        center = center,
-                        radius = ringRadius,
-                        style = Stroke(width = 1.4.dp.toPx())
-                    )
-
-                    // (b) Secondary Inner Concentric Calibration Ring
-                    val innerRadius = p * 95.dp.toPx()
-                    drawCircle(
-                        color = Color(0xFFCBD5E1).copy(alpha = alpha * 0.55f),
-                        center = center,
-                        radius = innerRadius,
-                        style = Stroke(width = 0.9.dp.toPx())
-                    )
-
-                    // (c) Surgical Optical Focus Crosshair Ticks (+)
-                    val crossOffset = (6 + p * 20).dp.toPx()
-                    val tickLen = 6.dp.toPx()
-                    val crossColor = Color(0xFFFFFFFF).copy(alpha = alpha * 0.9f)
-                    // Left
-                    drawLine(crossColor, Offset(center.x - crossOffset - tickLen, center.y), Offset(center.x - crossOffset, center.y), strokeWidth = 1.2f)
-                    // Right
-                    drawLine(crossColor, Offset(center.x + crossOffset, center.y), Offset(center.x + crossOffset + tickLen, center.y), strokeWidth = 1.2f)
-                    // Top
-                    drawLine(crossColor, Offset(center.x, center.y - crossOffset - tickLen), Offset(center.x, center.y - crossOffset), strokeWidth = 1.2f)
-                    // Bottom
-                    drawLine(crossColor, Offset(center.x, center.y + crossOffset), Offset(center.x, center.y + crossOffset + tickLen), strokeWidth = 1.2f)
-
-                    // (d) Rotating Optical Aperture Brackets (Autofocus Target Reticle)
-                    rotate(p * 45f, pivot = center) {
-                        val bracketDist = p * 55.dp.toPx()
-                        val bSize = 5.dp.toPx()
-                        val bColor = Color(0xFFCBD5E1).copy(alpha = alpha * 0.75f)
-                        // Top-left
-                        drawLine(bColor, Offset(center.x - bracketDist, center.y - bracketDist), Offset(center.x - bracketDist + bSize, center.y - bracketDist), strokeWidth = 1f)
-                        drawLine(bColor, Offset(center.x - bracketDist, center.y - bracketDist), Offset(center.x - bracketDist, center.y - bracketDist + bSize), strokeWidth = 1f)
-                        // Top-right
-                        drawLine(bColor, Offset(center.x + bracketDist - bSize, center.y - bracketDist), Offset(center.x + bracketDist, center.y - bracketDist), strokeWidth = 1f)
-                        drawLine(bColor, Offset(center.x + bracketDist, center.y - bracketDist), Offset(center.x + bracketDist, center.y - bracketDist + bSize), strokeWidth = 1f)
-                        // Bottom-left
-                        drawLine(bColor, Offset(center.x - bracketDist, center.y + bracketDist), Offset(center.x - bracketDist + bSize, center.y + bracketDist), strokeWidth = 1f)
-                        drawLine(bColor, Offset(center.x - bracketDist, center.y + bracketDist - bSize), Offset(center.x - bracketDist, center.y + bracketDist), strokeWidth = 1f)
-                        // Bottom-right
-                        drawLine(bColor, Offset(center.x + bracketDist - bSize, center.y + bracketDist), Offset(center.x + bracketDist, center.y + bracketDist), strokeWidth = 1f)
-                        drawLine(bColor, Offset(center.x + bracketDist, center.y + bracketDist - bSize), Offset(center.x + bracketDist, center.y + bracketDist), strokeWidth = 1f)
-                    }
-
-                    // (e) 4 Micro-Photons Radiating Outward
-                    val sparkDist = p * 85.dp.toPx()
-                    for (k in 0 until 4) {
-                        val angleRad = (k * 90f + p * 30f) * (PI / 180.0)
-                        val sx = center.x + (cos(angleRad) * sparkDist).toFloat()
-                        val sy = center.y + (sin(angleRad) * sparkDist).toFloat()
-                        drawCircle(
-                            color = Color(0xFFFFFFFF).copy(alpha = alpha * 0.8f),
-                            radius = 1.6.dp.toPx(),
-                            center = Offset(sx, sy)
-                        )
-                    }
-                }
-            }
         }
     }
-}
 
 // ==============================================================================
 // 3. STARRY NIGHT GOTHAM (From Photo 3: Van Gogh Swirling Sky over Batman)
@@ -1113,34 +895,9 @@ fun StarryGothamScreenBackground(
         )
     }
 
-    // Tap starry burst
-    var tapBursts by remember { mutableStateOf<List<StarryGothamTapBurst>>(emptyList()) }
-    val scope = rememberCoroutineScope()
     val vgCache = remember { VanGoghPathCache() }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    val anim = Animatable(0f)
-                    val burst = StarryGothamTapBurst(
-                        id = System.nanoTime(),
-                        center = offset,
-                        anim = anim
-                    )
-                    tapBursts = (tapBursts + burst).takeLast(4)
-                    scope.launch {
-                        anim.animateTo(
-                            targetValue = 1f,
-                            animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
-                        )
-                        tapBursts = tapBursts.filter { it.id != burst.id }
-                    }
-                }
-            }
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+    Canvas(modifier = modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
             val vortexSpin = vortexSpinAnim.value
@@ -1218,30 +975,8 @@ fun StarryGothamScreenBackground(
             val batY = height * 0.45f + sin(batFlightProgress * 4 * PI.toFloat()) * 40f
             drawBatSilhouette(center = Offset(batX, batY), size = 18.dp.toPx(), path = vgCache.batPath)
             drawBatSilhouette(center = Offset(batX - 45f, batY + 25f), size = 12.dp.toPx(), path = vgCache.batPath)
-
-            // 7. Interactive Starry Tap Burst
-            tapBursts.forEach { burst ->
-                val p = burst.anim.value
-                val alpha = (1f - p) * 0.6f
-                val radius = p * 460f
-                if (alpha > 0.01f) {
-                    drawCircle(
-                        color = Color(0xFFFFD166).copy(alpha = alpha),
-                        center = burst.center,
-                        radius = radius,
-                        style = Stroke(width = 2.5.dp.toPx())
-                    )
-                    drawCircle(
-                        color = Color(0xFF64B5F6).copy(alpha = alpha * 0.65f),
-                        center = burst.center,
-                        radius = radius * 0.7f,
-                        style = Stroke(width = 1.5.dp.toPx())
-                    )
-                }
-            }
         }
     }
-}
 
 private fun DrawScope.drawVanGoghStarWhirlpool(center: Offset, baseRadius: Float, angle: Float, pulse: Float) {
     // 1. Radiant luminous core (warm golden starlight)
@@ -1517,34 +1252,9 @@ fun CosmicSingularityScreenBackground(
         }
     }
 
-    // Interactive Gravitational Tap Lensing wave
-    var tapLensings by remember { mutableStateOf<List<CosmicTapLensing>>(emptyList()) }
-    val scope = rememberCoroutineScope()
     val ridgePath = remember { Path() }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    val anim = Animatable(0f)
-                    val lens = CosmicTapLensing(
-                        id = System.nanoTime(),
-                        center = offset,
-                        anim = anim
-                    )
-                    tapLensings = (tapLensings + lens).takeLast(4)
-                    scope.launch {
-                        anim.animateTo(
-                            targetValue = 1f,
-                            animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
-                        )
-                        tapLensings = tapLensings.filter { it.id != lens.id }
-                    }
-                }
-            }
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+    Canvas(modifier = modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
             val diskRotation = diskRotationAnim.value
@@ -1588,30 +1298,8 @@ fun CosmicSingularityScreenBackground(
 
             // 5. Luminescent Indigo Mountain Ridges & Valley City Lights Below
             drawIndigoPlanetRidge(width = width, height = height, path = ridgePath)
-
-            // 6. Interactive Gravitational Lensing Ripple on tap
-            tapLensings.forEach { lens ->
-                val p = lens.anim.value
-                val alpha = (1f - p) * 0.55f
-                val radius = p * 480f
-                if (alpha > 0.01f) {
-                    drawCircle(
-                        color = Color(0xFFFF2A4D).copy(alpha = alpha),
-                        center = lens.center,
-                        radius = radius,
-                        style = Stroke(width = 2.5.dp.toPx())
-                    )
-                    drawCircle(
-                        color = Color(0xFFFFAA00).copy(alpha = alpha * 0.65f),
-                        center = lens.center,
-                        radius = radius * 0.75f,
-                        style = Stroke(width = 1.2.dp.toPx())
-                    )
-                }
-            }
         }
     }
-}
 
 private fun DrawScope.drawCrimsonNebulaClouds(width: Float, height: Float) {
     val cloudColor1 = Color(0x35E61A35)

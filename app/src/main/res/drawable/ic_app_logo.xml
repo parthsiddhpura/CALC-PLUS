@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 1. Outer Black Squircle with Transparent Background Outside -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M28,12 h52 c9,0 16,7 16,16 v52 c0,9 -7,16 -16,16 H28 c-9,0 -16,-7 -16,-16 V28 c0,-9 7,-16 16,-16 Z" />
+
+    <!-- 2. Inner White Rounded Card -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,32 h28 c4.5,0 8,3.5 8,8 v28 c0,4.5 -3.5,8 -8,8 H40 c-4.5,0 -8,-3.5 -8,-8 V40 c0,-4.5 3.5,-8 8,-8 Z" />
+
+    <!-- 3. Top-Left: Minus Sign (−) -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M38,43 h13 v3.4 H38 Z" />
+
+    <!-- 4. Top-Right: Multiply Sign (×) -->
+    <group
+        android:pivotX="63.5"
+        android:pivotY="44.7"
+        android:rotation="45">
+        <path
+            android:fillColor="#000000"
+            android:pathData="M57,43 h13 v3.4 H57 Z M61.8,38.2 h3.4 v13 H61.8 Z" />
+    </group>
+
+    <!-- 5. Bottom-Left: Plus Sign (+) -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M38,62.3 h13 v3.4 H38 Z M42.8,57.5 h3.4 v13 H42.8 Z" />
+
+    <!-- 6. Bottom-Right: Equals Sign (=) -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M57,60.6 h13 v3.1 H57 Z M57,65.3 h13 v3.1 H57 Z" />
+
+</vector>

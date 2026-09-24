@@ -98,5 +98,35 @@ class ExampleUnitTest {
     assertTrue("Batman theme should have hasBatSignal=true", batmanTheme.hasBatSignal)
     assertTrue("Batman theme should be dark", batmanTheme.isDark)
   }
+
+  @Test
+  fun pressureCalculator_scientificAccuracy() {
+    val calc = com.example.domain.CustomCalculatorEngine.buildFromPrompt("measure pressure")
+    assertEquals("Fluid & Mechanical Pressure Calculator", calc.title)
+    assertFalse("Static physics calculator should not claim live internet connection", calc.hasInternetData)
+
+    // Check inputs: force_n, area_cm2, fluid_depth_m, fluid_density
+    val inputIds = calc.inputs.map { it.id }
+    assertTrue(inputIds.contains("force_n"))
+    assertTrue(inputIds.contains("area_cm2"))
+    assertTrue(inputIds.contains("fluid_depth_m"))
+    assertTrue(inputIds.contains("fluid_density"))
+
+    // Calculate outputs for 500 N on 25 cm²
+    val inputs = mapOf(
+      "force_n" to 500.0,
+      "area_cm2" to 25.0,
+      "fluid_depth_m" to 10.0,
+      "fluid_density" to 1000.0
+    )
+    val outputs = com.example.domain.CustomCalculatorEngine.calculateOutputs(calc, inputs)
+
+    // P = 500 N / 0.0025 m² = 200,000 Pa = 200 kPa = 2.0 bar
+    assertEquals(200.0, outputs["pressure_kpa"] ?: 0.0, 0.01)
+    assertEquals(2.0, outputs["pressure_bar"] ?: 0.0, 0.01)
+
+    // Hydrostatic = 1000 kg/m³ * 9.80665 m/s² * 10 m = 98066.5 Pa = 98.0665 kPa
+    assertEquals(98.0665, outputs["hydrostatic_kpa"] ?: 0.0, 0.1)
+  }
 }
 
