@@ -46,10 +46,6 @@ class CalculatorAppWidgetProvider : AppWidgetProvider() {
             val theme = WidgetDataManager.getThemeFamily(context)
             val minHeight = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) ?: 140
 
-            // Responsive Layout Selection:
-            // 2x1 -> minHeight < 110dp
-            // 4x4 -> minHeight >= 220dp
-            // 4x2 -> default
             val views = when {
                 minHeight < 110 -> buildCompact2x1Views(context, theme)
                 minHeight >= 220 -> buildLarge4x4Views(context, theme)
@@ -59,10 +55,11 @@ class CalculatorAppWidgetProvider : AppWidgetProvider() {
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
 
-        // --- 2x1 Compact Layout (e.g. ₹25,000 + 18% = ₹29,500) ---
-        private fun buildCompact2x1Views(context: Context, theme: WidgetThemeFamily): RemoteViews {
+        // --- 2x1 Compact Layout ---
+        private fun buildCompact2x1Views(context: Context, theme: WidgetDynamicTheme): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_adaptive_2x1)
-            views.setInt(R.id.widget_root, "setBackgroundResource", theme.bgRes)
+            theme.applyRoot(views, R.id.widget_root)
+            theme.applyButton(views, R.id.btn_quick_launch, isAccent = true)
 
             val expr = WidgetDataManager.getLastExpression(context)
             val res = WidgetDataManager.getLastResult(context)
@@ -85,12 +82,19 @@ class CalculatorAppWidgetProvider : AppWidgetProvider() {
             return views
         }
 
-        // --- 4x2 Standard Card (Full mini calculator & shortcuts) ---
-        private fun buildStandard4x2Views(context: Context, theme: WidgetThemeFamily): RemoteViews {
+        // --- 4x2 Standard Card ---
+        private fun buildStandard4x2Views(context: Context, theme: WidgetDynamicTheme): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_calculator)
-            views.setInt(R.id.widget_root, "setBackgroundResource", theme.bgRes)
-            views.setInt(R.id.btn_launch_calc, "setBackgroundResource", theme.btnBgRes)
+            theme.applyRoot(views, R.id.widget_root)
+            theme.applyScreen(views, R.id.widget_screen_container)
+            theme.applyButton(views, R.id.btn_launch_calc, isAccent = true)
+            theme.applyButton(views, R.id.btn_launch_gst, isAccent = false)
+            theme.applyButton(views, R.id.btn_launch_chains, isAccent = false)
+            theme.applyButton(views, R.id.btn_launch_ai, isAccent = false)
+
             views.setTextColor(R.id.widget_title, theme.headerTextColorHex)
+            views.setTextColor(R.id.widget_timestamp, theme.subtextColorHex)
+            views.setTextViewText(R.id.widget_timestamp, theme.title)
             views.setTextColor(R.id.widget_result, theme.textColorHex)
             views.setTextColor(R.id.widget_expression, theme.subtextColorHex)
 
@@ -100,7 +104,6 @@ class CalculatorAppWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_expression, lastExpr)
             views.setTextViewText(R.id.widget_result, lastResult)
 
-            // Click listener for launching Standard Calculator
             val calcIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(EXTRA_MODE, "STANDARD")
@@ -112,7 +115,6 @@ class CalculatorAppWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.btn_launch_calc, calcPendingIntent)
             views.setOnClickPendingIntent(R.id.widget_root, calcPendingIntent)
 
-            // Click listener for launching GST Calculator
             val gstIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(EXTRA_MODE, "GST_CALCULATOR")
@@ -123,7 +125,6 @@ class CalculatorAppWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_launch_gst, gstPendingIntent)
 
-            // Click listener for launching Calculation Chains
             val chainsIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(EXTRA_MODE, "CALCULATION_CHAINS")
@@ -134,7 +135,6 @@ class CalculatorAppWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_launch_chains, chainsPendingIntent)
 
-            // Click listener for launching AI Math Copilot
             val aiIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(EXTRA_MODE, "AI_COPILOT")
@@ -148,26 +148,40 @@ class CalculatorAppWidgetProvider : AppWidgetProvider() {
             return views
         }
 
-        // --- 4x4 Command Center (Calculator + History + Shortcuts) ---
-        private fun buildLarge4x4Views(context: Context, theme: WidgetThemeFamily): RemoteViews {
+        // --- 4x4 Command Center ---
+        private fun buildLarge4x4Views(context: Context, theme: WidgetDynamicTheme): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_adaptive_4x4)
-            views.setInt(R.id.widget_root, "setBackgroundResource", theme.bgRes)
+            theme.applyRoot(views, R.id.widget_root)
+            theme.applyScreen(views, R.id.btn_open_calc)
+            theme.applyScreen(views, R.id.hist_row_1)
+            theme.applyScreen(views, R.id.hist_row_2)
+            theme.applyScreen(views, R.id.hist_row_3)
+            theme.applyThemeCycleButton(views, R.id.btn_theme_cycle)
+
+            theme.applyButton(views, R.id.btn_hub_calc, isAccent = true)
+            theme.applyButton(views, R.id.btn_hub_gst, isAccent = false)
+            theme.applyButton(views, R.id.btn_hub_emi, isAccent = false)
+            theme.applyButton(views, R.id.btn_hub_bmi, isAccent = false)
+            theme.applyButton(views, R.id.btn_hub_age, isAccent = false)
+            theme.applyButton(views, R.id.btn_hub_forex, isAccent = true)
+
             views.setTextColor(R.id.widget_title, theme.headerTextColorHex)
             views.setTextColor(R.id.widget_result, theme.textColorHex)
             views.setTextColor(R.id.widget_expression, theme.subtextColorHex)
+            views.setTextColor(R.id.hist_row_1, theme.textColorHex)
+            views.setTextColor(R.id.hist_row_2, theme.textColorHex)
+            views.setTextColor(R.id.hist_row_3, theme.textColorHex)
 
             val expr = WidgetDataManager.getLastExpression(context)
             val res = WidgetDataManager.getLastResult(context)
             views.setTextViewText(R.id.widget_expression, expr)
             views.setTextViewText(R.id.widget_result, res)
 
-            // History rows
             val history = WidgetDataManager.getHistoryList(context)
             if (history.isNotEmpty()) views.setTextViewText(R.id.hist_row_1, "• " + history[0])
             if (history.size > 1) views.setTextViewText(R.id.hist_row_2, "• " + history[1])
             if (history.size > 2) views.setTextViewText(R.id.hist_row_3, "• " + history[2])
 
-            // Mode launches
             bindMode(context, views, R.id.btn_hub_calc, "STANDARD", 151)
             bindMode(context, views, R.id.btn_hub_gst, "GST_CALCULATOR", 152)
             bindMode(context, views, R.id.btn_hub_emi, "EMI_LOAN", 153)
@@ -176,7 +190,6 @@ class CalculatorAppWidgetProvider : AppWidgetProvider() {
             bindMode(context, views, R.id.btn_hub_forex, "CURRENCY_CONVERTER", 156)
             bindMode(context, views, R.id.btn_open_calc, "STANDARD", 157)
 
-            // Theme cycle button
             val themeIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_CYCLE_THEME
             }

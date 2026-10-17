@@ -22,7 +22,8 @@ class VariableWidgetProvider : AppWidgetProvider() {
             val theme = WidgetDataManager.getThemeFamily(context)
             val views = RemoteViews(context.packageName, R.layout.widget_variable)
 
-            views.setInt(R.id.widget_root, "setBackgroundResource", theme.bgRes)
+            theme.applyRoot(views, R.id.widget_root)
+            theme.applyThemeCycleButton(views, R.id.btn_theme_cycle)
             views.setTextColor(R.id.widget_title, theme.headerTextColorHex)
 
             val variables = WidgetDataManager.getMyValues(context)
@@ -35,7 +36,7 @@ class VariableWidgetProvider : AppWidgetProvider() {
 
             for (i in rows.indices) {
                 val (rowLayoutId, textPair) = rows[i]
-                views.setInt(rowLayoutId, "setBackgroundResource", theme.screenBgRes)
+                theme.applyScreen(views, rowLayoutId)
                 views.setTextColor(textPair.first, theme.subtextColorHex)
                 views.setTextColor(textPair.second, theme.accentColorHex)
 
@@ -44,7 +45,6 @@ class VariableWidgetProvider : AppWidgetProvider() {
                     views.setTextViewText(textPair.first, v.label)
                     views.setTextViewText(textPair.second, v.displayValue)
 
-                    // Tapping a value -> Opens standard calc with this value preloaded!
                     val numStr = if (v.numericValue % 1.0 == 0.0) {
                         v.numericValue.toLong().toString()
                     } else {
@@ -63,7 +63,6 @@ class VariableWidgetProvider : AppWidgetProvider() {
                 }
             }
 
-            // Theme Cycle
             val themeIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_CYCLE_THEME
             }

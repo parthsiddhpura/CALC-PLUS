@@ -5,46 +5,121 @@ import kotlin.math.*
 
 object FormulaEvaluator {
 
+    private val SUPPORTED_FUNCTIONS = setOf(
+        "sqrt", "cbrt", "abs", "round", "ceil", "floor",
+        "log", "ln", "log10", "exp",
+        "sin", "cos", "tan", "asin", "acos", "atan",
+        "min", "max", "pow"
+    )
+
+    private val SUPPORTED_CONSTANTS = mapOf(
+        "pi" to Math.PI,
+        "e" to Math.E
+    )
+
     /**
      * Evaluates a mathematical expression string with given variable values.
-     * e.g., "(raw_material + labour + electricity + overhead) * (1 + profit_margin / 100) / units"
+     * Supports standard operators (+, -, *, /, ^, %), implicit multiplication,
+     * scientific/financial functions, and previous-output chaining.
      */
     fun evaluate(expression: String, variables: Map<String, Double>): Double {
         if (expression.isBlank()) return 0.0
         try {
-            var processed = expression.trim().lowercase(Locale.ROOT)
-
-            // Sort variables by length descending so longer variable names are replaced first
-            val sortedVars = variables.entries.sortedByDescending { it.key.length }
-            for ((key, value) in sortedVars) {
-                val cleanKey = key.lowercase(Locale.ROOT).trim()
-                if (cleanKey.isNotEmpty()) {
-                    val regex = Regex("\\b${Regex.escape(cleanKey)}\\b")
-                    val formattedVal = if (value.isNaN() || value.isInfinite()) "0.0" else value.toString()
-                    processed = processed.replace(regex, "($formattedVal)")
-                }
-            }
-
-            // Also support {prev} placeholder
-            if (variables.containsKey("prev")) {
-                val prevVal = variables["prev"] ?: 0.0
-                processed = processed.replace("{prev}", "($prevVal)")
-                processed = processed.replace("prev", "($prevVal)")
-            }
-
-            return parseExpression(processed)
+            val processed = substituteVariables(expression, variables)
+            val result = parseExpression(processed)
+            return if (result.isNaN() || result.isInfinite()) 0.0 else result
         } catch (e: Exception) {
             return 0.0
         }
     }
 
+    /**
+     * Strictly verifies that a formula is syntactically valid, references only known variables
+     * or supported mathematical functions/constants, and evaluates to a finite number.
+     */
+    fun validateFormula(expression: String, variables: Map<String, Double>): Boolean {
+        if (expression.isBlank()) return false
+        return try {
+            val normalizedVars = variables.keys.map { it.lowercase(Locale.ROOT).trim() }.toSet()
+            val cleanExpr = normalizeOperators(expression.trim().lowercase(Locale.ROOT))
+                .replace("{prev}", "prev")
+
+            // Verify all identifier tokens are known variables, functions, or constants
+            val rawTokens = tokenizeRaw(cleanExpr)
+            for (token in rawTokens) {
+                val first = token.firstOrNull() ?: continue
+                if (first.isLetter() || first == '_') {
+                    if (token !in normalizedVars &&
+                        token !in SUPPORTED_FUNCTIONS &&
+                        token !in SUPPORTED_CONSTANTS &&
+                        token != "prev"
+                    ) {
+                        return false
+                    }
+                }
+            }
+
+            // Verify balanced parentheses
+            var depth = 0
+            for (ch in cleanExpr) {
+                if (ch == '(') depth++
+                else if (ch == ')') {
+                    depth--
+                    if (depth < 0) return false
+                }
+            }
+            if (depth != 0) return false
+
+            val processed = substituteVariables(expression, variables)
+            val result = parseExpression(processed)
+            !result.isNaN() && !result.isInfinite()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun normalizeOperators(expr: String): String {
+        return expr
+            .replace("**", "^")
+            .replace("×", "*")
+            .replace("÷", "/")
+            .replace("−", "-")
+            .replace("–", "-")
+            .replace("π", "pi")
+    }
+
+    private fun substituteVariables(expression: String, variables: Map<String, Double>): String {
+        var processed = normalizeOperators(expression.trim().lowercase(Locale.ROOT))
+
+        // Support {prev} placeholder first
+        if (variables.containsKey("prev")) {
+            val prevVal = variables["prev"] ?: 0.0
+            val formattedPrev = if (prevVal.isNaN() || prevVal.isInfinite()) "0.0" else prevVal.toString()
+            processed = processed.replace("{prev}", "($formattedPrev)")
+        }
+
+        // Sort variables by length descending so longer variable names are replaced first
+        val sortedVars = variables.entries.sortedByDescending { it.key.length }
+        for ((key, value) in sortedVars) {
+            val cleanKey = key.lowercase(Locale.ROOT).trim()
+            if (cleanKey.isNotEmpty()) {
+                val regex = Regex("\\b${Regex.escape(cleanKey)}\\b")
+                val formattedVal = if (value.isNaN() || value.isInfinite()) "0.0" else value.toString()
+                processed = processed.replace(regex, "($formattedVal)")
+            }
+        }
+
+        return processed
+    }
+
     private fun parseExpression(expr: String): Double {
-        val tokens = tokenize(expr)
+        val rawTokens = tokenizeRaw(expr)
+        val tokens = insertImplicitMultiplication(rawTokens)
         val parser = ExpressionParser(tokens)
         return parser.parse()
     }
 
-    private fun tokenize(expr: String): List<String> {
+    private fun tokenizeRaw(expr: String): List<String> {
         val tokens = mutableListOf<String>()
         var i = 0
         val clean = expr.replace(" ", "")
@@ -58,14 +133,29 @@ object FormulaEvaluator {
                 }
                 c.isDigit() || c == '.' -> {
                     val sb = StringBuilder()
-                    while (i < clean.length && (clean[i].isDigit() || clean[i] == '.' || clean[i] == 'e' || clean[i] == 'E')) {
-                        if ((clean[i] == 'e' || clean[i] == 'E') && i + 1 < clean.length && (clean[i + 1] == '+' || clean[i + 1] == '-')) {
-                            sb.append(clean[i])
-                            sb.append(clean[i + 1])
-                            i += 2
+                    while (i < clean.length && (clean[i].isDigit() || clean[i] == '.')) {
+                        sb.append(clean[i])
+                        i++
+                    }
+                    // Handle scientific notation e.g. 1.5e-4 or 1e6
+                    if (i < clean.length && (clean[i] == 'e' || clean[i] == 'E')) {
+                        val nextIdx = i + 1
+                        val hasSciExponent = if (nextIdx < clean.length && (clean[nextIdx] == '+' || clean[nextIdx] == '-')) {
+                            nextIdx + 1 < clean.length && clean[nextIdx + 1].isDigit()
                         } else {
+                            nextIdx < clean.length && clean[nextIdx].isDigit()
+                        }
+                        if (hasSciExponent) {
                             sb.append(clean[i])
                             i++
+                            if (clean[i] == '+' || clean[i] == '-') {
+                                sb.append(clean[i])
+                                i++
+                            }
+                            while (i < clean.length && clean[i].isDigit()) {
+                                sb.append(clean[i])
+                                i++
+                            }
                         }
                     }
                     tokens.add(sb.toString())
@@ -84,13 +174,35 @@ object FormulaEvaluator {
         return tokens
     }
 
+    private fun isNumberToken(token: String): Boolean {
+        return token.firstOrNull()?.let { it.isDigit() || it == '.' } == true
+    }
+
+    private fun insertImplicitMultiplication(tokens: List<String>): List<String> {
+        if (tokens.size < 2) return tokens
+        val result = mutableListOf<String>()
+        for (i in tokens.indices) {
+            val curr = tokens[i]
+            result.add(curr)
+            if (i + 1 < tokens.size) {
+                val next = tokens[i + 1]
+                val currIsValueOrClose = isNumberToken(curr) || curr == ")" || curr in SUPPORTED_CONSTANTS
+                val nextIsOpenOrIdent = next == "(" || next in SUPPORTED_FUNCTIONS || next in SUPPORTED_CONSTANTS || isNumberToken(next) && curr == ")"
+                if (currIsValueOrClose && nextIsOpenOrIdent) {
+                    result.add("*")
+                }
+            }
+        }
+        return result
+    }
+
     private class ExpressionParser(private val tokens: List<String>) {
         private var pos = 0
 
         fun parse(): Double {
             if (tokens.isEmpty()) return 0.0
             val res = parseAdditive()
-            return if (res.isNaN()) 0.0 else res
+            return if (res.isNaN() || res.isInfinite()) 0.0 else res
         }
 
         private fun peek(): String? = if (pos < tokens.size) tokens[pos] else null
@@ -107,26 +219,16 @@ object FormulaEvaluator {
         }
 
         private fun parseMultiplicative(): Double {
-            var left = parseExponential()
+            var left = parseUnary()
             while (peek() == "*" || peek() == "/" || peek() == "%") {
                 val op = consume()
-                val right = parseExponential()
+                val right = parseUnary()
                 left = when (op) {
                     "*" -> left * right
-                    "/" -> if (right != 0.0) left / right else 0.0
-                    "%" -> if (right != 0.0) left % right else 0.0
+                    "/" -> if (abs(right) > 1e-15) left / right else 0.0
+                    "%" -> if (abs(right) > 1e-15) left % right else 0.0
                     else -> left
                 }
-            }
-            return left
-        }
-
-        private fun parseExponential(): Double {
-            var left = parseUnary()
-            while (peek() == "^") {
-                consume()
-                val right = parseUnary()
-                left = left.pow(right)
             }
             return left
         }
@@ -140,7 +242,17 @@ object FormulaEvaluator {
                 consume()
                 return -parseUnary()
             }
-            return parsePrimary()
+            return parseExponential()
+        }
+
+        private fun parseExponential(): Double {
+            var left = parsePrimary()
+            if (peek() == "^") {
+                consume()
+                val right = parseUnary() // Right-associative & allows 2^-3
+                left = left.pow(right)
+            }
+            return left
         }
 
         private fun parsePrimary(): Double {
@@ -153,31 +265,47 @@ object FormulaEvaluator {
                 return expr
             }
 
+            if (token in SUPPORTED_CONSTANTS) {
+                consume()
+                return SUPPORTED_CONSTANTS[token] ?: 0.0
+            }
+
             // Function calls
-            if (token in listOf("sqrt", "abs", "round", "ceil", "floor", "log", "ln", "sin", "cos", "tan", "min", "max", "pow")) {
+            if (token in SUPPORTED_FUNCTIONS) {
                 val funcName = consume()
                 if (peek() == "(") {
                     consume() // (
-                    val arg1 = parseAdditive()
-                    var arg2 = 0.0
-                    if (peek() == ",") {
-                        consume()
-                        arg2 = parseAdditive()
+                    val args = mutableListOf<Double>()
+                    if (peek() != ")") {
+                        args.add(parseAdditive())
+                        while (peek() == ",") {
+                            consume()
+                            args.add(parseAdditive())
+                        }
                     }
                     if (peek() == ")") consume() // )
 
+                    val arg1 = args.getOrElse(0) { 0.0 }
+                    val arg2 = args.getOrElse(1) { 0.0 }
+
                     return when (funcName) {
-                        "sqrt" -> if (arg1 >= 0) sqrt(arg1) else 0.0
+                        "sqrt" -> if (arg1 >= 0.0) sqrt(arg1) else 0.0
+                        "cbrt" -> cbrt(arg1)
                         "abs" -> abs(arg1)
                         "round" -> round(arg1)
                         "ceil" -> ceil(arg1)
                         "floor" -> floor(arg1)
-                        "log", "ln" -> if (arg1 > 0) ln(arg1) else 0.0
+                        "log", "ln" -> if (arg1 > 0.0) ln(arg1) else 0.0
+                        "log10" -> if (arg1 > 0.0) log10(arg1) else 0.0
+                        "exp" -> exp(arg1)
                         "sin" -> sin(arg1)
                         "cos" -> cos(arg1)
                         "tan" -> tan(arg1)
-                        "min" -> min(arg1, arg2)
-                        "max" -> max(arg1, arg2)
+                        "asin" -> if (arg1 in -1.0..1.0) asin(arg1) else 0.0
+                        "acos" -> if (arg1 in -1.0..1.0) acos(arg1) else 0.0
+                        "atan" -> atan(arg1)
+                        "min" -> if (args.size >= 2) args.minOrNull() ?: arg1 else arg1
+                        "max" -> if (args.size >= 2) args.maxOrNull() ?: arg1 else arg1
                         "pow" -> arg1.pow(arg2)
                         else -> arg1
                     }

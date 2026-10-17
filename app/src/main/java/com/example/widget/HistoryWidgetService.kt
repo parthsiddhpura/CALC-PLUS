@@ -35,7 +35,7 @@ class HistoryRemoteViewsFactory(private val context: Context) : RemoteViewsServi
             val item = items[position]
             views.setTextViewText(R.id.history_item_text, item)
 
-            val theme = WidgetDataManager.getThemeFamily(context)
+            val theme = WidgetDataManager.getDynamicTheme(context)
             views.setTextColor(R.id.history_item_text, theme.textColorHex)
             views.setTextColor(R.id.history_item_bullet, theme.accentColorHex)
             views.setTextColor(R.id.history_item_action, theme.accentColorHex)

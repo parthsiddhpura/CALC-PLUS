@@ -234,16 +234,16 @@ fun CalculatorDisplay(
 
         // Responsive font scaling factors based on actual available display height
         val isScientific = mode == CalculatorMode.SCIENTIFIC
-        val heightFactor = (maxHeight.value / (if (isScientific) 160f else 190f)).coerceIn(0.85f, 1.25f)
-        val configResultSp = displayConfig.scaleSize.resultSp.toFloat() * (if (isScientific) 0.84f else 1.0f)
-        val configExprSp = displayConfig.scaleSize.exprSp.toFloat() * (if (isScientific) 0.88f else 1.0f)
+        val heightFactor = (maxHeight.value / (if (isScientific) 180f else 190f)).coerceIn(0.90f, 1.35f)
+        val configResultSp = displayConfig.scaleSize.resultSp.toFloat() * (if (isScientific) 0.96f else 1.0f)
+        val configExprSp = displayConfig.scaleSize.exprSp.toFloat() * (if (isScientific) 0.94f else 1.0f)
         val baseSp = if (isScientific) {
-            (configResultSp * heightFactor).coerceIn(48f, 66f)
+            (configResultSp * heightFactor).coerceIn(58f, 82f)
         } else {
             (configResultSp * heightFactor).coerceIn(64f, 92f)
         }
         val exprBaseSize = if (isScientific) {
-            (configExprSp * heightFactor).toInt().coerceIn(20, 28)
+            (configExprSp * heightFactor).toInt().coerceIn(24, 34)
         } else {
             (configExprSp * heightFactor).toInt().coerceIn(24, 38)
         }
@@ -283,6 +283,10 @@ fun CalculatorDisplay(
             StarryGothamDisplayOverlay(modifier = Modifier.matchParentSize())
         } else if (theme.isCosmicSingularity) {
             CosmicSingularityDisplayOverlay(modifier = Modifier.matchParentSize())
+        } else if (theme.isHarryPotter) {
+            HarryPotterDisplayOverlay(modifier = Modifier.matchParentSize())
+        } else if (theme.isPearlescent3D) {
+            Pearlescent3DDisplayOverlay(modifier = Modifier.matchParentSize())
         } else {
             // Unique professional ambient display animation for all other theme categories
             ThemeAmbientDisplayAnimation(
@@ -880,7 +884,7 @@ fun CalculatorDisplay(
                     charCount <= 30 -> 0.36f
                     else -> 0.30f
                 }
-                val minResultSp = if (isScientific) 22f else 28f
+                val minResultSp = if (isScientific) 26f else 28f
                 val targetSp = (baseSp * dynamicScale).coerceIn(minResultSp, baseSp)
                 val animatedSp by animateFloatAsState(
                     targetValue = targetSp,

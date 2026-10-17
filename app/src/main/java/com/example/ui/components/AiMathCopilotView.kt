@@ -95,6 +95,14 @@ fun AiMathCopilotView(
         "Compound growth of ₹10,000 monthly SIP for 15 years at 14%"
     )
 
+    // Beta Version Note with "Don't ask again" option
+    BetaFeatureNoticeDialog(
+        featureKey = "ai_math_copilot",
+        featureTitle = "AI Math Copilot",
+        theme = theme,
+        noteText = "AI Math & Logic Copilot solves natural language expressions, step-by-step algebra, currency/tax calculations, and financial formulas. Please verify numerical output for high-stakes or critical decisions as we continuously enhance accuracy."
+    )
+
     Column(
         modifier = modifier
             .fillMaxSize()

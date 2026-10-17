@@ -85,6 +85,103 @@ fun ThemeAmbientDisplayAnimation(
         val secondary = theme.secondaryAccent
 
         when {
+            // 00A. HARRY POTTER: Hovering Golden Snitch, Fluttering Wings & Golden Lumos Motes
+            theme.isHarryPotter || theme.id == ThemeId.HARRY_POTTER_HOGWARTS -> {
+                val snitchBaseX = w - 40.dp.toPx()
+                val snitchBaseY = 22.dp.toPx()
+                val floatX = snitchBaseX + sin(wavePhaseVal) * 4.dp.toPx()
+                val floatY = snitchBaseY + kotlin.math.cos(wavePhaseVal * 1.4f) * 3.dp.toPx()
+                val snitchR = 6.dp.toPx()
+
+                // High-speed wing flap oscillation
+                val flap = sin(wavePhaseVal * 16f) * 24.dp.toPx()
+
+                // Wings
+                drawLine(
+                    color = Color(0xDDFFFFFF),
+                    start = Offset(floatX - snitchR * 0.7f, floatY),
+                    end = Offset(floatX - snitchR * 0.7f - 16.dp.toPx(), floatY - flap * 0.4f),
+                    strokeWidth = 2.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+                drawLine(
+                    color = Color(0xDDFFFFFF),
+                    start = Offset(floatX + snitchR * 0.7f, floatY),
+                    end = Offset(floatX + snitchR * 0.7f + 16.dp.toPx(), floatY - flap * 0.4f),
+                    strokeWidth = 2.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+
+                // Snitch Sphere
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0xFFFFF2A1), Color(0xFFFFD700), Color(0xFFD4AF37)),
+                        center = Offset(floatX - snitchR * 0.3f, floatY - snitchR * 0.3f),
+                        radius = snitchR * 1.2f
+                    ),
+                    radius = snitchR,
+                    center = Offset(floatX, floatY)
+                )
+
+                // Drifting Lumos motes
+                for (i in 0 until 5) {
+                    val progress = (sweepProgressVal + i * 0.20f) % 1f
+                    val my = h * (1f - progress)
+                    val mx = (w * (0.15f + i * 0.18f)) + sin(progress * 8f + i) * 12.dp.toPx()
+                    val mAlpha = (sin(progress * Math.PI.toFloat()) * 0.75f).coerceIn(0f, 0.75f) * breathPulseVal
+                    drawCircle(
+                        color = Color(0xFFFFD700).copy(alpha = mAlpha),
+                        radius = (1.5.dp.toPx() + (i % 2) * 1.dp.toPx()),
+                        center = Offset(mx, my)
+                    )
+                }
+
+                // Bottom enchanted gold baseline
+                val goldBrush = Brush.horizontalGradient(
+                    listOf(Color.Transparent, Color(0x44D4AF37), Color(0xDDFFD700), Color(0x44D4AF37), Color.Transparent)
+                )
+                drawLine(goldBrush, Offset(w * 0.10f, h - 3.dp.toPx()), Offset(w * 0.90f, h - 3.dp.toPx()), 2.dp.toPx(), StrokeCap.Round)
+            }
+
+            // 00B. PEARLESCENT 3D PRISM: Floating 3D Pearl Bubble, Caustic Sheen & Liquid Wave
+            theme.isPearlescent3D || theme.id == ThemeId.PEARLESCENT_3D_OPAL -> {
+                // Diagonal caustic sheen sweep
+                val sheenX = (sweepProgressVal * (w + 140.dp.toPx())) - 70.dp.toPx()
+                val sheenBrush = Brush.linearGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        Color(0x06A1C4FD),
+                        Color(0x28FFFFFF),
+                        Color(0x12FBC2EB),
+                        Color.Transparent
+                    ),
+                    start = Offset(sheenX - 35.dp.toPx(), 0f),
+                    end = Offset(sheenX + 35.dp.toPx(), h)
+                )
+                drawRect(brush = sheenBrush)
+
+                // Floating 3D Pearl Bubble in top-right
+                val bx = w - 34.dp.toPx() + sin(wavePhaseVal) * 3.dp.toPx()
+                val by = 20.dp.toPx() + kotlin.math.cos(wavePhaseVal * 1.2f) * 2.5.dp.toPx()
+                val br = 8.dp.toPx()
+
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color.White, Color(0xFFF0F4FC), Color(0xFFE2EAFC), Color(0xFFCAD8EE)),
+                        center = Offset(bx - br * 0.35f, by - br * 0.35f),
+                        radius = br * 1.25f
+                    ),
+                    radius = br,
+                    center = Offset(bx, by)
+                )
+
+                // Liquid Opal baseline
+                val opalBrush = Brush.horizontalGradient(
+                    listOf(Color.Transparent, Color(0x44A1C4FD), Color(0xCC4A4FE4), Color(0x66FBC2EB), Color.Transparent)
+                )
+                drawLine(opalBrush, Offset(w * 0.12f, h - 3.dp.toPx()), Offset(w * 0.88f, h - 3.dp.toPx()), 2.dp.toPx(), StrokeCap.Round)
+            }
+
             // 0A. KAWAII GIRL MATH: Sweet Kitten Peek, Floating Pastel Hearts & Twinkling Sparkles
             theme.isGirlMath || theme.id == ThemeId.GIRL_MATH_PASTEL -> {
                 // 5 elegant floating pastel hearts drifting upwards on organic sine-wave paths

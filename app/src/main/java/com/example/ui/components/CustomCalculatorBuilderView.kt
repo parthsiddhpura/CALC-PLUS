@@ -164,6 +164,14 @@ fun CustomCalculatorBuilderView(
         }
     }
 
+    // Beta Version Note with "Don't ask again" option
+    BetaFeatureNoticeDialog(
+        featureKey = "custom_calculator_builder",
+        featureTitle = "Build Me a Calculator",
+        theme = theme,
+        noteText = "Build Me a Calculator creates custom mathematical models, formulas, and dynamic inputs from plain English prompts. This feature is in active Beta—please verify custom formulas and test edge cases before using them for commercial or critical needs."
+    )
+
     // Recalculate outputs in real time
     val outputResults = remember(activeCalculator.id, inputValues.toMap()) {
         CustomCalculatorEngine.calculateOutputs(activeCalculator, inputValues)
@@ -824,8 +832,7 @@ fun CustomCalculatorBuilderView(
                                                 coroutineScope.launch {
                                                     isRefreshingLiveRates = true
                                                     isOnline = NetworkUtils.isInternetConnected(context)
-                                                    CurrencyRepository.fetchLiveRates()
-                                                    val updated = CustomCalculatorEngine.buildFromPromptWithInternet(activeCalculator.title)
+                                                    val updated = CustomCalculatorEngine.refreshCalculatorLiveRates(activeCalculator)
                                                     onSaveCustomCalculator(updated)
                                                     onSelectCalculator(updated)
                                                     isOnline = NetworkUtils.isInternetConnected(context)

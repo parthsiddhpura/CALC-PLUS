@@ -1515,3 +1515,1017 @@ fun CosmicSingularityDisplayOverlay(
         }
     }
 }
+
+// ==============================================================================
+// 5. HARRY POTTER: LUMOS & SORCERY (Enchanted Midnight, Golden Snitch, Deathly Hallows)
+// ==============================================================================
+
+private data class HarryPotterSparkMote(
+    val initialXRatio: Float,
+    val initialYRatio: Float,
+    val speedY: Float,
+    val driftFreq: Float,
+    val sizeDp: Float,
+    val maxAlpha: Float,
+    val phase: Float
+)
+
+private data class HarryPotterTapBurst(
+    val id: Long,
+    val center: Offset,
+    val anim: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>
+)
+
+private class HarryPotterPathCache {
+    val hallowsTriangle = Path()
+    val snitchWingLeft = Path()
+    val snitchWingRight = Path()
+    val sparkStarPath = Path()
+}
+
+@Composable
+fun HarryPotterScreenBackground(
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "hp_bg_anim")
+    val lumosDriftAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 8000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "lumos_drift"
+    )
+    val hallowsPulseAnim = infiniteTransition.animateFloat(
+        initialValue = 0.55f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "hallows_pulse"
+    )
+    val snitchFlyAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 10000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "snitch_fly"
+    )
+    val wingFlapAnim = infiniteTransition.animateFloat(
+        initialValue = -25f,
+        targetValue = 25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 110, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "wing_flap"
+    )
+
+    // Pre-allocated enchanted Lumos spark motes drifting upward
+    val sparkMotes = remember {
+        listOf(
+            HarryPotterSparkMote(0.12f, 0.85f, 0.45f, 3.2f, 2.8f, 0.80f, 0.2f),
+            HarryPotterSparkMote(0.28f, 0.65f, 0.38f, 2.8f, 2.2f, 0.65f, 1.1f),
+            HarryPotterSparkMote(0.48f, 0.90f, 0.52f, 4.0f, 3.5f, 0.90f, 2.4f),
+            HarryPotterSparkMote(0.68f, 0.70f, 0.40f, 3.0f, 2.5f, 0.75f, 3.7f),
+            HarryPotterSparkMote(0.85f, 0.82f, 0.48f, 3.5f, 3.0f, 0.85f, 4.5f),
+            HarryPotterSparkMote(0.20f, 0.40f, 0.35f, 2.5f, 2.0f, 0.60f, 0.9f),
+            HarryPotterSparkMote(0.78f, 0.30f, 0.42f, 3.8f, 2.4f, 0.70f, 5.1f),
+            HarryPotterSparkMote(0.38f, 0.20f, 0.30f, 2.2f, 1.8f, 0.55f, 1.8f),
+            HarryPotterSparkMote(0.58f, 0.15f, 0.32f, 2.9f, 2.2f, 0.65f, 3.3f)
+        )
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+    var tapBursts by remember { mutableStateOf<List<HarryPotterTapBurst>>(emptyList()) }
+    val pathCache = remember { HarryPotterPathCache() }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures { tapOffset ->
+                    val anim = Animatable(0f)
+                    val burstId = System.currentTimeMillis()
+                    val newBurst = HarryPotterTapBurst(burstId, tapOffset, anim)
+                    tapBursts = (tapBursts + newBurst).takeLast(4)
+                    coroutineScope.launch {
+                        anim.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(750, easing = FastOutSlowInEasing)
+                        )
+                        tapBursts = tapBursts.filter { it.id != burstId }
+                    }
+                }
+            }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val width = size.width
+            val height = size.height
+            val lumosDrift = lumosDriftAnim.value
+            val hallowsPulse = hallowsPulseAnim.value
+            val snitchFly = snitchFlyAnim.value
+            val wingFlap = wingFlapAnim.value
+
+            // 1. Ambient midnight mystic vignetted glow
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0x356A1523), // Deep Hogwarts scarlet
+                        Color(0x18D4AF37), // Antique gold haze
+                        Color.Transparent
+                    ),
+                    center = Offset(width * 0.5f, height * 0.35f),
+                    radius = width * 0.85f
+                ),
+                radius = width * 0.85f,
+                center = Offset(width * 0.5f, height * 0.35f)
+            )
+
+            // 2. Sacred Deathly Hallows Geometry Watermark (Triangle, Resurrection Stone circle, Elder Wand line)
+            val hallowsCenterX = width * 0.5f
+            val hallowsCenterY = height * 0.36f
+            val hallowsSize = width * 0.38f
+            val hallowsAlpha = 0.16f + 0.10f * hallowsPulse
+            val hallowsColor = Color(0xFFFFD700).copy(alpha = hallowsAlpha)
+            val hHeight = (hallowsSize * kotlin.math.sqrt(3.0) / 2.0).toFloat()
+            val topY = hallowsCenterY - hHeight * 0.55f
+            val bottomY = topY + hHeight
+            val leftX = hallowsCenterX - hallowsSize * 0.5f
+            val rightX = hallowsCenterX + hallowsSize * 0.5f
+
+            // Equilateral Triangle (Cloak of Invisibility)
+            pathCache.hallowsTriangle.reset()
+            pathCache.hallowsTriangle.moveTo(hallowsCenterX, topY)
+            pathCache.hallowsTriangle.lineTo(rightX, bottomY)
+            pathCache.hallowsTriangle.lineTo(leftX, bottomY)
+            pathCache.hallowsTriangle.close()
+            drawPath(
+                path = pathCache.hallowsTriangle,
+                color = hallowsColor,
+                style = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round)
+            )
+
+            // Inner Inscribed Circle (Resurrection Stone)
+            val circleRadius = hHeight / 3f
+            val circleCenterY = bottomY - circleRadius
+            drawCircle(
+                color = hallowsColor,
+                radius = circleRadius,
+                center = Offset(hallowsCenterX, circleCenterY),
+                style = Stroke(width = 1.4.dp.toPx())
+            )
+
+            // Vertical Center Line (Elder Wand)
+            drawLine(
+                color = hallowsColor,
+                start = Offset(hallowsCenterX, topY),
+                end = Offset(hallowsCenterX, bottomY),
+                strokeWidth = 1.8.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+
+            // 3. Floating Lumos Spark Motes drifting upward
+            sparkMotes.forEach { mote ->
+                val progress = (lumosDrift * mote.speedY + mote.phase) % 1f
+                val moteY = height * (1f - progress)
+                val driftOffset = sin(progress * (2 * PI).toFloat() * mote.driftFreq + mote.phase) * 16.dp.toPx()
+                val moteX = (width * mote.initialXRatio) + driftOffset
+                val alpha = (sin(progress * PI.toFloat()) * mote.maxAlpha * hallowsPulse).coerceIn(0f, 1f)
+                val moteRadius = mote.sizeDp.dp.toPx()
+
+                // Soft outer glowing halo
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFFFDF00).copy(alpha = alpha * 0.65f),
+                            Color(0xFFD4AF37).copy(alpha = alpha * 0.20f),
+                            Color.Transparent
+                        ),
+                        center = Offset(moteX, moteY),
+                        radius = moteRadius * 3.5f
+                    ),
+                    radius = moteRadius * 3.5f,
+                    center = Offset(moteX, moteY)
+                )
+
+                // Bright spark center
+                drawCircle(
+                    color = Color(0xFFFFF9E6).copy(alpha = alpha),
+                    radius = moteRadius,
+                    center = Offset(moteX, moteY)
+                )
+            }
+
+            // 4. Background Orbiting Golden Snitch with Fluttering Wings
+            val snitchX = (width * 0.5f) + cos(snitchFly) * (width * 0.38f)
+            val snitchY = (height * 0.22f) + sin(snitchFly * 1.5f) * (height * 0.08f)
+            val snitchRadius = 7.dp.toPx()
+
+            // Wings
+            val wingLength = 22.dp.toPx()
+            val wingWidth = 7.dp.toPx()
+
+            // Left Wing
+            rotate(wingFlap - 15f, pivot = Offset(snitchX - snitchRadius * 0.7f, snitchY)) {
+                pathCache.snitchWingLeft.reset()
+                pathCache.snitchWingLeft.moveTo(snitchX - snitchRadius * 0.7f, snitchY)
+                pathCache.snitchWingLeft.cubicTo(
+                    snitchX - snitchRadius * 0.7f - wingLength * 0.5f, snitchY - wingWidth * 1.4f,
+                    snitchX - snitchRadius * 0.7f - wingLength * 0.85f, snitchY - wingWidth * 0.5f,
+                    snitchX - snitchRadius * 0.7f - wingLength, snitchY - wingWidth * 0.2f
+                )
+                pathCache.snitchWingLeft.cubicTo(
+                    snitchX - snitchRadius * 0.7f - wingLength * 0.7f, snitchY + wingWidth * 0.6f,
+                    snitchX - snitchRadius * 0.7f - wingLength * 0.3f, snitchY + wingWidth * 0.4f,
+                    snitchX - snitchRadius * 0.7f, snitchY
+                )
+                pathCache.snitchWingLeft.close()
+                drawPath(
+                    path = pathCache.snitchWingLeft,
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xBBFFFFFF),
+                            Color(0x88FFE680),
+                            Color(0x22FFFFFF)
+                        )
+                    )
+                )
+                drawPath(
+                    path = pathCache.snitchWingLeft,
+                    color = Color(0xAAFFD700),
+                    style = Stroke(width = 0.8.dp.toPx())
+                )
+            }
+
+            // Right Wing
+            rotate(-wingFlap + 15f, pivot = Offset(snitchX + snitchRadius * 0.7f, snitchY)) {
+                pathCache.snitchWingRight.reset()
+                pathCache.snitchWingRight.moveTo(snitchX + snitchRadius * 0.7f, snitchY)
+                pathCache.snitchWingRight.cubicTo(
+                    snitchX + snitchRadius * 0.7f + wingLength * 0.5f, snitchY - wingWidth * 1.4f,
+                    snitchX + snitchRadius * 0.7f + wingLength * 0.85f, snitchY - wingWidth * 0.5f,
+                    snitchX + snitchRadius * 0.7f + wingLength, snitchY - wingWidth * 0.2f
+                )
+                pathCache.snitchWingRight.cubicTo(
+                    snitchX + snitchRadius * 0.7f + wingLength * 0.7f, snitchY + wingWidth * 0.6f,
+                    snitchX + snitchRadius * 0.7f + wingLength * 0.3f, snitchY + wingWidth * 0.4f,
+                    snitchX + snitchRadius * 0.7f, snitchY
+                )
+                pathCache.snitchWingRight.close()
+                drawPath(
+                    path = pathCache.snitchWingRight,
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xBBFFFFFF),
+                            Color(0x88FFE680),
+                            Color(0x22FFFFFF)
+                        )
+                    )
+                )
+                drawPath(
+                    path = pathCache.snitchWingRight,
+                    color = Color(0xAAFFD700),
+                    style = Stroke(width = 0.8.dp.toPx())
+                )
+            }
+
+            // Snitch Golden Sphere with specular highlight
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFFFF7C2), // Specular gleam
+                        Color(0xFFFFD700), // Pure gold
+                        Color(0xFFD4AF37), // Antique gold
+                        Color(0xFF8B6508)  // Deep shadow edge
+                    ),
+                    center = Offset(snitchX - snitchRadius * 0.35f, snitchY - snitchRadius * 0.35f),
+                    radius = snitchRadius * 1.2f
+                ),
+                radius = snitchRadius,
+                center = Offset(snitchX, snitchY)
+            )
+
+            // Golden Stardust Trail behind Snitch
+            for (t in 1..4) {
+                val trailAngle = snitchFly - (t * 0.12f)
+                val tx = (width * 0.5f) + cos(trailAngle) * (width * 0.38f)
+                val ty = (height * 0.22f) + sin(trailAngle * 1.5f) * (height * 0.08f)
+                val trAlpha = (0.6f / t)
+                drawCircle(
+                    color = Color(0xFFFFD700).copy(alpha = trAlpha),
+                    radius = (2.2f - t * 0.4f).dp.toPx(),
+                    center = Offset(tx, ty)
+                )
+            }
+
+            // 5. Interactive "Lumos Maxima" Tap Spark Bursts
+            tapBursts.forEach { burst ->
+                val p = burst.anim.value
+                val bAlpha = (1f - p).coerceIn(0f, 1f)
+                val bRadius = (16.dp.toPx() + p * 85.dp.toPx())
+
+                // Expanding golden aura ring
+                drawCircle(
+                    color = Color(0xFFFFDF00).copy(alpha = bAlpha * 0.45f),
+                    radius = bRadius,
+                    center = burst.center,
+                    style = Stroke(width = 2.dp.toPx())
+                )
+
+                // 8 Radiating magic sparks
+                for (s in 0 until 8) {
+                    val angle = (s * (PI / 4.0)).toFloat()
+                    val sparkDist = bRadius * 0.9f
+                    val sx = burst.center.x + cos(angle) * sparkDist
+                    val sy = burst.center.y + sin(angle) * sparkDist
+                    drawCircle(
+                        color = Color(0xFFFFFBE6).copy(alpha = bAlpha),
+                        radius = (2.5f * (1f - p * 0.5f)).dp.toPx(),
+                        center = Offset(sx, sy)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HarryPotterDisplayOverlay(
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "hp_display_anim")
+    val hoverAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "snitch_hover"
+    )
+    val flapAnim = infiniteTransition.animateFloat(
+        initialValue = -32f,
+        targetValue = 32f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 90, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "snitch_flap"
+    )
+    val wavePulseAnim = infiniteTransition.animateFloat(
+        initialValue = 0.45f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "wave_pulse"
+    )
+    val lumosDriftAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 5000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "display_lumos_drift"
+    )
+    val starTwinkleAnim = infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "star_twinkle"
+    )
+
+    // Pre-allocated display Lumos spark motes
+    val displayMotes = remember {
+        listOf(
+            HarryPotterSparkMote(0.15f, 0.85f, 0.35f, 2.5f, 2.0f, 0.75f, 0.3f),
+            HarryPotterSparkMote(0.35f, 0.60f, 0.40f, 2.0f, 1.8f, 0.65f, 1.2f),
+            HarryPotterSparkMote(0.60f, 0.90f, 0.30f, 3.0f, 2.5f, 0.85f, 2.5f),
+            HarryPotterSparkMote(0.80f, 0.75f, 0.38f, 2.2f, 2.0f, 0.70f, 3.8f),
+            HarryPotterSparkMote(0.48f, 0.35f, 0.42f, 2.8f, 2.2f, 0.80f, 4.6f),
+            HarryPotterSparkMote(0.25f, 0.20f, 0.28f, 1.8f, 1.5f, 0.60f, 1.9f)
+        )
+    }
+
+    val pathCache = remember { HarryPotterPathCache() }
+
+    Canvas(modifier = modifier) {
+        val width = size.width
+        val height = size.height
+        val hover = hoverAnim.value
+        val flap = flapAnim.value
+        val pulse = wavePulseAnim.value
+        val drift = lumosDriftAnim.value
+        val twinkle = starTwinkleAnim.value
+
+        // 1. Center Sacred Deathly Hallows Watermark in Display Background
+        val hallowsSize = (height * 0.48f).coerceAtMost(width * 0.25f)
+        if (hallowsSize > 20f) {
+            val hCenterX = width * 0.32f
+            val hCenterY = height * 0.48f
+            val hallowsColor = Color(0xD4AF37).copy(alpha = 0.08f * pulse)
+
+            val topY = hCenterY - (hallowsSize * 0.5f)
+            val bottomY = hCenterY + (hallowsSize * 0.5f)
+            val halfBase = hallowsSize * 0.577f
+            val leftX = hCenterX - halfBase
+            val rightX = hCenterX + halfBase
+
+            // Cloak Triangle
+            pathCache.hallowsTriangle.reset()
+            pathCache.hallowsTriangle.moveTo(hCenterX, topY)
+            pathCache.hallowsTriangle.lineTo(rightX, bottomY)
+            pathCache.hallowsTriangle.lineTo(leftX, bottomY)
+            pathCache.hallowsTriangle.close()
+            drawPath(
+                path = pathCache.hallowsTriangle,
+                color = hallowsColor,
+                style = Stroke(width = 1.2.dp.toPx(), cap = StrokeCap.Round)
+            )
+
+            // Resurrection Stone Circle
+            val circleRadius = hallowsSize / 3f
+            drawCircle(
+                color = hallowsColor,
+                radius = circleRadius,
+                center = Offset(hCenterX, bottomY - circleRadius),
+                style = Stroke(width = 1.0.dp.toPx())
+            )
+
+            // Elder Wand Center Line
+            drawLine(
+                color = hallowsColor,
+                start = Offset(hCenterX, topY),
+                end = Offset(hCenterX, bottomY),
+                strokeWidth = 1.4.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+        }
+
+        // 2. Floating Lumos Spark Motes rising through display glass
+        displayMotes.forEach { mote ->
+            val progress = (drift * mote.speedY + mote.phase) % 1f
+            val moteY = height * (1f - progress)
+            val driftOffset = sin(progress * (2 * PI).toFloat() * mote.driftFreq + mote.phase) * 10.dp.toPx()
+            val moteX = (width * mote.initialXRatio) + driftOffset
+            val alpha = (sin(progress * PI.toFloat()) * mote.maxAlpha * pulse).coerceIn(0f, 1f)
+            val moteRadius = mote.sizeDp.dp.toPx()
+
+            // Outer golden glow halo
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFFFDF00).copy(alpha = alpha * 0.55f),
+                        Color(0xFFD4AF37).copy(alpha = alpha * 0.15f),
+                        Color.Transparent
+                    ),
+                    center = Offset(moteX, moteY),
+                    radius = moteRadius * 3.2f
+                ),
+                radius = moteRadius * 3.2f,
+                center = Offset(moteX, moteY)
+            )
+
+            // Bright golden center
+            drawCircle(
+                color = Color(0xFFFFFBE8).copy(alpha = alpha),
+                radius = moteRadius,
+                center = Offset(moteX, moteY)
+            )
+        }
+
+        // 3. Twinkling 4-Point Magic Sparkle Stars in display corners
+        val starCoords = listOf(
+            Offset(width * 0.12f, height * 0.25f) to 4.dp.toPx(),
+            Offset(width * 0.65f, height * 0.20f) to 3.dp.toPx(),
+            Offset(width * 0.20f, height * 0.72f) to 3.5.dp.toPx()
+        )
+        starCoords.forEachIndexed { idx, (pos, starR) ->
+            val starAlpha = (if (idx % 2 == 0) twinkle else (1.2f - twinkle)).coerceIn(0.15f, 0.9f)
+            val sColor = Color(0xFFFFE885).copy(alpha = starAlpha * 0.75f)
+
+            // Horizontal & vertical star spikes
+            drawLine(
+                color = sColor,
+                start = Offset(pos.x - starR, pos.y),
+                end = Offset(pos.x + starR, pos.y),
+                strokeWidth = 1.2.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = sColor,
+                start = Offset(pos.x, pos.y - starR),
+                end = Offset(pos.x, pos.y + starR),
+                strokeWidth = 1.2.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawCircle(
+                color = Color(0xFFFFFDE0).copy(alpha = starAlpha),
+                radius = starR * 0.35f,
+                center = pos
+            )
+        }
+
+        // 4. Hovering & Swooping Golden Snitch with Fluttering Wings & Sparkle Wake
+        val snitchBaseX = width - 42.dp.toPx()
+        val snitchBaseY = 22.dp.toPx()
+        val floatX = snitchBaseX + cos(hover) * 6.dp.toPx()
+        val floatY = snitchBaseY + sin(hover * 1.5f) * 4.dp.toPx()
+        val snitchR = 6.5.dp.toPx()
+
+        // Wing geometry
+        val wingLen = 18.dp.toPx()
+        val wingH = 6.dp.toPx()
+
+        // Left fluttering wing
+        rotate(flap - 14f, pivot = Offset(floatX - snitchR * 0.7f, floatY)) {
+            pathCache.snitchWingLeft.reset()
+            pathCache.snitchWingLeft.moveTo(floatX - snitchR * 0.7f, floatY)
+            pathCache.snitchWingLeft.cubicTo(
+                floatX - snitchR * 0.7f - wingLen * 0.5f, floatY - wingH * 1.4f,
+                floatX - snitchR * 0.7f - wingLen * 0.85f, floatY - wingH * 0.4f,
+                floatX - snitchR * 0.7f - wingLen, floatY
+            )
+            pathCache.snitchWingLeft.cubicTo(
+                floatX - snitchR * 0.7f - wingLen * 0.7f, floatY + wingH * 0.6f,
+                floatX - snitchR * 0.7f - wingLen * 0.3f, floatY + wingH * 0.3f,
+                floatX - snitchR * 0.7f, floatY
+            )
+            pathCache.snitchWingLeft.close()
+            drawPath(
+                path = pathCache.snitchWingLeft,
+                brush = Brush.horizontalGradient(
+                    listOf(Color(0xDDFFFFFF), Color(0x99FFE885), Color(0x33FFFFFF))
+                )
+            )
+        }
+
+        // Right fluttering wing
+        rotate(-flap + 14f, pivot = Offset(floatX + snitchR * 0.7f, floatY)) {
+            pathCache.snitchWingRight.reset()
+            pathCache.snitchWingRight.moveTo(floatX + snitchR * 0.7f, floatY)
+            pathCache.snitchWingRight.cubicTo(
+                floatX + snitchR * 0.7f + wingLen * 0.5f, floatY - wingH * 1.4f,
+                floatX + snitchR * 0.7f + wingLen * 0.85f, floatY - wingH * 0.4f,
+                floatX + snitchR * 0.7f + wingLen, floatY
+            )
+            pathCache.snitchWingRight.cubicTo(
+                floatX + snitchR * 0.7f + wingLen * 0.7f, floatY + wingH * 0.6f,
+                floatX + snitchR * 0.7f + wingLen * 0.3f, floatY + wingH * 0.3f,
+                floatX + snitchR * 0.7f, floatY
+            )
+            pathCache.snitchWingRight.close()
+            drawPath(
+                path = pathCache.snitchWingRight,
+                brush = Brush.horizontalGradient(
+                    listOf(Color(0xDDFFFFFF), Color(0x99FFE885), Color(0x33FFFFFF))
+                )
+            )
+        }
+
+        // Golden Snitch Stardust Wake (3 trailing golden sparkles)
+        for (i in 1..3) {
+            val trailDist = i * 6.dp.toPx()
+            val trailX = floatX + trailDist * cos(hover + PI.toFloat() * 0.6f)
+            val trailY = floatY + trailDist * sin(hover + PI.toFloat() * 0.6f)
+            val trailAlpha = (0.7f - i * 0.2f) * pulse
+            drawCircle(
+                color = Color(0xFFFFD700).copy(alpha = trailAlpha.coerceIn(0.1f, 1f)),
+                radius = (3.5f - i * 0.8f).dp.toPx(),
+                center = Offset(trailX, trailY)
+            )
+        }
+
+        // Gleaming 3D Golden Snitch Sphere
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFFFFFDD0), // Specular gleam
+                    Color(0xFFFFD700), // Gleaming gold
+                    Color(0xFFD4AF37), // Antique rich gold
+                    Color(0xFF7A5805)  // Deep shadow rim
+                ),
+                center = Offset(floatX - snitchR * 0.35f, floatY - snitchR * 0.35f),
+                radius = snitchR * 1.25f
+            ),
+            radius = snitchR,
+            center = Offset(floatX, floatY)
+        )
+
+        // Glowing Golden Snitch Halo
+        drawCircle(
+            color = Color(0xFFFFD700).copy(alpha = 0.28f * pulse),
+            radius = snitchR * 2.4f,
+            center = Offset(floatX, floatY)
+        )
+
+        // 5. Enchanted Sorcerer's Gold wave along bottom display edge
+        val waveY = height - 4.dp.toPx()
+        val waveBrush = Brush.horizontalGradient(
+            colors = listOf(
+                Color.Transparent,
+                Color(0x33D4AF37),
+                Color(0xEEFFD700).copy(alpha = 0.85f * pulse),
+                Color(0x44D4AF37),
+                Color.Transparent
+            )
+        )
+        drawLine(
+            brush = waveBrush,
+            start = Offset(width * 0.08f, waveY),
+            end = Offset(width * 0.92f, waveY),
+            strokeWidth = 2.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+    }
+}
+
+// ==============================================================================
+// 6. PEARLESCENT 3D PRISM (Silky Iridescent Opal, Floating 3D Spheres & Caustics)
+// ==============================================================================
+
+private data class PearlOrb3D(
+    val initialXRatio: Float,
+    val initialYRatio: Float,
+    val radiusDp: Float,
+    val primaryColor: Color,
+    val tintColor: Color,
+    val shadowColor: Color,
+    val orbitSpeedX: Float,
+    val orbitSpeedY: Float,
+    val orbitRadiusDp: Float,
+    val phase: Float
+)
+
+private data class PearlescentTapRipple(
+    val id: Long,
+    val center: Offset,
+    val anim: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>
+)
+
+@Composable
+fun Pearlescent3DScreenBackground(
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pearl_3d_bg_anim")
+    val orbitPhaseAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 14000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "orbit_phase"
+    )
+    val causticSweepAnim = infiniteTransition.animateFloat(
+        initialValue = -0.3f,
+        targetValue = 1.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 9000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "caustic_sweep"
+    )
+    val pearlPulseAnim = infiniteTransition.animateFloat(
+        initialValue = 0.75f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pearl_pulse"
+    )
+
+    // Pre-allocated floating 3D pearlescent spheres with spherical specular light
+    val pearlOrbs = remember {
+        listOf(
+            PearlOrb3D(
+                initialXRatio = 0.82f,
+                initialYRatio = 0.16f,
+                radiusDp = 52f,
+                primaryColor = Color(0xFFFFFFFF),
+                tintColor = Color(0xFFE2EAFD), // Opal cyan mist
+                shadowColor = Color(0x228899B8),
+                orbitSpeedX = 1.0f,
+                orbitSpeedY = 1.3f,
+                orbitRadiusDp = 14f,
+                phase = 0.2f
+            ),
+            PearlOrb3D(
+                initialXRatio = 0.14f,
+                initialYRatio = 0.38f,
+                radiusDp = 44f,
+                primaryColor = Color(0xFFFFFFFF),
+                tintColor = Color(0xFFFDE7EE), // Rose quartz opal
+                shadowColor = Color(0x22B88899),
+                orbitSpeedX = -0.9f,
+                orbitSpeedY = 1.1f,
+                orbitRadiusDp = 12f,
+                phase = 1.8f
+            ),
+            PearlOrb3D(
+                initialXRatio = 0.88f,
+                initialYRatio = 0.72f,
+                radiusDp = 38f,
+                primaryColor = Color(0xFFFFFFFF),
+                tintColor = Color(0xFFEFE8FD), // Lavender opal
+                shadowColor = Color(0x209A88B8),
+                orbitSpeedX = 1.2f,
+                orbitSpeedY = -0.8f,
+                orbitRadiusDp = 10f,
+                phase = 3.2f
+            ),
+            PearlOrb3D(
+                initialXRatio = 0.18f,
+                initialYRatio = 0.84f,
+                radiusDp = 30f,
+                primaryColor = Color(0xFFFFFFFF),
+                tintColor = Color(0xFFE6FAF4), // Seafoam pearl
+                shadowColor = Color(0x1C80B0A0),
+                orbitSpeedX = -1.1f,
+                orbitSpeedY = 1.4f,
+                orbitRadiusDp = 9f,
+                phase = 4.6f
+            ),
+            PearlOrb3D(
+                initialXRatio = 0.50f,
+                initialYRatio = 0.08f,
+                radiusDp = 22f,
+                primaryColor = Color(0xFFFFFFFF),
+                tintColor = Color(0xFFFFF4E6), // Champagne pearl
+                shadowColor = Color(0x18B8A080),
+                orbitSpeedX = 0.8f,
+                orbitSpeedY = -1.0f,
+                orbitRadiusDp = 7f,
+                phase = 2.5f
+            )
+        )
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+    var tapRipples by remember { mutableStateOf<List<PearlescentTapRipple>>(emptyList()) }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures { tapOffset ->
+                    val anim = Animatable(0f)
+                    val ripId = System.currentTimeMillis()
+                    val newRip = PearlescentTapRipple(ripId, tapOffset, anim)
+                    tapRipples = (tapRipples + newRip).takeLast(4)
+                    coroutineScope.launch {
+                        anim.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(900, easing = FastOutSlowInEasing)
+                        )
+                        tapRipples = tapRipples.filter { it.id != ripId }
+                    }
+                }
+            }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val width = size.width
+            val height = size.height
+            val orbitPhase = orbitPhaseAnim.value
+            val causticSweep = causticSweepAnim.value
+            val pearlPulse = pearlPulseAnim.value
+
+            // 1. Silky iridescent caustic light sweep across canvas
+            val sweepX = causticSweep * width
+            drawRect(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        Color(0x10A1C4FD),
+                        Color(0x22FBC2EB),
+                        Color(0x18C2E9FB),
+                        Color.Transparent
+                    ),
+                    start = Offset(sweepX - width * 0.4f, 0f),
+                    end = Offset(sweepX + width * 0.4f, height)
+                )
+            )
+
+            // 2. Draw Floating 3D Pearlescent Spheres
+            pearlOrbs.forEach { orb ->
+                val ox = (width * orb.initialXRatio) +
+                        cos(orbitPhase * orb.orbitSpeedX + orb.phase) * orb.orbitRadiusDp.dp.toPx()
+                val oy = (height * orb.initialYRatio) +
+                        sin(orbitPhase * orb.orbitSpeedY + orb.phase) * orb.orbitRadiusDp.dp.toPx()
+                val radius = orb.radiusDp.dp.toPx()
+
+                // A. Soft diffuse drop shadow
+                val shadowOffsetY = radius * 0.28f
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            orb.shadowColor,
+                            orb.shadowColor.copy(alpha = 0.04f),
+                            Color.Transparent
+                        ),
+                        center = Offset(ox, oy + shadowOffsetY),
+                        radius = radius * 1.25f
+                    ),
+                    radius = radius * 1.25f,
+                    center = Offset(ox, oy + shadowOffsetY)
+                )
+
+                // B. Main 3D Pearlescent Sphere body with offset spherical specular gradient
+                val lightSourceX = ox - radius * 0.38f
+                val lightSourceY = oy - radius * 0.38f
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color.White,             // Pure specular hotspot
+                            Color(0xFFFCFDFF),       // High key sheen
+                            orb.tintColor,           // Iridescent pastel midtone
+                            Color(0xFFDDE4F2)        // Soft ambient shadow edge
+                        ),
+                        center = Offset(lightSourceX, lightSourceY),
+                        radius = radius * 1.35f
+                    ),
+                    radius = radius,
+                    center = Offset(ox, oy)
+                )
+
+                // C. Ambient bounce light on opposite bottom rim (hallmark of high-end 3D rendering!)
+                val bounceRimBrush = Brush.radialGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        Color.White.copy(alpha = 0.45f * pearlPulse)
+                    ),
+                    center = Offset(ox + radius * 0.35f, oy + radius * 0.35f),
+                    radius = radius * 0.7f
+                )
+                drawCircle(
+                    brush = bounceRimBrush,
+                    radius = radius,
+                    center = Offset(ox, oy)
+                )
+
+                // D. Sharp specular reflection pinpoint
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.90f),
+                    radius = radius * 0.12f,
+                    center = Offset(lightSourceX, lightSourceY)
+                )
+            }
+
+            // 3. Interactive Pearlescent Butter Ripples
+            tapRipples.forEach { rip ->
+                val p = rip.anim.value
+                val alpha = (1f - p).coerceIn(0f, 1f)
+                val ripRadius = (20.dp.toPx() + p * 120.dp.toPx())
+
+                // Inner soft opal fill
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0x30C2E9FB).copy(alpha = alpha * 0.4f),
+                            Color(0x18FBC2EB).copy(alpha = alpha * 0.2f),
+                            Color.Transparent
+                        ),
+                        center = rip.center,
+                        radius = ripRadius
+                    ),
+                    radius = ripRadius,
+                    center = rip.center
+                )
+
+                // Concentric pearlescent iridescent border
+                drawCircle(
+                    color = Color(0xFFA1C4FD).copy(alpha = alpha * 0.65f),
+                    radius = ripRadius,
+                    center = rip.center,
+                    style = Stroke(width = 2.dp.toPx())
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun Pearlescent3DDisplayOverlay(
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pearl_display_anim")
+    val sheenProgressAnim = infiniteTransition.animateFloat(
+        initialValue = -0.4f,
+        targetValue = 1.4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 6500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "sheen_progress"
+    )
+    val floatAnim = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "float"
+    )
+    val liquidPulseAnim = infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "liquid_pulse"
+    )
+
+    Canvas(modifier = modifier) {
+        val width = size.width
+        val height = size.height
+        val sheenP = sheenProgressAnim.value
+        val floatP = floatAnim.value
+        val pulse = liquidPulseAnim.value
+
+        // 1. Diagonal Caustic Iridescent Sheen Sweep across display LCD
+        val sheenX = sheenP * width
+        drawRect(
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    Color.Transparent,
+                    Color(0x08A1C4FD),
+                    Color(0x24FFFFFF),
+                    Color(0x14FBC2EB),
+                    Color.Transparent
+                ),
+                start = Offset(sheenX - 40.dp.toPx(), 0f),
+                end = Offset(sheenX + 40.dp.toPx(), height)
+            )
+        )
+
+        // 2. Floating 3D Pearlescent Bubble in top-right
+        val bubbleBaseX = width - 36.dp.toPx()
+        val bubbleBaseY = 20.dp.toPx()
+        val bx = bubbleBaseX + cos(floatP) * 3.dp.toPx()
+        val by = bubbleBaseY + sin(floatP * 1.3f) * 2.5.dp.toPx()
+        val br = 9.dp.toPx()
+
+        // 3D Specular Pearl
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color.White,
+                    Color(0xFFF0F4FC),
+                    Color(0xFFE2EAFC),
+                    Color(0xFFC8D5EC)
+                ),
+                center = Offset(bx - br * 0.35f, by - br * 0.35f),
+                radius = br * 1.3f
+            ),
+            radius = br,
+            center = Offset(bx, by)
+        )
+        // Iridescent glow ring
+        drawCircle(
+            brush = Brush.sweepGradient(
+                listOf(
+                    Color(0x66A1C4FD),
+                    Color(0x66FBC2EB),
+                    Color(0x66C2E9FB),
+                    Color(0x66A1C4FD)
+                ),
+                center = Offset(bx, by)
+            ),
+            radius = br * 1.25f,
+            center = Offset(bx, by),
+            style = Stroke(width = 1.2.dp.toPx())
+        )
+
+        // 3. Butter-Smooth Liquid Opal Wave along bottom display edge
+        val waveY = height - 4.dp.toPx()
+        val waveBrush = Brush.horizontalGradient(
+            colors = listOf(
+                Color.Transparent,
+                Color(0x40A1C4FD).copy(alpha = 0.40f * pulse),
+                Color(0xCC4A4FE4).copy(alpha = 0.70f * pulse),
+                Color(0x55FBC2EB).copy(alpha = 0.50f * pulse),
+                Color.Transparent
+            )
+        )
+        drawLine(
+            brush = waveBrush,
+            start = Offset(width * 0.12f, waveY),
+            end = Offset(width * 0.88f, waveY),
+            strokeWidth = 2.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+    }
+}

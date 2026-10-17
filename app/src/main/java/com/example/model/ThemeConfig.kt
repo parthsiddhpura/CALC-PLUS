@@ -76,7 +76,9 @@ enum class ThemeId {
     ORTYL_MINIMAL_MATTE,
     OLED_STEALTH_VOID,
     STARRY_NIGHT_GOTHAM,
-    COSMIC_SINGULARITY
+    COSMIC_SINGULARITY,
+    HARRY_POTTER_HOGWARTS,
+    PEARLESCENT_3D_OPAL
 }
 
 enum class ButtonShapeType {
@@ -185,6 +187,8 @@ data class ThemePalette(
     val isOledStealthVoid: Boolean = false,
     val isStarryGotham: Boolean = false,
     val isCosmicSingularity: Boolean = false,
+    val isHarryPotter: Boolean = false,
+    val isPearlescent3D: Boolean = false,
     val customKeyColors: Map<String, Color>? = null,
     val customKeyTextColors: Map<String, Color>? = null
 ) {
@@ -221,6 +225,8 @@ enum class IronManSuitType {
  */
 val ThemePalette.onSurfaceTextColor: Color
     get() = when {
+        isHarryPotter -> Color(0xFFF5E6C8)
+        isPearlescent3D -> Color(0xFF181D33)
         isNekoMochi && !isDark -> Color(0xFF3B1A23)
         isGirlMath && !isDark -> Color(0xFF4A202D)
         surfaceColor.luminance() > 0.45f -> Color(0xFF1E293B)
@@ -229,6 +235,8 @@ val ThemePalette.onSurfaceTextColor: Color
 
 val ThemePalette.onSurfaceSubtextColor: Color
     get() = when {
+        isHarryPotter -> Color(0xFFD4AF37)
+        isPearlescent3D -> Color(0xFF5E6585)
         isNekoMochi && !isDark -> Color(0xFF70404C)
         isGirlMath && !isDark -> Color(0xFF8A5563)
         surfaceColor.luminance() > 0.45f -> Color(0xFF64748B)
@@ -237,6 +245,8 @@ val ThemePalette.onSurfaceSubtextColor: Color
 
 val ThemePalette.onCardColor: Color
     get() = when {
+        isHarryPotter -> Color(0xFFF5E6C8)
+        isPearlescent3D -> Color(0xFF181D33)
         isNekoMochi && !isDark -> Color(0xFF3B1A23)
         isGirlMath && !isDark -> Color(0xFF4A202D)
         cardBackground.luminance() > 0.45f -> Color(0xFF1E293B)
@@ -245,6 +255,8 @@ val ThemePalette.onCardColor: Color
 
 val ThemePalette.onCardSubtextColor: Color
     get() = when {
+        isHarryPotter -> Color(0xFFD4AF37)
+        isPearlescent3D -> Color(0xFF5E6585)
         isNekoMochi && !isDark -> Color(0xFF70404C)
         isGirlMath && !isDark -> Color(0xFF8A5563)
         cardBackground.luminance() > 0.45f -> Color(0xFF64748B)
@@ -257,18 +269,20 @@ val ThemePalette.onCardSubtextColor: Color
  * and text elements have optimal contrast, deep legible typography, and vibrant accents.
  */
 fun ThemePalette.toToolTheme(): ThemePalette {
-    if (isDark || isRetroCircuit || isNothingDossier || isBauhausDossier || isTerracottaStudio) {
+    if (isDark || isRetroCircuit || isNothingDossier || isBauhausDossier || isTerracottaStudio || isHarryPotter) {
         return this
     }
     val isLightCanvas = !isDark && backgroundColor.luminance() > 0.45f
-    val isNekoOrLight = isLightCanvas && (id == ThemeId.NEKO_MOCHI_CAT || isNekoMochi || isGirlMath || screenTextColor.luminance() > 0.45f)
+    val isNekoOrLight = isLightCanvas && (id == ThemeId.NEKO_MOCHI_CAT || isNekoMochi || isGirlMath || isPearlescent3D || screenTextColor.luminance() > 0.45f)
     return if (isNekoOrLight) {
         val primaryText = if (id == ThemeId.NEKO_MOCHI_CAT || isNekoMochi) Color(0xFF3B1A23)
         else if (isGirlMath) Color(0xFF4A202D)
+        else if (isPearlescent3D) Color(0xFF181D33)
         else Color(0xFF1E293B)
 
         val secondaryText = if (id == ThemeId.NEKO_MOCHI_CAT || isNekoMochi) Color(0xFF70404C)
         else if (isGirlMath) Color(0xFF8A5563)
+        else if (isPearlescent3D) Color(0xFF5E6585)
         else Color(0xFF64748B)
 
         val cardBg = Color(0xFFFFFFFF)

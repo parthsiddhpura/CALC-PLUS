@@ -3125,9 +3125,117 @@ object CalculatorThemes {
         isCosmicSingularity = true
     )
 
+    /**
+     * Harry Potter: Lumos & Sorcery
+     * Enchanted midnight obsidian velvet with rich Gryffindor burgundy, antique burnished gold,
+     * animated 3D Golden Snitch hovering with fluttering wings, Lumos motes, and sacred Deathly Hallows geometry.
+     */
+    val HarryPotterHogwarts = ThemePalette(
+        id = ThemeId.HARRY_POTTER_HOGWARTS,
+        name = "Harry Potter: Lumos & Sorcery",
+        subtitle = "Enchanted Hogwarts, Golden Snitch, Lumos motes & Sorcerer's Gold",
+        category = "Fantasy & Magic",
+        isDark = true,
+        backgroundBrush = Brush.verticalGradient(
+            listOf(Color(0xFF09060B), Color(0xFF150A19), Color(0xFF0C0710))
+        ),
+        backgroundColor = Color(0xFF09060B),
+        surfaceColor = Color(0xFF140B18),
+        cardBackground = Color(0xFF1A0E20),
+        screenBackground = Color(0xFF0D0711),
+        screenBorderColor = Color(0xFFD4AF37),
+        screenTextColor = Color(0xFFF7E7C4),
+        screenExpressionColor = Color(0xFFD4AF37),
+        screenPreviewColor = Color(0xFFFFD700),
+        cursorColor = Color(0xFFFFD700),
+        displayFont = DisplayFontType.MODERN_SANS,
+        hasScanlines = false,
+        numberButtonBg = Color(0xFF180F1E),
+        numberButtonText = Color(0xFFF7E7C4),
+        numberButtonBorder = Color(0x38D4AF37),
+        operatorButtonBg = Color(0xFF4A0814),
+        operatorButtonText = Color(0xFFFFD700),
+        operatorButtonBorder = Color(0x55D4AF37),
+        functionButtonBg = Color(0xFF12182B),
+        functionButtonText = Color(0xFFF6C85F),
+        functionButtonBorder = Color(0x33F6C85F),
+        equalsButtonBrush = Brush.verticalGradient(
+            listOf(Color(0xFFFFDF00), Color(0xFFD4AF37))
+        ),
+        equalsButtonText = Color(0xFF0C060F),
+        equalsButtonBorder = Color(0x88FFD700),
+        accentColor = Color(0xFFFFD700),
+        secondaryAccent = Color(0xFFD4AF37),
+        glowColor = Color(0x60FFD700),
+        shapeType = ButtonShapeType.ROUNDED_SQUARE,
+        cornerRadiusDp = 13.dp,
+        borderWidthDp = 1.dp,
+        hasShadow = true,
+        shadowElevationDp = 4.dp,
+        pressAnimation = PressAnimationType.NEON_GLOW,
+        statusBarDarkIcons = false,
+        isHarryPotter = true
+    )
+
+    /**
+     * Pearlescent 3D Prism
+     * Silky iridescent pearlescent silk canvas with floating 3D spheres, specular caustic light refractions,
+     * pillowy soft-touch pearl keys with sapphire-graphite legibility and butter-smooth spring physics.
+     */
+    val Pearlescent3DOpal = ThemePalette(
+        id = ThemeId.PEARLESCENT_3D_OPAL,
+        name = "Pearlescent 3D Prism",
+        subtitle = "Silky iridescent opal, floating 3D spheres & butter-smooth refractions",
+        category = "Aesthetic & 3D",
+        isDark = false,
+        backgroundBrush = Brush.verticalGradient(
+            listOf(Color(0xFFFAF7FC), Color(0xFFEDF1FB), Color(0xFFF9EEF3), Color(0xFFF2EDFA))
+        ),
+        backgroundColor = Color(0xFFFAF7FC),
+        surfaceColor = Color(0xFFF0ECF8),
+        cardBackground = Color(0xFFFFFFFF),
+        screenBackground = Color(0xFFFFFFFF),
+        screenBorderColor = Color(0x40A1C4FD),
+        screenTextColor = Color(0xFF181D33),
+        screenExpressionColor = Color(0xFF5E6585),
+        screenPreviewColor = Color(0xFF4A4FE4),
+        cursorColor = Color(0xFF4A4FE4),
+        displayFont = DisplayFontType.ROUNDED,
+        hasScanlines = false,
+        numberButtonBg = Color(0xFFFFFFFF),
+        numberButtonText = Color(0xFF181D33),
+        numberButtonBorder = Color(0x28A1C4FD),
+        operatorButtonBg = Color(0xFFEEF2FF),
+        operatorButtonText = Color(0xFF4A4FE4),
+        operatorButtonBorder = Color(0x404A4FE4),
+        functionButtonBg = Color(0xFFFFF0F5),
+        functionButtonText = Color(0xFF992255),
+        functionButtonBorder = Color(0x35FFB6C1),
+        equalsButtonBrush = Brush.linearGradient(
+            listOf(Color(0xFFA1C4FD), Color(0xFFC2E9FB), Color(0xFFFBC2EB))
+        ),
+        equalsButtonText = Color(0xFF111736),
+        equalsButtonBorder = Color(0x40A1C4FD),
+        accentColor = Color(0xFF4A4FE4),
+        secondaryAccent = Color(0xFFD488B8),
+        glowColor = Color(0x30A1C4FD),
+        shapeType = ButtonShapeType.ROUNDED_SQUARE,
+        cornerRadiusDp = 15.dp,
+        borderWidthDp = 1.dp,
+        hasShadow = true,
+        shadowElevationDp = 3.dp,
+        pressAnimation = PressAnimationType.BOUNCE,
+        statusBarDarkIcons = true,
+        isPearlescent3D = true
+    )
+
     val allThemes: List<ThemePalette> = listOf(
-        // Default Premier Theme: The Dark Knight
+        // Default Premier Theme: The Dark Knight (Premier Top Theme)
         BatmanDarkKnight,
+
+        // Featured Premier Themes from User Uploads
+        HarryPotterHogwarts,
+        Pearlescent3DOpal,
 
         // Featured Exact User Uploads & Studio Hardware Themes
         OrtylMinimalMatte,

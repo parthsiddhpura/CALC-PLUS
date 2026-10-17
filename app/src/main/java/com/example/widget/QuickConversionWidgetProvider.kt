@@ -22,8 +22,13 @@ class QuickConversionWidgetProvider : AppWidgetProvider() {
             val theme = WidgetDataManager.getThemeFamily(context)
             val views = RemoteViews(context.packageName, R.layout.widget_quick_conversion)
 
-            views.setInt(R.id.widget_root, "setBackgroundResource", theme.bgRes)
-            views.setInt(R.id.btn_open_converter, "setBackgroundResource", theme.screenBgRes)
+            theme.applyRoot(views, R.id.widget_root)
+            theme.applyScreen(views, R.id.btn_open_converter)
+            theme.applyThemeCycleButton(views, R.id.btn_theme_cycle)
+            theme.applyButton(views, R.id.btn_toggle_unit_type, isAccent = false)
+            theme.applyButton(views, R.id.btn_swap_conv, isAccent = true)
+            theme.applyButton(views, R.id.btn_open_app_conv, isAccent = false)
+
             views.setTextColor(R.id.widget_title, theme.headerTextColorHex)
             views.setTextColor(R.id.conv_input_text, theme.textColorHex)
             views.setTextColor(R.id.conv_result_text, theme.accentColorHex)
@@ -33,7 +38,6 @@ class QuickConversionWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.conv_input_text, input)
             views.setTextViewText(R.id.conv_result_text, result)
 
-            // Tap card -> Open converter in app
             val isUnit = WidgetDataManager.isUnitConversion(context)
             val targetMode = if (isUnit) "UNIT_CONVERTER" else "CURRENCY_CONVERTER"
             val openIntent = Intent(context, MainActivity::class.java).apply {
@@ -47,7 +51,6 @@ class QuickConversionWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.btn_open_converter, openPendingIntent)
             views.setOnClickPendingIntent(R.id.btn_open_app_conv, openPendingIntent)
 
-            // Swap Button
             val swapIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_CONVERSION_SWAP
             }
@@ -57,7 +60,6 @@ class QuickConversionWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_swap_conv, swapPendingIntent)
 
-            // Unit/Currency Mode Toggle
             val modeIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_CONVERSION_TOGGLE_TYPE
             }
@@ -67,7 +69,6 @@ class QuickConversionWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_toggle_unit_type, modePendingIntent)
 
-            // Theme Cycle
             val themeIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_CYCLE_THEME
             }

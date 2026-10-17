@@ -22,12 +22,27 @@ class QuickCalcWidgetProvider : AppWidgetProvider() {
             val theme = WidgetDataManager.getThemeFamily(context)
             val views = RemoteViews(context.packageName, R.layout.widget_quick_calc)
 
-            // Styling
-            views.setInt(R.id.widget_root, "setBackgroundResource", theme.bgRes)
-            views.setInt(R.id.btn_open_full_calc, "setBackgroundResource", theme.screenBgRes)
+            // Apply exact App Theme Styling
+            theme.applyRoot(views, R.id.widget_root)
+            theme.applyScreen(views, R.id.btn_open_full_calc)
+            theme.applyThemeCycleButton(views, R.id.btn_theme_cycle)
             views.setTextColor(R.id.widget_title, theme.headerTextColorHex)
             views.setTextColor(R.id.widget_result, theme.textColorHex)
             views.setTextColor(R.id.widget_expression, theme.subtextColorHex)
+
+            // Keypad Button Theme Mirroring
+            theme.applyButton(views, R.id.btn_key_c, isAccent = true)
+            theme.applyButton(views, R.id.btn_key_div, isAccent = true)
+            theme.applyButton(views, R.id.btn_key_mul, isAccent = true)
+            theme.applyButton(views, R.id.btn_key_sub, isAccent = true)
+            theme.applyButton(views, R.id.btn_key_add, isAccent = true)
+            theme.applyButton(views, R.id.btn_key_eq, isAccent = true)
+            theme.applyButton(views, R.id.btn_key_7, isAccent = false)
+            theme.applyButton(views, R.id.btn_key_8, isAccent = false)
+            theme.applyButton(views, R.id.btn_key_9, isAccent = false)
+            theme.applyButton(views, R.id.btn_key_4, isAccent = false)
+            theme.applyButton(views, R.id.btn_key_5, isAccent = false)
+            theme.applyButton(views, R.id.btn_key_0, isAccent = false)
 
             // Data
             val buffer = WidgetDataManager.getQuickCalcBuffer(context)

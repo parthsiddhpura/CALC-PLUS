@@ -6,6 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import com.example.model.CalculationHistory
+import com.example.model.ThemeId
+import com.example.model.ThemePalette
+import com.example.ui.theme.CalculatorThemes
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.NumberFormat
@@ -83,26 +86,72 @@ object WidgetDataManager {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
-    // --- Theme Family ---
-    fun getThemeFamily(context: Context): WidgetThemeFamily {
-        val name = getPrefs(context).getString(KEY_THEME, WidgetThemeFamily.GLASS_MODERN.name)
+    private const val APP_PREFS_NAME = "chromacalc_prefs"
+    private const val KEY_APP_SAVED_THEME_ID = "saved_theme_id"
+
+    private fun getAppPrefs(context: Context): SharedPreferences {
+        return context.getSharedPreferences(APP_PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    // --- Active App Theme Synchronization (Mirrors exact app theme on all widgets) ---
+    fun getActiveAppThemeId(context: Context): ThemeId {
+        val savedName = getAppPrefs(context).getString(KEY_APP_SAVED_THEME_ID, null)
+            ?: getPrefs(context).getString(KEY_THEME, ThemeId.BATMAN_DARK_KNIGHT.name)
         return try {
-            WidgetThemeFamily.valueOf(name ?: WidgetThemeFamily.GLASS_MODERN.name)
+            ThemeId.valueOf(savedName ?: ThemeId.BATMAN_DARK_KNIGHT.name)
         } catch (e: Exception) {
-            WidgetThemeFamily.GLASS_MODERN
+            ThemeId.BATMAN_DARK_KNIGHT
         }
     }
 
-    fun setThemeFamily(context: Context, family: WidgetThemeFamily) {
-        getPrefs(context).edit().putString(KEY_THEME, family.name).apply()
+    fun getActiveAppTheme(context: Context): ThemePalette {
+        val basePalette = CalculatorThemes.getThemeById(getActiveAppThemeId(context))
+        val appPrefs = getAppPrefs(context)
+        return if (appPrefs.contains("custom_accent_color")) {
+            val customColorLong = appPrefs.getLong("custom_accent_color", 0L)
+            if (customColorLong != 0L) {
+                val customAccent = androidx.compose.ui.graphics.Color(customColorLong.toULong())
+                basePalette.copy(
+                    accentColor = customAccent,
+                    operatorButtonBg = customAccent
+                )
+            } else {
+                basePalette
+            }
+        } else {
+            basePalette
+        }
+    }
+
+    fun getThemeFamily(context: Context): WidgetDynamicTheme {
+        return WidgetDynamicTheme.fromThemePalette(getActiveAppTheme(context))
+    }
+
+    fun getDynamicTheme(context: Context): WidgetDynamicTheme {
+        return getThemeFamily(context)
+    }
+
+    fun syncAppTheme(context: Context, themeId: ThemeId) {
+        getAppPrefs(context).edit().putString(KEY_APP_SAVED_THEME_ID, themeId.name).apply()
+        getPrefs(context).edit().putString(KEY_THEME, themeId.name).apply()
         notifyAllWidgets(context)
     }
 
+    fun setThemeFamily(context: Context, family: WidgetThemeFamily) {
+        val targetId = when (family) {
+            WidgetThemeFamily.DARK_KNIGHT -> ThemeId.BATMAN_DARK_KNIGHT
+            WidgetThemeFamily.MINIMAL -> ThemeId.MONOCHROME_LUXURY
+            WidgetThemeFamily.RETRO -> ThemeId.MAC_CLASSIC_1984
+        }
+        syncAppTheme(context, targetId)
+    }
+
     fun cycleThemeFamily(context: Context) {
-        val current = getThemeFamily(context)
-        val all = WidgetThemeFamily.values()
-        val next = all[(current.ordinal + 1) % all.size]
-        setThemeFamily(context, next)
+        val allThemes = CalculatorThemes.allThemes
+        val currentId = getActiveAppThemeId(context)
+        val currentIndex = allThemes.indexOfFirst { it.id == currentId }
+        val nextIndex = if (currentIndex >= 0) (currentIndex + 1) % allThemes.size else 0
+        syncAppTheme(context, allThemes[nextIndex].id)
     }
 
     // --- Last Calculation ---

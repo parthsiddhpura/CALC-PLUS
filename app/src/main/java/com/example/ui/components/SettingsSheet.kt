@@ -597,6 +597,7 @@ fun SettingsSheet(
                                             val hasMotion = themeItem.hasBatSignal || themeItem.hasArcReactor ||
                                                     themeItem.isOrtylMinimal || themeItem.isOledStealthVoid ||
                                                     themeItem.isStarryGotham || themeItem.isCosmicSingularity ||
+                                                    themeItem.isHarryPotter || themeItem.isPearlescent3D ||
                                                     themeItem.isGirlMath || themeItem.isNekoMochi ||
                                                     themeItem.isRetroCircuit || themeItem.isNothingDossier ||
                                                     themeItem.isBauhausDossier || themeItem.isTerracottaStudio

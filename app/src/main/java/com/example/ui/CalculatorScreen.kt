@@ -72,6 +72,8 @@ import com.example.ui.components.OrtylScreenBackground
 import com.example.ui.components.OledStealthVoidScreenBackground
 import com.example.ui.components.StarryGothamScreenBackground
 import com.example.ui.components.CosmicSingularityScreenBackground
+import com.example.ui.components.HarryPotterScreenBackground
+import com.example.ui.components.Pearlescent3DScreenBackground
 import com.example.ui.components.BatmanScreenBackground
 import com.example.ui.components.ArcReactorIcon
 import com.example.ui.components.IronManScreenBackground
@@ -182,6 +184,10 @@ fun CalculatorScreen(
                         StarryGothamScreenBackground(modifier = Modifier.fillMaxSize())
                     } else if (currentTheme.isCosmicSingularity) {
                         CosmicSingularityScreenBackground(modifier = Modifier.fillMaxSize())
+                    } else if (currentTheme.isHarryPotter) {
+                        HarryPotterScreenBackground(modifier = Modifier.fillMaxSize())
+                    } else if (currentTheme.isPearlescent3D) {
+                        Pearlescent3DScreenBackground(modifier = Modifier.fillMaxSize())
                     } else if (currentTheme.isGirlMath || currentTheme.isNekoMochi || currentTheme.isY2kGlossy || currentTheme.isPixelArt) {
                         KawaiiScreenBackground(
                             theme = currentTheme,
@@ -217,17 +223,17 @@ fun CalculatorScreen(
                 val topBarTextColor = if (theme.isDark) {
                     theme.screenTextColor
                 } else {
-                    if (theme.isNekoMochi || theme.isGirlMath) Color(0xFF3E1E28) else Color(0xFF1E293B)
+                    if (theme.isPearlescent3D) Color(0xFF181D33) else if (theme.isNekoMochi || theme.isGirlMath) Color(0xFF3E1E28) else Color(0xFF1E293B)
                 }
                 val topBarBadgeBg = if (theme.isDark) {
                     theme.surfaceColor
                 } else {
-                    if (theme.isNekoMochi) Color(0xFFFFD6E0) else theme.surfaceColor
+                    if (theme.isPearlescent3D) Color(0xFFE8EEFF) else if (theme.isNekoMochi) Color(0xFFFFD6E0) else theme.surfaceColor
                 }
                 val topBarBadgeText = if (theme.isDark) {
                     theme.screenExpressionColor
                 } else {
-                    if (theme.isNekoMochi || theme.isGirlMath) Color(0xFF5A2534) else Color(0xFF334155)
+                    if (theme.isPearlescent3D) Color(0xFF4A4FE4) else if (theme.isNekoMochi || theme.isGirlMath) Color(0xFF5A2534) else Color(0xFF334155)
                 }
 
                 if (isLandscape) {
@@ -685,8 +691,8 @@ fun CalculatorScreen(
                                             onOpenDecimalConverter = { viewModel.setShowDecimalConverterSheet(true) },
                                             onToggleNotation = { viewModel.toggleDisplayNotation(haptics) },
                                             modifier = Modifier
-                                                .weight(0.33f)
-                                                .padding(bottom = 4.dp)
+                                                .weight(0.40f)
+                                                .padding(bottom = 6.dp)
                                         )
 
                                         ScientificKeypad(
@@ -708,7 +714,7 @@ fun CalculatorScreen(
                                             onMemoryClear = onMemoryClearCallback,
                                             onEng = onEngCallback,
                                             modifier = Modifier
-                                                .weight(0.67f)
+                                                .weight(0.60f)
                                                 .padding(bottom = 2.dp)
                                         )
                                     }

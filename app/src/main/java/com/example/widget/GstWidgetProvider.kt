@@ -22,8 +22,13 @@ class GstWidgetProvider : AppWidgetProvider() {
             val theme = WidgetDataManager.getThemeFamily(context)
             val views = RemoteViews(context.packageName, R.layout.widget_gst)
 
-            views.setInt(R.id.widget_root, "setBackgroundResource", theme.bgRes)
-            views.setInt(R.id.btn_open_gst_calc, "setBackgroundResource", theme.screenBgRes)
+            theme.applyRoot(views, R.id.widget_root)
+            theme.applyScreen(views, R.id.btn_open_gst_calc)
+            theme.applyButton(views, R.id.btn_cycle_gst_rate, isAccent = true)
+            theme.applyButton(views, R.id.btn_gst_add, isAccent = true)
+            theme.applyButton(views, R.id.btn_gst_sub, isAccent = false)
+            theme.applyButton(views, R.id.btn_gst_amount_inc, isAccent = false)
+
             views.setTextColor(R.id.widget_title, theme.headerTextColorHex)
             views.setTextColor(R.id.gst_base_text, theme.subtextColorHex)
             views.setTextColor(R.id.gst_rate_label, theme.accentColorHex)
@@ -39,7 +44,6 @@ class GstWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.gst_total_text, WidgetDataManager.formatCurrency(total))
             views.setTextViewText(R.id.btn_cycle_gst_rate, "${rate.toInt()}% ▾")
 
-            // Tap display -> Open GST Calculator
             val openIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(CalculatorAppWidgetProvider.EXTRA_MODE, "GST_CALCULATOR")
@@ -51,7 +55,6 @@ class GstWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_open_gst_calc, openPendingIntent)
 
-            // + GST button
             val addIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_GST_TOGGLE_MODE
             }
@@ -61,7 +64,6 @@ class GstWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_gst_add, addPendingIntent)
 
-            // - GST button
             val subIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_GST_TOGGLE_MODE
             }
@@ -71,7 +73,6 @@ class GstWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_gst_sub, subPendingIntent)
 
-            // Cycle Rate button
             val rateIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_GST_CYCLE_RATE
             }
@@ -81,7 +82,6 @@ class GstWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_cycle_gst_rate, ratePendingIntent)
 
-            // +1k adjust amount
             val incIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_GST_ADJUST_AMOUNT
                 putExtra(WidgetActionReceiver.EXTRA_DELTA, 1000.0)

@@ -22,8 +22,14 @@ class PercentageWidgetProvider : AppWidgetProvider() {
             val theme = WidgetDataManager.getThemeFamily(context)
             val views = RemoteViews(context.packageName, R.layout.widget_percentage)
 
-            views.setInt(R.id.widget_root, "setBackgroundResource", theme.bgRes)
-            views.setInt(R.id.btn_open_percent_calc, "setBackgroundResource", theme.screenBgRes)
+            theme.applyRoot(views, R.id.widget_root)
+            theme.applyScreen(views, R.id.btn_open_percent_calc)
+            theme.applyThemeCycleButton(views, R.id.btn_theme_cycle)
+            theme.applyButton(views, R.id.btn_pct_sub, isAccent = false)
+            theme.applyButton(views, R.id.btn_pct_add, isAccent = true)
+            theme.applyButton(views, R.id.btn_base_sub, isAccent = false)
+            theme.applyButton(views, R.id.btn_base_add, isAccent = false)
+
             views.setTextColor(R.id.widget_title, theme.headerTextColorHex)
             views.setTextColor(R.id.pct_equation_text, theme.textColorHex)
             views.setTextColor(R.id.pct_result_text, theme.accentColorHex)
@@ -35,7 +41,6 @@ class PercentageWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.pct_equation_text, "${rate.toInt()}% of ${WidgetDataManager.formatCurrency(base)}")
             views.setTextViewText(R.id.pct_result_text, WidgetDataManager.formatCurrency(result))
 
-            // Tap card -> Open standard calculator with equation
             val openIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(CalculatorAppWidgetProvider.EXTRA_MODE, "STANDARD")
@@ -47,7 +52,6 @@ class PercentageWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_open_percent_calc, openPendingIntent)
 
-            // Rate -5%
             val rSubIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_PERCENT_ADJUST_RATE
                 putExtra(WidgetActionReceiver.EXTRA_DELTA, -5.0)
@@ -58,7 +62,6 @@ class PercentageWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_pct_sub, rSubPendingIntent)
 
-            // Rate +5%
             val rAddIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_PERCENT_ADJUST_RATE
                 putExtra(WidgetActionReceiver.EXTRA_DELTA, 5.0)
@@ -69,7 +72,6 @@ class PercentageWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_pct_add, rAddPendingIntent)
 
-            // Base -1k
             val bSubIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_PERCENT_ADJUST_BASE
                 putExtra(WidgetActionReceiver.EXTRA_DELTA, -1000.0)
@@ -80,7 +82,6 @@ class PercentageWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_base_sub, bSubPendingIntent)
 
-            // Base +1k
             val bAddIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_PERCENT_ADJUST_BASE
                 putExtra(WidgetActionReceiver.EXTRA_DELTA, 1000.0)
@@ -91,7 +92,6 @@ class PercentageWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_base_add, bAddPendingIntent)
 
-            // Theme Cycle
             val themeIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_CYCLE_THEME
             }

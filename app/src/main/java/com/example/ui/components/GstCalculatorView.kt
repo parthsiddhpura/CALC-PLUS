@@ -328,127 +328,236 @@ fun GstCalculatorView(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Bottom Breakdown Strip (Net Amount, CGST, SGST, Total Tax & Gross Amount)
-                    // Always displayed with stable 2-column metrics to prevent blanking or layout shifts
+                    // Bottom Breakdown Strip (Net Amount, Total Tax, CGST, SGST & Gross Amount)
+                    // If the amount is big, display strictly line-wise: First Net Amount, then Total Tax, then CGST, then SGST/GST
                     val activeSlab = slabs.firstOrNull { it.id == selectedSlabId } ?: slabs.getOrElse(3) { slabs[0] }
                     val currentResultToDisplay = currentResult ?: GstEngine.calculate(0.0, activeSlab.ratePercent, calculationType)
+                    val isBigAmount = amountInput.length >= 6 || evaluatedAmount >= 10000.0 || currentResultToDisplay.netAmount >= 10000.0 || currentResultToDisplay.grossAmount >= 10000.0
 
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(if (isBigAmount) 4.dp else 6.dp)
                     ) {
                         HorizontalDivider(
                             color = theme.screenBorderColor.copy(alpha = 0.4f),
                             thickness = 1.dp
                         )
 
-                        // Row 1: Net Amount / Input Gross (left) & Total Tax / Extracted Tax (right)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Net Amount or Original Gross
+                        if (isBigAmount) {
+                            // --- LINE-WISE BREAKDOWN FOR LARGE AMOUNTS ---
+                            // 1. Line 1: Net Amount
+                            val netLabel = if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE) "Net (Base) Amount" else LanguageStrings.netAmount(language)
+                            val netVal = GstEngine.formatCurrency(
+                                if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE) currentResultToDisplay.netAmount else currentResultToDisplay.netAmount
+                            )
                             Row(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 1.5.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE) "Gross (Input)" else LanguageStrings.netAmount(language),
+                                    text = netLabel,
                                     color = theme.screenExpressionColor,
-                                    fontSize = 11.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = GstEngine.formatCurrency(
-                                        if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE) currentResultToDisplay.grossAmount else currentResultToDisplay.netAmount
-                                    ),
+                                    text = netVal,
                                     color = theme.screenTextColor,
-                                    fontSize = 12.sp,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace
+                                    fontFamily = FontFamily.Monospace,
+                                    maxLines = 1
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(16.dp))
-
-                            // Total Tax / Extracted GST
+                            // 2. Line 2: Total Tax
+                            val taxLabel = if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE)
+                                "Total Tax (-${currentResultToDisplay.gstRate}%)"
+                            else
+                                "${LanguageStrings.totalTax(language)} (${currentResultToDisplay.gstRate}%)"
+                            val taxVal = if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE)
+                                "-${GstEngine.formatCurrency(currentResultToDisplay.gstAmount)}"
+                            else
+                                "+${GstEngine.formatCurrency(currentResultToDisplay.gstAmount)}"
                             Row(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 1.5.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE)
-                                        "GST (-${currentResultToDisplay.gstRate}%)"
-                                    else
-                                        "${LanguageStrings.totalTax(language)} (${currentResultToDisplay.gstRate}%)",
+                                    text = taxLabel,
                                     color = theme.screenExpressionColor,
-                                    fontSize = 11.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE)
-                                        "-${GstEngine.formatCurrency(currentResultToDisplay.gstAmount)}"
-                                    else
-                                        "+${GstEngine.formatCurrency(currentResultToDisplay.gstAmount)}",
+                                    text = taxVal,
                                     color = theme.accentColor,
-                                    fontSize = 12.sp,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace
+                                    fontFamily = FontFamily.Monospace,
+                                    maxLines = 1
                                 )
                             }
-                        }
 
-                        // Row 2: CGST (left) & SGST (right)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // CGST
+                            // 3. Line 3: CGST
+                            val cgstLabel = "CGST (${currentResultToDisplay.gstRate / 2}%)"
+                            val cgstVal = GstEngine.formatCurrency(currentResultToDisplay.cgstAmount)
                             Row(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 1.5.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "CGST (${currentResultToDisplay.gstRate / 2}%)",
+                                    text = cgstLabel,
                                     color = theme.screenExpressionColor,
-                                    fontSize = 11.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = GstEngine.formatCurrency(currentResultToDisplay.cgstAmount),
+                                    text = cgstVal,
                                     color = theme.accentColor,
-                                    fontSize = 12.sp,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace
+                                    fontFamily = FontFamily.Monospace,
+                                    maxLines = 1
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(16.dp))
-
-                            // SGST
+                            // 4. Line 4: SGST / UTGST / GST
+                            val sgstLabel = "SGST / UTGST (${currentResultToDisplay.gstRate / 2}%)"
+                            val sgstVal = GstEngine.formatCurrency(currentResultToDisplay.sgstAmount)
                             Row(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 1.5.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "SGST (${currentResultToDisplay.gstRate / 2}%)",
+                                    text = sgstLabel,
                                     color = theme.screenExpressionColor,
-                                    fontSize = 11.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = GstEngine.formatCurrency(currentResultToDisplay.sgstAmount),
+                                    text = sgstVal,
                                     color = theme.accentColor,
-                                    fontSize = 12.sp,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace
+                                    fontFamily = FontFamily.Monospace,
+                                    maxLines = 1
                                 )
+                            }
+                        } else {
+                            // Standard Compact 2-Column Metrics for smaller amounts
+                            // Row 1: Net Amount / Input Gross (left) & Total Tax / Extracted Tax (right)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Net Amount or Original Gross
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE) "Gross (Input)" else LanguageStrings.netAmount(language),
+                                        color = theme.screenExpressionColor,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = GstEngine.formatCurrency(
+                                            if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE) currentResultToDisplay.grossAmount else currentResultToDisplay.netAmount
+                                        ),
+                                        color = theme.screenTextColor,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(16.dp))
+
+                                // Total Tax / Extracted GST
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE)
+                                            "GST (-${currentResultToDisplay.gstRate}%)"
+                                        else
+                                            "${LanguageStrings.totalTax(language)} (${currentResultToDisplay.gstRate}%)",
+                                        color = theme.screenExpressionColor,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = if (currentResultToDisplay.type == GstCalculationType.INCLUSIVE)
+                                            "-${GstEngine.formatCurrency(currentResultToDisplay.gstAmount)}"
+                                        else
+                                            "+${GstEngine.formatCurrency(currentResultToDisplay.gstAmount)}",
+                                        color = theme.accentColor,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+                            }
+
+                            // Row 2: CGST (left) & SGST (right)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // CGST
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "CGST (${currentResultToDisplay.gstRate / 2}%)",
+                                        color = theme.screenExpressionColor,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = GstEngine.formatCurrency(currentResultToDisplay.cgstAmount),
+                                        color = theme.accentColor,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(16.dp))
+
+                                // SGST
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "SGST (${currentResultToDisplay.gstRate / 2}%)",
+                                        color = theme.screenExpressionColor,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = GstEngine.formatCurrency(currentResultToDisplay.sgstAmount),
+                                        color = theme.accentColor,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
                             }
                         }
 

@@ -22,14 +22,20 @@ class ClipboardWidgetProvider : AppWidgetProvider() {
             val theme = WidgetDataManager.getThemeFamily(context)
             val views = RemoteViews(context.packageName, R.layout.widget_clipboard)
 
-            views.setInt(R.id.widget_root, "setBackgroundResource", theme.bgRes)
-            views.setInt(R.id.btn_clipboard_card, "setBackgroundResource", theme.screenBgRes)
+            theme.applyRoot(views, R.id.widget_root)
+            theme.applyScreen(views, R.id.btn_clipboard_card)
+            theme.applyButton(views, R.id.btn_clip_calc, isAccent = true)
+            theme.applyButton(views, R.id.btn_clip_convert, isAccent = false)
+            theme.applyButton(views, R.id.btn_clip_gst, isAccent = false)
+            theme.applyButton(views, R.id.btn_clip_pct, isAccent = false)
+            theme.applyButton(views, R.id.btn_clip_save, isAccent = false)
+            theme.applyButton(views, R.id.btn_clip_share, isAccent = false)
+
             views.setTextColor(R.id.clipboard_val_text, theme.textColorHex)
 
             val text = WidgetDataManager.getClipboardText(context)
             views.setTextViewText(R.id.clipboard_val_text, text)
 
-            // Card click -> Open app
             val cardIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(CalculatorAppWidgetProvider.EXTRA_MODE, "STANDARD")
@@ -41,7 +47,6 @@ class ClipboardWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_clipboard_card, cardPi)
 
-            // Bind Action Buttons
             bindAction(context, views, R.id.btn_clip_calc, "CALCULATE", 1110)
             bindAction(context, views, R.id.btn_clip_convert, "CONVERT", 1111)
             bindAction(context, views, R.id.btn_clip_gst, "GST", 1112)

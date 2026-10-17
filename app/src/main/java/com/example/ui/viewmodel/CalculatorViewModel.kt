@@ -50,6 +50,7 @@ import com.example.model.WorksheetTemplate
 import com.example.domain.WorksheetTapeEngine
 import com.example.data.local.WorksheetRepository
 import com.example.ui.theme.CalculatorThemes
+import com.example.widget.WidgetDataManager
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -199,6 +200,20 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     private val _uiState: MutableStateFlow<CalculatorUiState>
     val uiState: StateFlow<CalculatorUiState>
 
+    private val themePrefListener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPrefs, key ->
+        if (key == "saved_theme_id") {
+            val newThemeName = sharedPrefs.getString("saved_theme_id", null)
+            if (newThemeName != null) {
+                try {
+                    val newThemeId = ThemeId.valueOf(newThemeName)
+                    if (_uiState.value.currentThemeId != newThemeId) {
+                        _uiState.update { it.copy(currentThemeId = newThemeId) }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
     private val _searchQuery = MutableStateFlow("")
     private val _onlyFavorites = MutableStateFlow(false)
 
@@ -291,6 +306,8 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             )
         )
         uiState = _uiState.asStateFlow()
+        prefs.registerOnSharedPreferenceChangeListener(themePrefListener)
+        WidgetDataManager.syncAppTheme(application, initialTheme)
 
         val db = AppDatabase.getDatabase(application)
         repository = HistoryRepository(db.historyDao())
@@ -351,6 +368,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     fun setTheme(themeId: ThemeId) {
         prefs.edit().putString("saved_theme_id", themeId.name).apply()
         _uiState.update { it.copy(currentThemeId = themeId) }
+        WidgetDataManager.syncAppTheme(getApplication<Application>(), themeId)
     }
 
     fun cycleNextTheme() {
@@ -432,6 +450,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             prefs.edit().remove("custom_accent_color").apply()
         }
         _uiState.update { it.copy(customAccentColor = color) }
+        WidgetDataManager.notifyAllWidgets(getApplication<Application>())
     }
 
     fun setCustomShapeType(shape: ButtonShapeType?) {
@@ -465,6 +484,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
                 customDisplayFont = null
             )
         }
+        WidgetDataManager.notifyAllWidgets(getApplication<Application>())
     }
 
     fun getEffectiveTheme(state: CalculatorUiState): ThemePalette {

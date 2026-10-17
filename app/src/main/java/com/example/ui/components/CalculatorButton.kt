@@ -81,6 +81,8 @@ fun CalculatorButton(
     // Ultra-crisp, zero-latency physical tactile spring
     val scaleState = animateFloatAsState(
         targetValue = when {
+            isPressed && theme.isPearlescent3D -> 0.91f
+            isPressed && theme.isHarryPotter -> 0.90f
             isPressed && theme.pressAnimation == PressAnimationType.JELLY_SQUISH -> 0.86f
             isPressed && theme.pressAnimation == PressAnimationType.BOUNCE -> 0.88f
             isPressed && theme.pressAnimation == PressAnimationType.PIXEL_STEP -> 0.96f
@@ -88,8 +90,8 @@ fun CalculatorButton(
             else -> 1.0f
         },
         animationSpec = spring(
-            dampingRatio = if (theme.pressAnimation == PressAnimationType.JELLY_SQUISH) 0.58f else 0.72f,
-            stiffness = if (theme.pressAnimation == PressAnimationType.JELLY_SQUISH) 1200f else 1600f
+            dampingRatio = if (theme.isPearlescent3D) 0.65f else if (theme.pressAnimation == PressAnimationType.JELLY_SQUISH) 0.58f else 0.72f,
+            stiffness = if (theme.isPearlescent3D) 1300f else if (theme.pressAnimation == PressAnimationType.JELLY_SQUISH) 1200f else 1600f
         ),
         label = "btn_scale"
     )
@@ -105,8 +107,13 @@ fun CalculatorButton(
 
     val isNothingTheme = theme.isNothingDossier || theme.id == ThemeId.NOTHING_DOSSIER
 
-    val currentBgColor = if (isPressed) {
+    val targetBgColor = if (isPressed) {
         when {
+            theme.isHarryPotter -> theme.accentColor.copy(alpha = 0.32f)
+            theme.isPearlescent3D -> {
+                if (resolvedBgColor == theme.numberButtonBg) Color(0xFFF0F4FC)
+                else resolvedBgColor.copy(alpha = 0.82f)
+            }
             theme.hasBatSignal -> Color(0xFF283344)
             theme.hasArcReactor -> Color(0xFF1F2D42)
             isNothingTheme -> {
@@ -121,6 +128,15 @@ fun CalculatorButton(
             else -> resolvedBgColor.copy(alpha = 0.84f)
         }
     } else resolvedBgColor
+
+    val currentBgColor by animateColorAsState(
+        targetValue = targetBgColor,
+        animationSpec = tween(
+            durationMillis = if (isPressed) 70 else 180,
+            easing = androidx.compose.animation.core.FastOutSlowInEasing
+        ),
+        label = "btn_bg_anim"
+    )
 
     val shape: Shape = remember(theme.shapeType, theme.cornerRadiusDp) {
         theme.getShape()
@@ -220,6 +236,8 @@ fun CalculatorButton(
                 .then(
                     run {
                         val isRingActive = isPressed && (
+                            theme.isHarryPotter ||
+                            theme.isPearlescent3D ||
                             theme.pressAnimation == PressAnimationType.NEON_GLOW ||
                             theme.hasBatSignal ||
                             theme.hasArcReactor ||
@@ -228,6 +246,8 @@ fun CalculatorButton(
                         if (borderWidth > 0.dp || isRingActive) {
                             val activeBorderColor = if (isRingActive) {
                                 when {
+                                    theme.isPearlescent3D -> Color(0xFFA1C4FD)
+                                    theme.isHarryPotter -> Color(0xFFFFD700)
                                     isNothingTheme && (text == "=" || backgroundBrush != null) -> Color.White
                                     isNothingTheme -> theme.accentColor
                                     else -> theme.accentColor

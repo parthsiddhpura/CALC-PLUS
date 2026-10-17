@@ -22,8 +22,10 @@ class FormulaWidgetProvider : AppWidgetProvider() {
             val theme = WidgetDataManager.getThemeFamily(context)
             val views = RemoteViews(context.packageName, R.layout.widget_formula)
 
-            views.setInt(R.id.widget_root, "setBackgroundResource", theme.bgRes)
-            views.setInt(R.id.btn_open_formula, "setBackgroundResource", theme.screenBgRes)
+            theme.applyRoot(views, R.id.widget_root)
+            theme.applyScreen(views, R.id.btn_open_formula)
+            theme.applyButton(views, R.id.btn_cycle_formula, isAccent = true)
+
             views.setTextColor(R.id.formula_name_text, theme.headerTextColorHex)
             views.setTextColor(R.id.formula_input_label, theme.subtextColorHex)
             views.setTextColor(R.id.formula_input_val, theme.textColorHex)
@@ -37,7 +39,6 @@ class FormulaWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.formula_output_label, formula.outputLabel)
             views.setTextViewText(R.id.formula_output_val, formula.outputValue)
 
-            // Tap card -> Open Engineering / Calc mode
             val openIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(CalculatorAppWidgetProvider.EXTRA_MODE, "ENGINEERING")
@@ -48,7 +49,6 @@ class FormulaWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_open_formula, openPendingIntent)
 
-            // Next formula button
             val cycleIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_FORMULA_CYCLE
             }

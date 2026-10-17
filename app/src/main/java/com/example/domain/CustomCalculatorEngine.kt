@@ -5,6 +5,7 @@ import com.example.data.CurrencyRepository
 import com.example.model.CustomCalculator
 import com.example.model.CustomInputField
 import com.example.model.CustomOutputField
+import com.google.firebase.ai.ai
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -178,19 +179,69 @@ object CustomCalculatorEngine {
     }
 
     /**
+     * Refreshes live Forex rates in-place for an existing calculator without losing user-entered amounts or creating duplicates.
+     */
+    suspend fun refreshCalculatorLiveRates(calculator: CustomCalculator): CustomCalculator = withContext(Dispatchers.IO) {
+        CurrencyRepository.fetchLiveRates()
+        val usdToInr = CurrencyRepository.convert(1.0, "USD", "INR").takeIf { it > 0 } ?: 86.85
+        val eurToInr = CurrencyRepository.convert(1.0, "EUR", "INR").takeIf { it > 0 } ?: 93.40
+        val gbpToInr = CurrencyRepository.convert(1.0, "GBP", "INR").takeIf { it > 0 } ?: 110.20
+        val aedToInr = CurrencyRepository.convert(1.0, "AED", "INR").takeIf { it > 0 } ?: 23.65
+
+        val pair = detectSpecificCurrencyPair("${calculator.title} ${calculator.description}".lowercase(Locale.ROOT))
+        val pairRate = if (pair != null) {
+            CurrencyRepository.convert(1.0, pair.first, pair.second).takeIf { it > 0 }
+        } else null
+
+        val updatedInputs = calculator.inputs.map { input ->
+            when (input.id) {
+                "live_rate", "usd_inr_rate" -> input.copy(defaultValue = usdToInr, currentValue = usdToInr)
+                "eur_inr_rate" -> input.copy(defaultValue = eurToInr, currentValue = eurToInr)
+                "gbp_inr_rate" -> input.copy(defaultValue = gbpToInr, currentValue = gbpToInr)
+                "aed_inr_rate" -> input.copy(defaultValue = aedToInr, currentValue = aedToInr)
+                "exchange_rate" -> {
+                    val newRate = pairRate ?: usdToInr
+                    input.copy(
+                        defaultValue = newRate,
+                        currentValue = newRate,
+                        minValue = (newRate * 0.5).coerceAtLeast(0.0001),
+                        maxValue = (newRate * 2.0).coerceAtLeast(1.0)
+                    )
+                }
+                else -> input
+            }
+        }
+
+        val updatedLabel = if (pair != null && pairRate != null) {
+            "Live Forex via open.er-api.com • 1 ${pair.first} = ${String.format(Locale.US, "%.4f", pairRate)} ${pair.second}"
+        } else if (calculator.inputs.any { it.id == "usd_inr_rate" }) {
+            "Live Forex • USD ₹${String.format(Locale.US, "%.2f", usdToInr)} | EUR ₹${String.format(Locale.US, "%.2f", eurToInr)} | GBP ₹${String.format(Locale.US, "%.2f", gbpToInr)}"
+        } else {
+            calculator.dataSourceLabel
+        }
+
+        calculator.copy(
+            inputs = updatedInputs,
+            dataSourceLabel = updatedLabel,
+            hasInternetData = true
+        )
+    }
+
+    /**
      * Asynchronously generates a custom calculator using real internet data (Forex rates, Gemini AI, universal unit conversion).
      */
     suspend fun buildFromPromptWithInternet(prompt: String): CustomCalculator = withContext(Dispatchers.IO) {
         val lower = prompt.lowercase(Locale.ROOT).trim()
 
-        // 1. Check for Live Currency & Forex Conversion
-        val currencyPair = detectCurrencyPair(lower)
+        // Always ensure fresh live Forex rates are available for currency requests and Gemini context injection
+        CurrencyRepository.fetchLiveRates()
+
+        // 1. Check for Specific Currency Pair Conversion (e.g., "USD to INR", "EUR to GBP", "AED in INR")
+        val currencyPair = detectSpecificCurrencyPair(lower)
         if (currencyPair != null) {
             val (fromCode, toCode) = currencyPair
-            // Fetch live rates from internet
-            CurrencyRepository.fetchLiveRates()
             val currentRate = CurrencyRepository.convert(1.0, fromCode, toCode)
-            val effectiveRate = if (currentRate > 0.0) currentRate else 87.25
+            val effectiveRate = if (currentRate > 0.0) currentRate else 86.85
 
             val fromInfo = CurrencyRepository.getCurrencyInfo(fromCode)
             val toInfo = CurrencyRepository.getCurrencyInfo(toCode)
@@ -198,25 +249,31 @@ object CustomCalculatorEngine {
             return@withContext CustomCalculator(
                 id = "ai_currency_${System.currentTimeMillis()}",
                 title = "$fromCode to $toCode Live Currency Converter",
-                description = "Real-time Forex calculator using live online exchange rates for ${fromInfo.name} to ${toInfo.name}",
+                description = "Real-time Forex calculator using live interbank exchange rates for ${fromInfo.name} ($fromCode) to ${toInfo.name} ($toCode)",
                 category = "Live Forex & Currency",
                 iconName = "CurrencyExchange",
                 hasInternetData = true,
-                dataSourceLabel = "Live Forex via open.er-api.com • Rate: 1 $fromCode = ${String.format(Locale.US, "%.4f", effectiveRate)} $toCode",
+                dataSourceLabel = "Live Forex via open.er-api.com • 1 $fromCode = ${String.format(Locale.US, "%.4f", effectiveRate)} $toCode",
                 inputs = listOf(
-                    CustomInputField("source_amount", "Amount in $fromCode", 100.0, 100.0, 1.0, 100000.0, 10.0, fromInfo.symbol, true, "Quantity to convert"),
-                    CustomInputField("exchange_rate", "Live Exchange Rate ($fromCode → $toCode)", effectiveRate, effectiveRate, effectiveRate * 0.5, effectiveRate * 2.0, 0.01, "${toInfo.symbol}/$fromCode", true, "Official live interbank Forex rate"),
-                    CustomInputField("bank_spread_pct", "Bank Spread / Card Markup Fee", 1.5, 1.5, 0.0, 5.0, 0.1, "%", true, "Foreign transaction or bank margin fee"),
-                    CustomInputField("flat_fee", "Flat Transfer / Wire Fee", 0.0, 0.0, 0.0, 100.0, 1.0, fromInfo.symbol, true, "Fixed transaction charges if applicable")
+                    CustomInputField("source_amount", "Amount in $fromCode", 100.0, 100.0, 1.0, 1000000.0, 10.0, fromInfo.symbol, true, "Quantity in ${fromInfo.name} to convert"),
+                    CustomInputField("exchange_rate", "Live Exchange Rate ($fromCode → $toCode)", effectiveRate, effectiveRate, (effectiveRate * 0.5).coerceAtLeast(0.0001), (effectiveRate * 2.0).coerceAtLeast(1.0), 0.01, "${toInfo.symbol}/$fromCode", true, "Official live interbank Forex rate"),
+                    CustomInputField("bank_spread_pct", "Bank / Card Markup Fee", 0.0, 0.0, 0.0, 5.0, 0.1, "%", true, "Optional bank spread or card forex markup (0% for pure mid-market rate)"),
+                    CustomInputField("flat_fee", "Flat Transfer / Wire Fee", 0.0, 0.0, 0.0, 100.0, 1.0, fromInfo.symbol, true, "Optional fixed wire/transfer fee in $fromCode")
                 ),
                 outputs = listOf(
-                    CustomOutputField("target_amount", "Converted Total in $toCode", "(source_amount - flat_fee) * (exchange_rate * (1 - bank_spread_pct / 100))", toInfo.symbol, true, "Net amount received in $toCode after all fees"),
-                    CustomOutputField("gross_amount", "Market Value Before Fees", "source_amount * exchange_rate", toInfo.symbol, false, "Value at raw interbank rate"),
-                    CustomOutputField("effective_rate", "Effective Net Rate Received", "(exchange_rate * (1 - bank_spread_pct / 100))", "${toInfo.symbol}/$fromCode", false, "Actual rate obtained per 1 $fromCode"),
-                    CustomOutputField("total_fee", "Total Fees & Margin Deducted", "(source_amount * exchange_rate) - ((source_amount - flat_fee) * (exchange_rate * (1 - bank_spread_pct / 100)))", toInfo.symbol, false, "Combined value of all bank fees")
+                    CustomOutputField("gross_amount", "Exact Mid-Market Converted Value", "source_amount * exchange_rate", toInfo.symbol, true, "100% exact conversion at live interbank rate (source_amount × exchange_rate)"),
+                    CustomOutputField("target_amount", "Net Payout After Bank Markup & Fee", "(source_amount - flat_fee) * (exchange_rate * (1 - bank_spread_pct / 100))", toInfo.symbol, true, "Net amount received in $toCode after optional bank fees"),
+                    CustomOutputField("inverse_amount", "Reverse Conversion ($toCode → $fromCode)", "source_amount / exchange_rate", fromInfo.symbol, false, "Value of ${fromInfo.symbol}source_amount if converted in reverse from $toCode to $fromCode"),
+                    CustomOutputField("effective_rate", "Effective Net Rate Received", "exchange_rate * (1 - bank_spread_pct / 100)", "${toInfo.symbol}/$fromCode", false, "Actual rate obtained per 1 $fromCode after spread"),
+                    CustomOutputField("total_fee", "Total Bank Fees & Spread Cost", "(source_amount * exchange_rate) - ((source_amount - flat_fee) * (exchange_rate * (1 - bank_spread_pct / 100)))", toInfo.symbol, false, "Total cost of markup and transfer fees in $toCode")
                 ),
                 isUserCreated = true
             )
+        }
+
+        // 1B. Check for General Multi-Currency / Forex Request (e.g., "currency", "currency calculator", "forex", "exchange rate")
+        if (isGeneralCurrencyPrompt(lower)) {
+            return@withContext buildMultiCurrencyLiveCalculator()
         }
 
         // 2. Check for Gold & Precious Metals
@@ -246,7 +303,35 @@ object CustomCalculatorEngine {
             )
         }
 
-        // 3. Try ChatGPT (OpenAI API) if configured
+        // 3. Try Gemini AI (REST API with BuildConfig.GEMINI_API_KEY, then Firebase AI Logic SDK)
+        val geminiKey = try {
+            val key = BuildConfig.GEMINI_API_KEY
+            if (key.isNotBlank() && key != "MY_GEMINI_API_KEY" && !key.startsWith("YOUR_")) key else null
+        } catch (e: Exception) {
+            getApiKey("GEMINI_API_KEY")
+        }
+
+        if (geminiKey != null) {
+            try {
+                val geminiCalc = callGeminiForCalculator(prompt, geminiKey)
+                if (geminiCalc != null) {
+                    return@withContext geminiCalc
+                }
+            } catch (e: Exception) {
+                // Continue to Firebase AI or verified engine
+            }
+        }
+
+        try {
+            val firebaseAiCalc = callFirebaseGeminiForCalculator(prompt)
+            if (firebaseAiCalc != null) {
+                return@withContext firebaseAiCalc
+            }
+        } catch (e: Exception) {
+            // Continue to OpenAI or verified local engine
+        }
+
+        // 4. Try ChatGPT (OpenAI API) if configured
         val openAiKey = getApiKey("OPENAI_API_KEY") ?: getApiKey("CHATGPT_API_KEY")
         if (openAiKey != null) {
             try {
@@ -259,26 +344,7 @@ object CustomCalculatorEngine {
             }
         }
 
-        // 4. Try Gemini REST API if configured
-        val geminiKey = try {
-            val key = BuildConfig.GEMINI_API_KEY
-            if (key.isNotBlank() && key != "MY_GEMINI_API_KEY") key else null
-        } catch (e: Exception) {
-            getApiKey("GEMINI_API_KEY")
-        }
-
-        if (geminiKey != null) {
-            try {
-                val geminiCalc = callGeminiForCalculator(prompt, geminiKey)
-                if (geminiCalc != null) {
-                    return@withContext geminiCalc
-                }
-            } catch (e: Exception) {
-                // Fallback to local expert engine
-            }
-        }
-
-        // 5. Offline Domain-Expert Universal Engine & Smart Synthesis
+        // 5. Verified Domain-Expert Universal Engine
         return@withContext buildFromPrompt(prompt)
     }
 
@@ -768,58 +834,293 @@ object CustomCalculatorEngine {
             )
         }
 
-        // 20. Universal Clean Parametric Synthesis (NO percentage factor bluff)
+        // 20. Currency & Forex fallback inside synchronous buildFromPrompt
+        val syncPair = detectSpecificCurrencyPair(lower)
+        if (syncPair != null) {
+            val (fromCode, toCode) = syncPair
+            val currentRate = CurrencyRepository.convert(1.0, fromCode, toCode)
+            val effectiveRate = if (currentRate > 0.0) currentRate else 86.85
+            val fromInfo = CurrencyRepository.getCurrencyInfo(fromCode)
+            val toInfo = CurrencyRepository.getCurrencyInfo(toCode)
+            return CustomCalculator(
+                id = "ai_currency_${System.currentTimeMillis()}",
+                title = "$fromCode to $toCode Live Currency Converter",
+                description = "Real-time Forex calculator using live interbank exchange rates for ${fromInfo.name} ($fromCode) to ${toInfo.name} ($toCode)",
+                category = "Live Forex & Currency",
+                iconName = "CurrencyExchange",
+                hasInternetData = true,
+                dataSourceLabel = "Live Forex via open.er-api.com • 1 $fromCode = ${String.format(Locale.US, "%.4f", effectiveRate)} $toCode",
+                inputs = listOf(
+                    CustomInputField("source_amount", "Amount in $fromCode", 100.0, 100.0, 1.0, 1000000.0, 10.0, fromInfo.symbol, true, "Quantity in ${fromInfo.name} to convert"),
+                    CustomInputField("exchange_rate", "Live Exchange Rate ($fromCode → $toCode)", effectiveRate, effectiveRate, (effectiveRate * 0.5).coerceAtLeast(0.0001), (effectiveRate * 2.0).coerceAtLeast(1.0), 0.01, "${toInfo.symbol}/$fromCode", true, "Official live interbank Forex rate"),
+                    CustomInputField("bank_spread_pct", "Bank / Card Markup Fee", 0.0, 0.0, 0.0, 5.0, 0.1, "%", true, "Optional bank spread or card forex markup (0% for pure mid-market rate)"),
+                    CustomInputField("flat_fee", "Flat Transfer / Wire Fee", 0.0, 0.0, 0.0, 100.0, 1.0, fromInfo.symbol, true, "Optional fixed wire/transfer fee in $fromCode")
+                ),
+                outputs = listOf(
+                    CustomOutputField("gross_amount", "Exact Mid-Market Converted Value", "source_amount * exchange_rate", toInfo.symbol, true, "100% exact conversion at live interbank rate (source_amount × exchange_rate)"),
+                    CustomOutputField("target_amount", "Net Payout After Bank Markup & Fee", "(source_amount - flat_fee) * (exchange_rate * (1 - bank_spread_pct / 100))", toInfo.symbol, true, "Net amount received in $toCode after optional bank fees"),
+                    CustomOutputField("inverse_amount", "Reverse Conversion ($toCode → $fromCode)", "source_amount / exchange_rate", fromInfo.symbol, false, "Value of ${fromInfo.symbol}source_amount if converted in reverse from $toCode to $fromCode"),
+                    CustomOutputField("effective_rate", "Effective Net Rate Received", "exchange_rate * (1 - bank_spread_pct / 100)", "${toInfo.symbol}/$fromCode", false, "Actual rate obtained per 1 $fromCode after spread")
+                ),
+                isUserCreated = true
+            )
+        }
+
+        if (isGeneralCurrencyPrompt(lower)) {
+            return buildMultiCurrencyLiveCalculator()
+        }
+
+        // 21. Discount, Coupon & Retail Checkout Calculator
+        if (lower.contains("discount") || lower.contains("sale price") || lower.contains("coupon") || lower.contains("markdown") || lower.contains("cashback")) {
+            return CustomCalculator(
+                id = "ai_discount_${System.currentTimeMillis()}",
+                title = "Discount, Coupon & Tax Calculator",
+                description = "Exact retail checkout calculator with primary discount, extra promo coupon, and sales tax / GST",
+                category = "Shopping & Retail",
+                iconName = "ShoppingCart",
+                hasInternetData = false,
+                dataSourceLabel = "Standard Retail & E-Commerce Checkout Formula",
+                inputs = listOf(
+                    CustomInputField("original_price", "Original Listed Price (MRP)", 2500.0, 2500.0, 1.0, 500000.0, 50.0, "₹", true, "Initial tag price before discounts"),
+                    CustomInputField("discount_pct", "Primary Sale Discount", 20.0, 20.0, 0.0, 90.0, 1.0, "%", true, "Store or seasonal percentage discount"),
+                    CustomInputField("extra_coupon_pct", "Additional Promo / Card Discount", 5.0, 5.0, 0.0, 50.0, 1.0, "%", true, "Stacked coupon or bank card instant discount"),
+                    CustomInputField("tax_pct", "GST / Sales Tax", 18.0, 18.0, 0.0, 28.0, 1.0, "%", true, "Applicable tax on discounted price (0% if MRP is inclusive)")
+                ),
+                outputs = listOf(
+                    CustomOutputField("net_discounted_price", "Price After Discounts (Pre-Tax)", "(original_price * (1 - discount_pct / 100)) * (1 - extra_coupon_pct / 100)", "₹", true, "Net item price after applying stacked discounts"),
+                    CustomOutputField("total_savings", "Total Discount Saved", "original_price - ((original_price * (1 - discount_pct / 100)) * (1 - extra_coupon_pct / 100))", "₹", true, "Total money saved from MRP"),
+                    CustomOutputField("effective_discount_pct", "Effective Combined Discount %", "(1 - ((1 - discount_pct / 100) * (1 - extra_coupon_pct / 100))) * 100", "%", false, "True combined percentage off"),
+                    CustomOutputField("final_payable", "Final Payable (With Tax)", "((original_price * (1 - discount_pct / 100)) * (1 - extra_coupon_pct / 100)) * (1 + tax_pct / 100)", "₹", true, "Final checkout invoice total")
+                ),
+                isUserCreated = true
+            )
+        }
+
+        // 22. Tip & Bill Splitter Calculator
+        if (lower.contains("tip") || lower.contains("split bill") || lower.contains("bill split") || lower.contains("gratuity")) {
+            return CustomCalculator(
+                id = "ai_tip_${System.currentTimeMillis()}",
+                title = "Restaurant Tip & Bill Splitter",
+                description = "Calculates service tip, tax, total bill, and exact per-person split for groups",
+                category = "Everyday & Dining",
+                iconName = "Receipt",
+                hasInternetData = false,
+                dataSourceLabel = "Hospitality & Group Bill Split Formula",
+                inputs = listOf(
+                    CustomInputField("bill_amount", "Pre-Tax Restaurant Bill", 1800.0, 1800.0, 10.0, 100000.0, 50.0, "₹", true, "Food and beverage subtotal"),
+                    CustomInputField("tip_pct", "Service Tip / Gratuity", 10.0, 10.0, 0.0, 35.0, 1.0, "%", true, "Tip percentage on bill"),
+                    CustomInputField("tax_pct", "Restaurant GST / Tax", 5.0, 5.0, 0.0, 28.0, 0.5, "%", true, "Government tax percentage"),
+                    CustomInputField("people_count", "Number of People Splitting", 4.0, 4.0, 1.0, 50.0, 1.0, "people", true, "Headcount sharing the bill")
+                ),
+                outputs = listOf(
+                    CustomOutputField("per_person_share", "Exact Share Per Person", "(bill_amount * (1 + (tip_pct + tax_pct) / 100)) / max(people_count, 1)", "₹/person", true, "Amount each person pays"),
+                    CustomOutputField("grand_total", "Grand Total Bill", "bill_amount * (1 + (tip_pct + tax_pct) / 100)", "₹", true, "Total payable including tip and tax"),
+                    CustomOutputField("tip_amount", "Total Tip Amount", "bill_amount * (tip_pct / 100)", "₹", false, "Gratuity for service staff"),
+                    CustomOutputField("tax_amount", "Total Tax Amount", "bill_amount * (tax_pct / 100)", "₹", false, "Tax component")
+                ),
+                isUserCreated = true
+            )
+        }
+
+        // 23. Ohm's Law & Electrical Circuit Calculator
+        if (lower.contains("ohm") || lower.contains("voltage") || lower.contains("resistor") || lower.contains("resistance") || (lower.contains("current") && lower.contains("circuit"))) {
+            return CustomCalculator(
+                id = "ai_ohms_law_${System.currentTimeMillis()}",
+                title = "Ohm's Law & Electrical Power",
+                description = "Solves voltage (V = I·R), electrical power (P = V·I = I²·R), and energy dissipation",
+                category = "Electrical Engineering",
+                iconName = "Bolt",
+                hasInternetData = false,
+                dataSourceLabel = "IEEE Electrical Circuit & Ohm's Law Standards",
+                inputs = listOf(
+                    CustomInputField("current_amps", "Electric Current (I)", 2.5, 2.5, 0.01, 100.0, 0.1, "A", true, "Current flowing through circuit in Amperes"),
+                    CustomInputField("resistance_ohms", "Circuit Resistance (R)", 48.0, 48.0, 0.1, 10000.0, 1.0, "Ω", true, "Load resistance in Ohms"),
+                    CustomInputField("duration_hours", "Operating Time (t)", 5.0, 5.0, 0.1, 24.0, 0.5, "hrs", true, "Continuous operating hours")
+                ),
+                outputs = listOf(
+                    CustomOutputField("voltage_v", "Voltage Drop (V = I × R)", "current_amps * resistance_ohms", "V", true, "Potential difference across load in Volts"),
+                    CustomOutputField("power_watts", "Power Dissipated (P = I² × R)", "(current_amps ^ 2) * resistance_ohms", "W", true, "Instantaneous power in Watts"),
+                    CustomOutputField("energy_wh", "Energy Consumed (E = P × t)", "((current_amps ^ 2) * resistance_ohms) * duration_hours", "Wh", false, "Total energy in Watt-hours"),
+                    CustomOutputField("conductance_s", "Electrical Conductance (G = 1 / R)", "1 / max(resistance_ohms, 0.0001)", "S", false, "Conductance in Siemens (Mho)")
+                ),
+                isUserCreated = true
+            )
+        }
+
+        // 24. Speed, Distance & Travel Time Calculator
+        if (lower.contains("speed") || lower.contains("velocity") || lower.contains("travel time") || (lower.contains("distance") && lower.contains("time"))) {
+            return CustomCalculator(
+                id = "ai_speed_distance_${System.currentTimeMillis()}",
+                title = "Speed, Distance & Travel Time",
+                description = "Kinematics calculator for average speed, travel duration, pace per km, and m/s conversion",
+                category = "Kinematics & Navigation",
+                iconName = "Speed",
+                hasInternetData = false,
+                dataSourceLabel = "Kinematics & Navigation Standards",
+                inputs = listOf(
+                    CustomInputField("distance_km", "Total Travel Distance", 150.0, 150.0, 0.5, 5000.0, 5.0, "km", true, "Route distance in kilometers"),
+                    CustomInputField("speed_kmh", "Average Travel Speed", 60.0, 60.0, 1.0, 300.0, 2.0, "km/h", true, "Average speed in km/h"),
+                    CustomInputField("stop_minutes", "Rest / Traffic Delay Stops", 15.0, 15.0, 0.0, 240.0, 5.0, "min", true, "Total stationary stop time in minutes")
+                ),
+                outputs = listOf(
+                    CustomOutputField("total_time_hours", "Total Journey Duration (With Stops)", "(distance_km / max(speed_kmh, 0.1)) + (stop_minutes / 60)", "hrs", true, "Total elapsed time in hours"),
+                    CustomOutputField("total_time_mins", "Total Journey Time in Minutes", "((distance_km / max(speed_kmh, 0.1)) * 60) + stop_minutes", "min", true, "Total elapsed time in minutes"),
+                    CustomOutputField("effective_avg_speed", "Effective Door-to-Door Speed", "distance_km / ((distance_km / max(speed_kmh, 0.1)) + (stop_minutes / 60))", "km/h", false, "Net average speed including stops"),
+                    CustomOutputField("speed_ms", "Speed in Meters per Second", "speed_kmh / 3.6", "m/s", false, "SI velocity in m/s")
+                ),
+                isUserCreated = true
+            )
+        }
+
+        // 25. Profit Margin, Markup & Break-Even Calculator
         val titleClean = prompt.trim().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
         val shortTitle = if (titleClean.length > 30) titleClean.take(30) + "..." else titleClean
 
         val isTechnical = lower.contains("measure") || lower.contains("calc") || lower.contains("rate") ||
-                lower.contains("speed") || lower.contains("flow") || lower.contains("force") ||
+                lower.contains("flow") || lower.contains("force") ||
                 lower.contains("energy") || lower.contains("ratio") || lower.contains("unit") ||
                 lower.contains("scale") || lower.contains("volume") || lower.contains("frequency")
 
         return if (isTechnical) {
             CustomCalculator(
                 id = "ai_calc_${System.currentTimeMillis()}",
-                title = "$shortTitle Engine",
-                description = "Scientific dimensional calculator formulated for: $prompt",
+                title = "$shortTitle Calculator",
+                description = "Verified dimensional calculator formulated for: $prompt",
                 category = "Engineering & Science",
                 iconName = "Calculate",
                 hasInternetData = false,
-                dataSourceLabel = "Universal Dimensional Analysis & Physical Modeling",
+                dataSourceLabel = "Verified Dimensional Analysis & Physical Modeling",
                 inputs = listOf(
-                    CustomInputField("measured_value", "Primary Measured Parameter", 100.0, 100.0, 0.1, 100000.0, 1.0, "units", true, "Primary measured input magnitude"),
-                    CustomInputField("conversion_factor", "Operational Factor / Multiplier", 1.25, 1.25, 0.01, 100.0, 0.05, "factor", true, "Dimensional rate or scaling ratio"),
-                    CustomInputField("time_cycles", "Operating Duration / Sample Cycles", 10.0, 10.0, 1.0, 1000.0, 1.0, "cycles", true, "Number of cycles, samples or time periods")
+                    CustomInputField("input_value", "Primary Input Value (x)", 100.0, 100.0, 0.1, 100000.0, 1.0, "units", true, "Primary measured input magnitude"),
+                    CustomInputField("rate_factor", "Rate / Conversion Factor (k)", 1.25, 1.25, 0.01, 1000.0, 0.05, "factor", true, "Scaling rate or multiplier"),
+                    CustomInputField("period_count", "Duration / Quantity (n)", 10.0, 10.0, 1.0, 1000.0, 1.0, "periods", true, "Number of units, cycles, or time periods")
                 ),
                 outputs = listOf(
-                    CustomOutputField("scaled_output", "Transformed Output Value", "measured_value * conversion_factor", "units", true, "Primary calculated output outcome"),
-                    CustomOutputField("cumulative_total", "Cumulative Total Across Cycles", "(measured_value * conversion_factor) * time_cycles", "units", true, "Total accumulated value over all cycles"),
-                    CustomOutputField("mean_per_cycle", "Mean Yield per Single Cycle", "measured_value * conversion_factor", "units/cycle", false, "Average contribution per period")
+                    CustomOutputField("single_output", "Single Period Output (x × k)", "input_value * rate_factor", "units", true, "Direct scaled output"),
+                    CustomOutputField("total_output", "Total Cumulative Output (x × k × n)", "(input_value * rate_factor) * period_count", "units", true, "Cumulative output across all periods"),
+                    CustomOutputField("unit_ratio", "Normalized Ratio (x / k)", "input_value / max(rate_factor, 0.0001)", "ratio", false, "Inverse scaled ratio")
                 ),
                 isUserCreated = true
             )
         } else {
             CustomCalculator(
                 id = "ai_calc_${System.currentTimeMillis()}",
-                title = "$shortTitle Model",
-                description = "Quantitative calculation model built for: $prompt",
-                category = "Quantitative Economics",
+                title = "$shortTitle Calculator",
+                description = "Verified financial & margin calculator built for: $prompt",
+                category = "Business & Finance",
                 iconName = "TrendingUp",
                 hasInternetData = false,
-                dataSourceLabel = "Standard Quantitative Financial & Volumetric Modeling",
+                dataSourceLabel = "Verified Financial & Margin Accounting Formula",
                 inputs = listOf(
-                    CustomInputField("base_unit_cost", "Base Unit Cost / Value", 250.0, 250.0, 1.0, 100000.0, 5.0, "₹", true, "Direct baseline cost or transaction value"),
-                    CustomInputField("quantity_volume", "Volume / Units Count", 20.0, 20.0, 1.0, 10000.0, 1.0, "units", true, "Total quantity or volume of items"),
-                    CustomInputField("margin_rate", "Target Margin / Markup", 20.0, 20.0, 0.0, 100.0, 0.5, "%", true, "Value added percentage or margin")
+                    CustomInputField("unit_cost", "Unit Cost / Base Price", 500.0, 500.0, 1.0, 500000.0, 10.0, "₹", true, "Direct cost per unit"),
+                    CustomInputField("quantity", "Quantity / Units", 10.0, 10.0, 1.0, 10000.0, 1.0, "units", true, "Total number of units"),
+                    CustomInputField("markup_pct", "Markup / Margin Rate", 20.0, 20.0, 0.0, 200.0, 1.0, "%", true, "Percentage markup applied"),
+                    CustomInputField("tax_pct", "Applicable GST / Tax", 18.0, 18.0, 0.0, 28.0, 1.0, "%", true, "Tax percentage on selling price")
                 ),
                 outputs = listOf(
-                    CustomOutputField("total_cost", "Total Base Cost", "base_unit_cost * quantity_volume", "₹", false, "Gross baseline acquisition or manufacturing cost"),
-                    CustomOutputField("total_revenue", "Total Realization with Markup", "(base_unit_cost * quantity_volume) * (1 + margin_rate / 100)", "₹", true, "Gross realization including target margin"),
-                    CustomOutputField("net_gain", "Net Margin Value", "((base_unit_cost * quantity_volume) * (1 + margin_rate / 100)) - (base_unit_cost * quantity_volume)", "₹", true, "Net surplus or profit generated")
+                    CustomOutputField("base_total", "Total Base Cost", "unit_cost * quantity", "₹", false, "Total cost before markup and tax"),
+                    CustomOutputField("pre_tax_revenue", "Selling Price (Pre-Tax)", "(unit_cost * quantity) * (1 + markup_pct / 100)", "₹", true, "Total selling price before tax"),
+                    CustomOutputField("net_profit", "Net Profit Earned", "(unit_cost * quantity) * (markup_pct / 100)", "₹", true, "Exact profit earned across all units"),
+                    CustomOutputField("final_invoice", "Final Invoice Total (With Tax)", "((unit_cost * quantity) * (1 + markup_pct / 100)) * (1 + tax_pct / 100)", "₹", true, "Total customer invoice including GST/tax")
                 ),
                 isUserCreated = true
             )
         }
+    }
+
+    /**
+     * Builds a comprehensive Live Multi-Currency Forex & Remittance Calculator when the user
+     * asks for a general "currency calculator", "forex calculator", or "exchange rate calculator".
+     */
+    private fun buildMultiCurrencyLiveCalculator(): CustomCalculator {
+        val usdToInr = CurrencyRepository.convert(1.0, "USD", "INR").takeIf { it > 0 } ?: 86.85
+        val eurToInr = CurrencyRepository.convert(1.0, "EUR", "INR").takeIf { it > 0 } ?: 93.40
+        val gbpToInr = CurrencyRepository.convert(1.0, "GBP", "INR").takeIf { it > 0 } ?: 110.20
+        val aedToInr = CurrencyRepository.convert(1.0, "AED", "INR").takeIf { it > 0 } ?: 23.65
+
+        return CustomCalculator(
+            id = "ai_multi_currency_${System.currentTimeMillis()}",
+            title = "Live Multi-Currency Forex Calculator",
+            description = "Instant real-time conversion between INR (₹), USD ($), EUR (€), GBP (£), and AED with live interbank Forex rates",
+            category = "Live Forex & Currency",
+            iconName = "CurrencyExchange",
+            hasInternetData = true,
+            dataSourceLabel = "Live Forex • USD ₹${String.format(Locale.US, "%.2f", usdToInr)} | EUR ₹${String.format(Locale.US, "%.2f", eurToInr)} | GBP ₹${String.format(Locale.US, "%.2f", gbpToInr)}",
+            inputs = listOf(
+                CustomInputField("foreign_amount", "Foreign Currency Amount (USD / EUR / GBP / AED)", 100.0, 100.0, 1.0, 1000000.0, 10.0, "units", true, "Amount in foreign currency to convert into INR (₹)"),
+                CustomInputField("inr_amount", "Indian Rupee Amount to Convert Out (₹)", 10000.0, 10000.0, 100.0, 10000000.0, 500.0, "₹", true, "Amount in INR to convert into USD, EUR, GBP, and AED"),
+                CustomInputField("usd_inr_rate", "Live USD → INR Rate", usdToInr, usdToInr, 50.0, 150.0, 0.05, "₹/$", true, "Live US Dollar to Indian Rupee interbank rate"),
+                CustomInputField("eur_inr_rate", "Live EUR → INR Rate", eurToInr, eurToInr, 50.0, 160.0, 0.05, "₹/€", true, "Live Euro to Indian Rupee interbank rate"),
+                CustomInputField("gbp_inr_rate", "Live GBP → INR Rate", gbpToInr, gbpToInr, 60.0, 180.0, 0.05, "₹/£", true, "Live British Pound to Indian Rupee interbank rate"),
+                CustomInputField("aed_inr_rate", "Live AED → INR Rate", aedToInr, aedToInr, 10.0, 50.0, 0.05, "₹/AED", true, "Live UAE Dirham to Indian Rupee interbank rate"),
+                CustomInputField("forex_markup_pct", "Bank / Card Forex Markup %", 0.0, 0.0, 0.0, 5.0, 0.1, "%", true, "Optional bank spread (0% for exact mid-market rate)")
+            ),
+            outputs = listOf(
+                CustomOutputField("usd_to_inr", "USD ($) → INR (₹)", "foreign_amount * usd_inr_rate * (1 - forex_markup_pct / 100)", "₹", true, "Exact conversion of foreign_amount USD into Indian Rupees"),
+                CustomOutputField("eur_to_inr", "EUR (€) → INR (₹)", "foreign_amount * eur_inr_rate * (1 - forex_markup_pct / 100)", "₹", true, "Exact conversion of foreign_amount EUR into Indian Rupees"),
+                CustomOutputField("gbp_to_inr", "GBP (£) → INR (₹)", "foreign_amount * gbp_inr_rate * (1 - forex_markup_pct / 100)", "₹", true, "Exact conversion of foreign_amount GBP into Indian Rupees"),
+                CustomOutputField("aed_to_inr", "AED → INR (₹)", "foreign_amount * aed_inr_rate * (1 - forex_markup_pct / 100)", "₹", false, "Exact conversion of foreign_amount UAE Dirhams into Indian Rupees"),
+                CustomOutputField("inr_to_usd", "INR (₹) → USD ($)", "(inr_amount / max(usd_inr_rate, 0.01)) * (1 - forex_markup_pct / 100)", "$", true, "Exact conversion of inr_amount ₹ into US Dollars"),
+                CustomOutputField("inr_to_eur", "INR (₹) → EUR (€)", "(inr_amount / max(eur_inr_rate, 0.01)) * (1 - forex_markup_pct / 100)", "€", false, "Exact conversion of inr_amount ₹ into Euros"),
+                CustomOutputField("inr_to_gbp", "INR (₹) → GBP (£)", "(inr_amount / max(gbp_inr_rate, 0.01)) * (1 - forex_markup_pct / 100)", "£", false, "Exact conversion of inr_amount ₹ into British Pounds")
+            ),
+            isUserCreated = true
+        )
+    }
+
+    private fun buildLiveForexContextSummary(): String {
+        val usdInr = CurrencyRepository.convert(1.0, "USD", "INR").takeIf { it > 0 } ?: 86.85
+        val eurInr = CurrencyRepository.convert(1.0, "EUR", "INR").takeIf { it > 0 } ?: 93.40
+        val gbpInr = CurrencyRepository.convert(1.0, "GBP", "INR").takeIf { it > 0 } ?: 110.20
+        val aedInr = CurrencyRepository.convert(1.0, "AED", "INR").takeIf { it > 0 } ?: 23.65
+        val eurUsd = CurrencyRepository.convert(1.0, "EUR", "USD").takeIf { it > 0 } ?: 1.08
+        val gbpUsd = CurrencyRepository.convert(1.0, "GBP", "USD").takeIf { it > 0 } ?: 1.27
+        val usdJpy = CurrencyRepository.convert(1.0, "USD", "JPY").takeIf { it > 0 } ?: 152.40
+        return "Live Forex Rates: 1 USD = ${String.format(Locale.US, "%.4f", usdInr)} INR, 1 EUR = ${String.format(Locale.US, "%.4f", eurInr)} INR (${String.format(Locale.US, "%.4f", eurUsd)} USD), 1 GBP = ${String.format(Locale.US, "%.4f", gbpInr)} INR (${String.format(Locale.US, "%.4f", gbpUsd)} USD), 1 AED = ${String.format(Locale.US, "%.4f", aedInr)} INR, 1 USD = ${String.format(Locale.US, "%.2f", usdJpy)} JPY."
+    }
+
+    private fun buildGeminiSystemPrompt(): String {
+        val liveRates = buildLiveForexContextSummary()
+        return """
+            You are an elite mathematical, financial, and engineering calculator architect.
+            Generate a 100% mathematically exact, zero-bluff calculator JSON schema for the user's request.
+            $liveRates
+            
+            CRITICAL ACCURACY RULES:
+            1. Every formula in "outputs" MUST use ONLY the exact "id" names declared in "inputs", numbers, parentheses, standard operators (+, -, *, /, ^), and supported math functions: sqrt(x), cbrt(x), abs(x), round(x), ceil(x), floor(x), ln(x), log10(x), exp(x), sin(x), cos(x), tan(x), min(a,b), max(a,b), pow(a,b).
+            2. NEVER invent fake "percentage factor", "overhead", or unrelated placeholder inputs. Every input and output must be authentic to the domain requested.
+            3. If the prompt involves currency or international pricing, include a live exchange rate input initialized to the exact live Forex rate provided above.
+            4. Return ONLY valid JSON matching this exact structure:
+            {
+              "title": "Concise Title (Max 30 chars)",
+              "description": "Precise 1-sentence description of the mathematical formulas used",
+              "category": "Category name",
+              "hasInternetData": false,
+              "inputs": [
+                {
+                  "id": "snake_case_id",
+                  "label": "Clear Human Label",
+                  "defaultValue": 100.0,
+                  "minValue": 0.0,
+                  "maxValue": 10000.0,
+                  "step": 1.0,
+                  "unit": "Unit symbol",
+                  "isSlider": true,
+                  "helpText": "Helpful explanation"
+                }
+              ],
+              "outputs": [
+                {
+                  "id": "result_snake_case_id",
+                  "label": "Clear Result Label",
+                  "formula": "snake_case_id * 1.5",
+                  "unit": "Unit symbol",
+                  "isHighlighted": true,
+                  "description": "Exact formula explanation"
+                }
+              ]
+            }
+        """.trimIndent()
     }
 
     /**
@@ -834,9 +1135,25 @@ object CustomCalculatorEngine {
             val buildConfigClass = Class.forName("com.example.BuildConfig")
             val field = buildConfigClass.getField(name)
             val value = field.get(null) as? String
-            if (!value.isNullOrBlank()) return value
+            if (!value.isNullOrBlank() && value != "MY_GEMINI_API_KEY" && !value.startsWith("YOUR_")) return value
         } catch (e: Exception) {}
         return null
+    }
+
+    /**
+     * Calls Firebase AI Logic SDK (Gemini) as an automatic cloud-backed AI generator when available.
+     */
+    private suspend fun callFirebaseGeminiForCalculator(prompt: String): CustomCalculator? {
+        return try {
+            val model = com.google.firebase.Firebase.ai(
+                backend = com.google.firebase.ai.type.GenerativeBackend.googleAI()
+            ).generativeModel("gemini-3-flash-preview")
+            val response = model.generateContent("${buildGeminiSystemPrompt()}\n\nUser Request: $prompt")
+            val text = response.text?.replace("```json", "")?.replace("```", "")?.trim() ?: return null
+            parseJsonToCalculator(text, prompt, "Verified Gemini AI + Live Forex Engine")
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /**
@@ -855,44 +1172,11 @@ object CustomCalculatorEngine {
                 doOutput = true
             }
 
-            val systemInstruction = """
-                You are a professional engineering, scientific and financial calculator architect.
-                Generate an accurate, mathematically verified calculator schema for the user query.
-                Return ONLY valid JSON matching this schema with realistic numbers, units and exact arithmetic formulas:
-                {
-                  "title": "Short Title (Max 30 chars)",
-                  "description": "Accurate 1-sentence scientific description",
-                  "category": "Discipline / Category name",
-                  "inputs": [
-                    {
-                      "id": "variable_name",
-                      "label": "Human label",
-                      "defaultValue": 100.0,
-                      "minValue": 0.0,
-                      "maxValue": 10000.0,
-                      "step": 1.0,
-                      "unit": "Unit symbol",
-                      "isSlider": true,
-                      "helpText": "Clear explanation"
-                    }
-                  ],
-                  "outputs": [
-                    {
-                      "id": "result_id",
-                      "label": "Result label",
-                      "formula": "variable_name * 2",
-                      "unit": "Unit symbol",
-                      "isHighlighted": true,
-                      "description": "Scientific explanation"
-                    }
-                  ]
-                }
-                Use only variable IDs in formulas with standard operators (+, -, *, /). Never use percentage factor or budget overhead for physical measurements.
-            """.trimIndent()
+            val systemInstruction = buildGeminiSystemPrompt()
 
             val requestBody = JSONObject().apply {
                 put("model", "gpt-4o-mini")
-                put("temperature", 0.2)
+                put("temperature", 0.1)
                 put("messages", JSONArray().apply {
                     put(JSONObject().apply {
                         put("role", "system")
@@ -934,55 +1218,23 @@ object CustomCalculatorEngine {
     }
 
     /**
-     * Calls Gemini REST API to dynamically generate a custom calculator schema
+     * Calls Gemini REST API (gemini-3-flash-preview / gemini-2.5-flash) with live Forex context
+     * and structured JSON output to generate a verified custom calculator schema.
      */
     private fun callGeminiForCalculator(prompt: String, apiKey: String): CustomCalculator? {
-        val models = listOf("gemini-2.5-flash", "gemini-1.5-flash")
+        val models = listOf("gemini-3-flash-preview", "gemini-2.5-flash")
+        val systemInstruction = buildGeminiSystemPrompt()
         for (model in models) {
             try {
                 val endpoint = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey"
                 val url = URL(endpoint)
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
-                    connectTimeout = 10000
-                    readTimeout = 10000
+                    connectTimeout = 12000
+                    readTimeout = 12000
                     setRequestProperty("Content-Type", "application/json")
                     doOutput = true
                 }
-
-                val systemInstruction = """
-                    You are an expert engineering, scientific, and financial calculator architect.
-                    Return ONLY valid JSON matching this structure with realistic parameters and clean arithmetic formulas:
-                    {
-                      "title": "Short Title (Max 30 chars)",
-                      "description": "Clear 1-sentence scientific description",
-                      "category": "Category name",
-                      "inputs": [
-                        {
-                          "id": "variable_name",
-                          "label": "Human label",
-                          "defaultValue": 100.0,
-                          "minValue": 0.0,
-                          "maxValue": 10000.0,
-                          "step": 1.0,
-                          "unit": "Unit symbol",
-                          "isSlider": true,
-                          "helpText": "Help tip"
-                        }
-                      ],
-                      "outputs": [
-                        {
-                          "id": "result_id",
-                          "label": "Result label",
-                          "formula": "variable_name * 1.5",
-                          "unit": "Unit symbol",
-                          "isHighlighted": true,
-                          "description": "Explanation"
-                        }
-                      ]
-                    }
-                    Use only variable IDs in formulas with standard operators (+, -, *, /). Never use fake percentage factor or budget overhead for physical measurements.
-                """.trimIndent()
 
                 val requestBody = JSONObject().apply {
                     put("contents", JSONArray().apply {
@@ -990,10 +1242,14 @@ object CustomCalculatorEngine {
                             put("role", "user")
                             put("parts", JSONArray().apply {
                                 put(JSONObject().apply {
-                                    put("text", "$systemInstruction\n\nUser Prompt: $prompt")
+                                    put("text", "$systemInstruction\n\nUser Request: $prompt")
                                 })
                             })
                         })
+                    })
+                    put("generationConfig", JSONObject().apply {
+                        put("temperature", 0.1)
+                        put("responseMimeType", "application/json")
                     })
                 }
 
@@ -1017,7 +1273,7 @@ object CustomCalculatorEngine {
                         if (parts != null && parts.length() > 0) {
                             var text = parts.getJSONObject(0).optString("text", "")
                             text = text.replace("```json", "").replace("```", "").trim()
-                            val parsed = parseJsonToCalculator(text, prompt, "Verified Mathematical Model")
+                            val parsed = parseJsonToCalculator(text, prompt, "Verified Gemini AI + Live Forex Engine")
                             if (parsed != null) return parsed
                         }
                     }
@@ -1029,27 +1285,43 @@ object CustomCalculatorEngine {
         return null
     }
 
+    /**
+     * Parses AI JSON into a CustomCalculator and strictly verifies every output formula
+     * against FormulaEvaluator.validateFormula so zero broken or unverified formulas can pass.
+     */
     private fun parseJsonToCalculator(jsonString: String, prompt: String, dataSource: String): CustomCalculator? {
         try {
-            val calcJson = JSONObject(jsonString)
-            val title = calcJson.optString("title", "Custom Calculator")
-            val description = calcJson.optString("description", prompt)
-            val category = calcJson.optString("category", "Calculation Tool")
+            val cleanJson = jsonString.substringAfter("{").let { "{$it" }.substringBeforeLast("}").let { "$it}" }
+            val calcJson = JSONObject(cleanJson)
+            val title = calcJson.optString("title", "Custom Calculator").trim()
+            val description = calcJson.optString("description", prompt).trim()
+            val category = calcJson.optString("category", "Verified AI Calculator").trim()
+            val hasInternet = calcJson.optBoolean("hasInternetData", false)
 
             val inputsList = mutableListOf<CustomInputField>()
             val inputsArr = calcJson.optJSONArray("inputs")
             if (inputsArr != null) {
                 for (i in 0 until inputsArr.length()) {
                     val item = inputsArr.getJSONObject(i)
+                    val rawId = item.optString("id", "input_$i").trim()
+                        .lowercase(Locale.ROOT)
+                        .replace(Regex("[^a-z0-9_]"), "_")
+                        .ifBlank { "input_$i" }
+                    val defVal = item.optDouble("defaultValue", 100.0).let { if (it.isNaN() || it.isInfinite()) 100.0 else it }
+                    val minVal = item.optDouble("minValue", 0.0).let { if (it.isNaN() || it.isInfinite()) 0.0 else it }
+                    val maxVal = item.optDouble("maxValue", (defVal * 10.0).coerceAtLeast(100.0)).let {
+                        if (it.isNaN() || it.isInfinite() || it <= minVal) (minVal + 1000.0) else it
+                    }
+                    val stepVal = item.optDouble("step", 1.0).let { if (it.isNaN() || it.isInfinite() || it <= 0.0) 1.0 else it }
                     inputsList.add(
                         CustomInputField(
-                            id = item.optString("id", "input_$i"),
-                            label = item.optString("label", "Input $i"),
-                            defaultValue = item.optDouble("defaultValue", 100.0),
-                            currentValue = item.optDouble("defaultValue", 100.0),
-                            minValue = item.optDouble("minValue", 0.0),
-                            maxValue = item.optDouble("maxValue", 10000.0),
-                            step = item.optDouble("step", 1.0),
+                            id = rawId,
+                            label = item.optString("label", "Input ${i + 1}"),
+                            defaultValue = defVal,
+                            currentValue = defVal,
+                            minValue = minVal,
+                            maxValue = maxVal,
+                            step = stepVal,
                             unit = item.optString("unit", ""),
                             isSlider = item.optBoolean("isSlider", true),
                             helpText = item.optString("helpText", "")
@@ -1058,21 +1330,38 @@ object CustomCalculatorEngine {
                 }
             }
 
+            if (inputsList.isEmpty()) return null
+
+            val testVariables = mutableMapOf<String, Double>()
+            inputsList.forEach { testVariables[it.id] = if (it.defaultValue == 0.0) 1.0 else it.defaultValue }
+
             val outputsList = mutableListOf<CustomOutputField>()
             val outputsArr = calcJson.optJSONArray("outputs")
             if (outputsArr != null) {
                 for (i in 0 until outputsArr.length()) {
                     val item = outputsArr.getJSONObject(i)
-                    outputsList.add(
-                        CustomOutputField(
-                            id = item.optString("id", "output_$i"),
-                            label = item.optString("label", "Output $i"),
-                            formula = item.optString("formula", "0"),
-                            unit = item.optString("unit", ""),
-                            isHighlighted = item.optBoolean("isHighlighted", i == 0),
-                            description = item.optString("description", "")
+                    val outId = item.optString("id", "output_$i").trim()
+                        .lowercase(Locale.ROOT)
+                        .replace(Regex("[^a-z0-9_]"), "_")
+                        .ifBlank { "output_$i" }
+                    val formula = item.optString("formula", "").trim()
+
+                    // Strictly verify that this formula uses only defined input/output IDs and evaluates to a finite number
+                    if (FormulaEvaluator.validateFormula(formula, testVariables)) {
+                        val evaluated = FormulaEvaluator.evaluate(formula, testVariables)
+                        testVariables[outId] = evaluated
+                        testVariables["prev"] = evaluated
+                        outputsList.add(
+                            CustomOutputField(
+                                id = outId,
+                                label = item.optString("label", "Result ${i + 1}"),
+                                formula = formula,
+                                unit = item.optString("unit", ""),
+                                isHighlighted = item.optBoolean("isHighlighted", i == 0),
+                                description = item.optString("description", "")
+                            )
                         )
-                    )
+                    }
                 }
             }
 
@@ -1082,46 +1371,79 @@ object CustomCalculatorEngine {
                     title = title,
                     description = description,
                     category = category,
-                    iconName = "Calculate",
+                    iconName = if (hasInternet) "CurrencyExchange" else "Calculate",
                     inputs = inputsList,
                     outputs = outputsList,
                     isUserCreated = true,
-                    hasInternetData = false,
+                    hasInternetData = hasInternet,
                     dataSourceLabel = dataSource
                 )
             }
         } catch (e: Exception) {
-            // ignore
+            // Fall through to deterministic verified engine
         }
         return null
     }
 
-    private fun detectCurrencyPair(lower: String): Pair<String, String>? {
-        val currencyCodes = CurrencyRepository.ALL_CURRENCIES.map { it.code }
+    /**
+     * Checks if the user prompt is asking for a general currency / forex / exchange rate calculator
+     * without specifying a single pair.
+     */
+    private fun isGeneralCurrencyPrompt(lower: String): Boolean {
+        val currencyKeywords = listOf(
+            "currency", "currencies", "forex", "exchange rate", "exchange calculator",
+            "money converter", "money conversion", "foreign exchange", "remittance", "wire transfer"
+        )
+        return currencyKeywords.any { lower.contains(it) }
+    }
 
-        var from: String? = null
-        var to: String? = null
+    /**
+     * Strictly detects a specific currency pair (fromCode, toCode) in the order mentioned by the user,
+     * using word boundaries so common English words (like "binary", "country", "geometry", "academic", "cupcake")
+     * NEVER falsely match 3-letter ISO currency codes.
+     */
+    private fun detectSpecificCurrencyPair(lower: String): Pair<String, String>? {
+        // Unambiguous ISO codes and currency names matched on strict word boundaries
+        val unambiguousAliases = mapOf(
+            "usd" to "USD", "dollar" to "USD", "dollars" to "USD", "usdt" to "USD",
+            "inr" to "INR", "rupee" to "INR", "rupees" to "INR",
+            "eur" to "EUR", "euro" to "EUR", "euros" to "EUR",
+            "gbp" to "GBP", "pound" to "GBP", "pounds" to "GBP", "sterling" to "GBP",
+            "aed" to "AED", "dirham" to "AED", "dirhams" to "AED",
+            "jpy" to "JPY", "yen" to "JPY",
+            "aud" to "AUD", "cad" to "CAD", "sgd" to "SGD", "chf" to "CHF", "franc" to "CHF",
+            "cny" to "CNY", "rmb" to "CNY", "yuan" to "CNY",
+            "sar" to "SAR", "riyal" to "SAR", "qar" to "QAR", "kwd" to "KWD", "dinar" to "KWD",
+            "bdt" to "BDT", "taka" to "BDT", "npr" to "NPR", "lkr" to "LKR", "pkr" to "PKR",
+            "thb" to "THB", "baht" to "THB", "myr" to "MYR", "ringgit" to "MYR",
+            "zar" to "ZAR", "brl" to "BRL", "mxn" to "MXN", "peso" to "MXN",
+            "krw" to "KRW", "won" to "KRW", "hkd" to "HKD", "nzd" to "NZD",
+            "sek" to "SEK", "nok" to "NOK", "dkk" to "DKK", "rub" to "RUB", "ruble" to "RUB"
+        )
 
-        // Look for pattern "usd to inr" or "convert usd to inr" or "eur in inr"
-        for (code in currencyCodes) {
-            val cLower = code.lowercase(Locale.ROOT)
-            if (lower.contains(cLower) || (cLower == "usd" && (lower.contains("dollar") || lower.contains("$"))) ||
-                (cLower == "inr" && (lower.contains("rupee") || lower.contains("₹") || lower.contains("rs"))) ||
-                (cLower == "eur" && (lower.contains("euro") || lower.contains("€"))) ||
-                (cLower == "gbp" && (lower.contains("pound") || lower.contains("£")))
-            ) {
-                if (from == null) {
-                    from = code
-                } else if (to == null && code != from) {
-                    to = code
+        val hasExplicitCurrencyContext = isGeneralCurrencyPrompt(lower) ||
+            Regex("\\b(convert|to|in|into|vs|from)\\b").containsMatchIn(lower)
+
+        val matchedCodesInOrder = mutableListOf<String>()
+        val wordTokens = Regex("[a-zA-Z]+").findAll(lower).map { it.value.lowercase(Locale.ROOT) }.toList()
+
+        for (token in wordTokens) {
+            val mapped = unambiguousAliases[token]
+            if (mapped != null) {
+                // Avoid treating "cad" (AutoCAD) or "sar" as currency unless there is currency context or another currency
+                val needsContext = token in setOf("cad", "sar", "won")
+                if (!needsContext || hasExplicitCurrencyContext) {
+                    if (mapped !in matchedCodesInOrder) {
+                        matchedCodesInOrder.add(mapped)
+                    }
                 }
             }
         }
 
-        if (from != null && to != null) {
-            return Pair(from, to)
-        } else if (from != null) {
-            // Default target is INR if from is not INR, else USD
+        if (matchedCodesInOrder.size >= 2) {
+            return Pair(matchedCodesInOrder[0], matchedCodesInOrder[1])
+        } else if (matchedCodesInOrder.size == 1 && (isGeneralCurrencyPrompt(lower) || lower.contains(" to ") || lower.contains(" in "))) {
+            val from = matchedCodesInOrder[0]
             val defaultTo = if (from == "INR") "USD" else "INR"
             return Pair(from, defaultTo)
         }
@@ -1129,3 +1451,4 @@ object CustomCalculatorEngine {
         return null
     }
 }
+

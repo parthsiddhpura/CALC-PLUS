@@ -23,17 +23,16 @@ class HistoryWidgetProvider : AppWidgetProvider() {
             val theme = WidgetDataManager.getThemeFamily(context)
             val views = RemoteViews(context.packageName, R.layout.widget_history)
 
-            views.setInt(R.id.widget_root, "setBackgroundResource", theme.bgRes)
+            theme.applyRoot(views, R.id.widget_root)
+            theme.applyButton(views, R.id.btn_open_app_history, isAccent = true)
             views.setTextColor(R.id.widget_title, theme.headerTextColorHex)
 
-            // Setup ListView adapter
             val serviceIntent = Intent(context, HistoryWidgetService::class.java).apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
                 data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
             }
             views.setRemoteAdapter(R.id.widget_history_list, serviceIntent)
 
-            // PendingIntent Template for list item click
             val itemClickIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(CalculatorAppWidgetProvider.EXTRA_MODE, "STANDARD")
@@ -44,7 +43,6 @@ class HistoryWidgetProvider : AppWidgetProvider() {
             )
             views.setPendingIntentTemplate(R.id.widget_history_list, itemClickPendingIntent)
 
-            // Open All button -> opens app
             val openAllIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(CalculatorAppWidgetProvider.EXTRA_MODE, "STANDARD")

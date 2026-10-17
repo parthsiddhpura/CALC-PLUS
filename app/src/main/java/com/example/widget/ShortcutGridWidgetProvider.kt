@@ -22,10 +22,10 @@ class ShortcutGridWidgetProvider : AppWidgetProvider() {
             val theme = WidgetDataManager.getThemeFamily(context)
             val views = RemoteViews(context.packageName, R.layout.widget_shortcut_grid)
 
-            views.setInt(R.id.widget_root, "setBackgroundResource", theme.bgRes)
+            theme.applyRoot(views, R.id.widget_root)
+            theme.applyThemeCycleButton(views, R.id.btn_theme_cycle)
             views.setTextColor(R.id.widget_title, theme.headerTextColorHex)
 
-            // Setup the 6 shortcuts
             val shortcuts = WidgetDataManager.getShortcuts()
             val buttonIds = listOf(
                 R.id.btn_shortcut_1,
@@ -37,6 +37,8 @@ class ShortcutGridWidgetProvider : AppWidgetProvider() {
             )
 
             for (i in buttonIds.indices) {
+                val isAccentBtn = i == 0 || i == 5
+                theme.applyButton(views, buttonIds[i], isAccent = isAccentBtn)
                 if (i in shortcuts.indices) {
                     val s = shortcuts[i]
                     views.setTextViewText(buttonIds[i], "${s.symbol} ${s.title}")
@@ -53,7 +55,6 @@ class ShortcutGridWidgetProvider : AppWidgetProvider() {
                 }
             }
 
-            // Theme Cycle
             val themeIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_CYCLE_THEME
             }
