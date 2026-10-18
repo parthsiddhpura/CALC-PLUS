@@ -21,6 +21,11 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountTree
@@ -158,6 +163,11 @@ fun MoreModesSheet(
     sheetState: SheetState,
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var showSupportSheet by remember { mutableStateOf(false) }
+    val supportSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val visibleModes = MORE_MODES
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -228,7 +238,70 @@ fun MoreModesSheet(
                     .fillMaxWidth()
                     .navigationBarsPadding()
             ) {
-                items(MORE_MODES, key = { it.mode.name }) { item ->
+                // Developer Support & Donation Card
+                item {
+                    DeveloperSupportCard(
+                        theme = theme,
+                        onOpenSupportSheet = { showSupportSheet = true }
+                    )
+                }
+
+                // Interactive Widget Customizer Shortcut
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = theme.cardBackground,
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = 1.dp,
+                            color = theme.accentColor.copy(alpha = 0.35f)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val intent = android.content.Intent(context, com.example.widget.WidgetValueEditorActivity::class.java).apply {
+                                    putExtra(com.example.widget.WidgetValueEditorActivity.EXTRA_WIDGET_TYPE, "GST")
+                                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                }
+                                context.startActivity(intent)
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = theme.accentColor.copy(alpha = 0.15f),
+                                modifier = Modifier.size(42.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Calculate,
+                                        contentDescription = null,
+                                        tint = theme.accentColor,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Home Screen Widget Customizer",
+                                    color = theme.onSurfaceTextColor,
+                                    fontSize = 14.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Customize live GST, EMI, and Quick Calc values",
+                                    color = theme.onSurfaceSubtextColor,
+                                    fontSize = 11.5.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                items(visibleModes, key = { it.mode.name }) { item ->
                     val isSelected = item.mode == activeMode
                     Surface(
                         shape = RoundedCornerShape(14.dp),
@@ -340,5 +413,13 @@ fun MoreModesSheet(
                 }
             }
         }
+    }
+
+    if (showSupportSheet) {
+        DeveloperSupportSheet(
+            theme = theme,
+            sheetState = supportSheetState,
+            onDismiss = { showSupportSheet = false }
+        )
     }
 }

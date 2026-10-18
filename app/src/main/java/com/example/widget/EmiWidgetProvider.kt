@@ -44,15 +44,15 @@ class EmiWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.emi_terms_text, "${WidgetDataManager.formatNum(rate)}% • $tenure Years")
             views.setTextViewText(R.id.emi_result_text, "${WidgetDataManager.formatCurrency(emi)} / mo")
 
-            val openIntent = Intent(context, MainActivity::class.java).apply {
+            val editIntent = Intent(context, WidgetValueEditorActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra(CalculatorAppWidgetProvider.EXTRA_MODE, "EMI_LOAN")
+                putExtra(WidgetValueEditorActivity.EXTRA_WIDGET_TYPE, "EMI")
             }
-            val openPendingIntent = PendingIntent.getActivity(
-                context, 601, openIntent,
+            val editPendingIntent = PendingIntent.getActivity(
+                context, 601, editIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.btn_open_emi_calc, openPendingIntent)
+            views.setOnClickPendingIntent(R.id.btn_open_emi_calc, editPendingIntent)
 
             val tenureSubIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_EMI_ADJUST_TENURE

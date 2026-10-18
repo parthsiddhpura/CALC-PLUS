@@ -107,17 +107,15 @@ object WidgetDataManager {
     fun getActiveAppTheme(context: Context): ThemePalette {
         val basePalette = CalculatorThemes.getThemeById(getActiveAppThemeId(context))
         val appPrefs = getAppPrefs(context)
-        return if (appPrefs.contains("custom_accent_color")) {
-            val customColorLong = appPrefs.getLong("custom_accent_color", 0L)
-            if (customColorLong != 0L) {
-                val customAccent = androidx.compose.ui.graphics.Color(customColorLong.toULong())
-                basePalette.copy(
-                    accentColor = customAccent,
-                    operatorButtonBg = customAccent
-                )
-            } else {
-                basePalette
-            }
+        val localAccentLong = if (appPrefs.contains("custom_accent_color")) {
+            appPrefs.getLong("custom_accent_color", 0L).takeIf { it != 0L }
+        } else null
+        return if (localAccentLong != null) {
+            val customAccent = androidx.compose.ui.graphics.Color(localAccentLong.toInt())
+            basePalette.copy(
+                accentColor = customAccent,
+                operatorButtonBg = customAccent
+            )
         } else {
             basePalette
         }
@@ -437,6 +435,41 @@ object WidgetDataManager {
     fun adjustPercentageBase(context: Context, delta: Double) {
         val current = (getPercentageBase(context) + delta).coerceAtLeast(100.0)
         getPrefs(context).edit().putFloat(KEY_PERCENT_BASE, current.toFloat()).apply()
+        notifyAllWidgets(context)
+    }
+
+    // --- Direct Widget Value Customizers (Interactive Tap-to-Edit Dialogs) ---
+    fun setGstValues(context: Context, amount: Double, rate: Double, isAdd: Boolean) {
+        getPrefs(context).edit()
+            .putFloat(KEY_GST_AMOUNT, amount.coerceAtLeast(0.0).toFloat())
+            .putFloat(KEY_GST_RATE, rate.coerceIn(0.0, 100.0).toFloat())
+            .putBoolean(KEY_GST_IS_ADD, isAdd)
+            .apply()
+        notifyAllWidgets(context)
+    }
+
+    fun setEmiValues(context: Context, principal: Double, rate: Double, tenureYears: Int) {
+        getPrefs(context).edit()
+            .putFloat(KEY_EMI_PRINCIPAL, principal.coerceAtLeast(1000.0).toFloat())
+            .putFloat(KEY_EMI_RATE, rate.coerceIn(0.1, 50.0).toFloat())
+            .putInt(KEY_EMI_TENURE, tenureYears.coerceIn(1, 40))
+            .apply()
+        notifyAllWidgets(context)
+    }
+
+    fun setPercentageValues(context: Context, base: Double, rate: Double) {
+        getPrefs(context).edit()
+            .putFloat(KEY_PERCENT_BASE, base.coerceAtLeast(0.0).toFloat())
+            .putFloat(KEY_PERCENT_RATE, rate.coerceIn(0.0, 1000.0).toFloat())
+            .apply()
+        notifyAllWidgets(context)
+    }
+
+    fun setQuickCalcValues(context: Context, buffer: String, result: String) {
+        getPrefs(context).edit()
+            .putString(KEY_QUICK_CALC_BUFFER, buffer)
+            .putString(KEY_QUICK_CALC_RESULT, result)
+            .apply()
         notifyAllWidgets(context)
     }
 

@@ -54,6 +54,7 @@ object DisplayFontHelper {
             DisplayFontType.ROUNDED -> RoundedFont
             DisplayFontType.PIXEL_8BIT -> PixelFont
             DisplayFontType.KAWAII_CANDY -> KawaiiFont
+            DisplayFontType.NOTHING_NDOT -> PixelFont
         }
     }
 
@@ -62,6 +63,7 @@ object DisplayFontHelper {
             DisplayFontType.DIGITAL_LCD -> 2.0.sp
             DisplayFontType.MONOSPACE -> 0.6.sp
             DisplayFontType.PIXEL_8BIT -> 1.5.sp
+            DisplayFontType.NOTHING_NDOT -> 2.5.sp
             else -> 0.sp
         }
     }
@@ -70,6 +72,7 @@ object DisplayFontHelper {
         return when (fontType) {
             DisplayFontType.DIGITAL_LCD -> FontWeight.Bold
             DisplayFontType.PIXEL_8BIT -> FontWeight.ExtraBold
+            DisplayFontType.NOTHING_NDOT -> FontWeight.Black
             DisplayFontType.ROUNDED -> if (isResult) FontWeight.Bold else FontWeight.Medium
             DisplayFontType.MONOSPACE -> if (isResult) FontWeight.Bold else FontWeight.Normal
             else -> if (isResult) FontWeight.Bold else FontWeight.Medium

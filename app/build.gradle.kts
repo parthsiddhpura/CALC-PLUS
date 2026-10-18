@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.chromacalc.bbduoj"
     minSdk = 24
     targetSdk = 36
-    versionCode = 93
-    versionName = "93.0"
+    versionCode = 94
+    versionName = "9.4"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -73,6 +73,9 @@ android {
     includeInApk = false
     includeInBundle = true
   }
+  androidResources {
+    localeFilters += listOf("en")
+  }
 }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
@@ -122,6 +125,7 @@ dependencies {
   // implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
+  implementation(libs.play.billing.ktx)
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 

@@ -493,16 +493,18 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         val shape = state.customShapeType ?: base.shapeType
         val font = state.customDisplayFont ?: base.displayFont
         val scanlines = state.displayConfig.showScanlinesOverride ?: base.hasScanlines
-        val radius = when (state.customShapeType) {
-            ButtonShapeType.PILL -> 24.dp
-            ButtonShapeType.CIRCLE -> 24.dp
-            ButtonShapeType.SQUIRCLE -> 16.dp
-            ButtonShapeType.ROUNDED_SQUARE -> 8.dp
-            ButtonShapeType.BRUTALIST_RECT -> 4.dp
-            ButtonShapeType.PIXEL_BLOCK -> 3.dp
-            ButtonShapeType.GLOSSY_JELLY -> 16.dp
-            ButtonShapeType.NEKO_EARS -> 18.dp
-            null -> base.cornerRadiusDp
+        val radius = when {
+            state.customShapeType != null -> when (state.customShapeType) {
+                ButtonShapeType.PILL -> 24.dp
+                ButtonShapeType.CIRCLE -> 24.dp
+                ButtonShapeType.SQUIRCLE -> 16.dp
+                ButtonShapeType.ROUNDED_SQUARE -> 8.dp
+                ButtonShapeType.BRUTALIST_RECT -> 4.dp
+                ButtonShapeType.PIXEL_BLOCK -> 3.dp
+                ButtonShapeType.GLOSSY_JELLY -> 16.dp
+                ButtonShapeType.NEKO_EARS -> 18.dp
+            }
+            else -> base.cornerRadiusDp
         }
         val contrastText = if (customAccent != null) {
             val lum = (0.299 * customAccent.red + 0.587 * customAccent.green + 0.114 * customAccent.blue)

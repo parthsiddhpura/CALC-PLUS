@@ -179,10 +179,11 @@ fun SettingsSheet(
     var languageSearchQuery by remember { mutableStateOf("") }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
     var resetSuccessMessage by remember { mutableStateOf<String?>(null) }
+    var showSupportSheet by remember { mutableStateOf(false) }
 
     val haptics = LocalHapticFeedback.current
 
-    val categories = listOf("All", "Retro", "Futuristic", "Modern Art", "Minimal & Aesthetic", "Atmospheric", "Playful", "Luxury & Clean")
+    val categories = listOf("All", "Luxury & Clean", "Futuristic", "Minimal & Aesthetic", "Retro", "Modern Art", "Atmospheric", "Playful")
 
     val filteredThemes = remember(themeCategory, themeSearchQuery, themeFilterDarkLight) {
         CalculatorThemes.allThemes.filter { theme ->
@@ -202,7 +203,7 @@ fun SettingsSheet(
     }
 
     val effectiveTheme = remember(activeTheme) {
-        val themeIsLightBg = activeTheme.surfaceColor.luminance() > 0.45f || activeTheme.backgroundColor.luminance() > 0.45f
+        val themeIsLightBg = !activeTheme.isDark && (activeTheme.surfaceColor.luminance() > 0.45f || activeTheme.backgroundColor.luminance() > 0.45f)
         if (themeIsLightBg && (activeTheme.screenTextColor.luminance() > 0.45f || activeTheme.id == ThemeId.NEKO_MOCHI_CAT)) {
             activeTheme.copy(
                 screenTextColor = if (activeTheme.id == ThemeId.NEKO_MOCHI_CAT) Color(0xFF3B1A23) else Color(0xFF1E1E1E),
@@ -479,7 +480,9 @@ fun SettingsSheet(
                                     ) {
                                         Text(
                                             text = cat,
-                                            color = if (isCatSelected) activeTheme.backgroundColor else activeTheme.screenExpressionColor,
+                                            color = if (isCatSelected) {
+                                                if (activeTheme.accentColor.luminance() > 0.6f) Color(0xFF1E1E1E) else Color.White
+                                            } else activeTheme.screenExpressionColor,
                                             fontSize = 12.sp,
                                             fontWeight = if (isCatSelected) FontWeight.Bold else FontWeight.Normal,
                                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
@@ -491,7 +494,10 @@ fun SettingsSheet(
                     }
 
                     // Themes Grid
-                    items(filteredThemes.chunked(2)) { pair ->
+                    items(
+                        items = filteredThemes.chunked(2),
+                        key = { pair -> pair.first().id.name }
+                    ) { pair ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -515,7 +521,7 @@ fun SettingsSheet(
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            val cardTitleColor = if (themeItem.cardBackground.luminance() > 0.45f) {
+                                            val cardTitleColor = if (!themeItem.isDark && themeItem.cardBackground.luminance() > 0.45f) {
                                                 if (themeItem.id == ThemeId.NEKO_MOCHI_CAT || themeItem.isNekoMochi) Color(0xFF3B1A23)
                                                 else if (themeItem.isGirlMath) Color(0xFF4A202D)
                                                 else Color(0xFF1E293B)
@@ -542,7 +548,7 @@ fun SettingsSheet(
 
                                         Spacer(modifier = Modifier.height(4.dp))
 
-                                        val cardSubtitleColor = if (themeItem.cardBackground.luminance() > 0.45f) {
+                                        val cardSubtitleColor = if (!themeItem.isDark && themeItem.cardBackground.luminance() > 0.45f) {
                                             if (themeItem.id == ThemeId.NEKO_MOCHI_CAT || themeItem.isNekoMochi) Color(0xFF70404C)
                                             else if (themeItem.isGirlMath) Color(0xFF8A5563)
                                             else Color(0xFF64748B)
@@ -595,6 +601,7 @@ fun SettingsSheet(
                                             }
 
                                             val hasMotion = themeItem.hasBatSignal || themeItem.hasArcReactor ||
+                                                    themeItem.isLiquidGlass || themeItem.isNothingOs ||
                                                     themeItem.isOrtylMinimal || themeItem.isOledStealthVoid ||
                                                     themeItem.isStarryGotham || themeItem.isCosmicSingularity ||
                                                     themeItem.isHarryPotter || themeItem.isPearlescent3D ||
@@ -1545,13 +1552,8 @@ fun SettingsSheet(
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        androidx.compose.foundation.Image(
-                                            painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_app_logo),
-                                            contentDescription = "Official App Logo",
-                                            modifier = Modifier.size(46.dp)
-                                        )
                                         Column {
                                             Text(
                                                 text = "CALC +",
@@ -1575,7 +1577,7 @@ fun SettingsSheet(
                                         border = androidx.compose.foundation.BorderStroke(1.dp, activeTheme.accentColor.copy(alpha = 0.4f))
                                     ) {
                                         Text(
-                                            text = "v9.0 STABLE",
+                                            text = "v9.4 STABLE",
                                             color = activeTheme.accentColor,
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
@@ -1650,7 +1652,7 @@ fun SettingsSheet(
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
-                                            text = "parthgsiddhpura@gmail.com • Gujarat, India",
+                                            text = "parthgsiddhpura@gmail.com • Ahmedabad, Gujarat, India",
                                             color = activeTheme.screenExpressionColor,
                                             fontSize = 11.sp
                                         )
@@ -1660,13 +1662,46 @@ fun SettingsSheet(
                                 HorizontalDivider(color = activeTheme.surfaceColor)
 
                                 Text(
-                                    text = "Parth Siddhpura is an Android engineer, UI/UX craftsman, and system designer dedicated to building high-precision, tactile, and aesthetically inspiring digital instruments. Passionate about blending vintage industrial hardware design (Dieter Rams' Braun, Casio engineering, Teenage Engineering, and Swiss Bauhaus) with modern Jetpack Compose architecture, Parth crafted Calc+ to bring physical weight, haptic feedback, analog warmth, and multi-disciplinary utility to the digital touchscreen.",
-                                    color = activeTheme.screenTextColor.copy(alpha = 0.88f),
-                                    fontSize = 12.5.sp,
-                                    lineHeight = 18.sp
+                                    text = "Parth Siddhpura is an Indian software developer, composer, author, and independent publisher based in Ahmedabad, Gujarat. Working across software engineering, music production (Prime Pulse Records, KNPS MUSIC), and digital publishing ('Quantum Nexus', 'Always & Forever' series), his work focuses on combining technical precision with refined, human-centric design.",
+                                    color = activeTheme.screenTextColor.copy(alpha = 0.90f),
+                                    fontSize = 12.sp,
+                                    lineHeight = 17.5.sp
                                 )
+
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = activeTheme.surfaceColor.copy(alpha = 0.55f),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = "ABOUT THIS APP'S DEVELOPMENT",
+                                            color = activeTheme.accentColor,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 0.5.sp
+                                        )
+                                        Text(
+                                            text = "CALC + was independently architected from the ground up as a 100% offline, ad-free computing instrument. Every multi-engine calculator, live home-screen widget, Android Auto vehicle dashboard companion, tactile haptic pulse, and GPU-accelerated theme (including Liquid Glass and Nothing OS) was crafted with care to deliver a fast, distraction-free studio experience.",
+                                            color = activeTheme.screenExpressionColor,
+                                            fontSize = 11.5.sp,
+                                            lineHeight = 16.5.sp
+                                        )
+                                    }
+                                }
                             }
                         }
+                    }
+
+                    // Developer Voluntary Donation & Support Card
+                    item {
+                        DeveloperSupportCard(
+                            theme = activeTheme,
+                            onOpenSupportSheet = { showSupportSheet = true }
+                        )
                     }
 
                     // Reset to Factory Defaults Card
@@ -1716,7 +1751,7 @@ fun SettingsSheet(
                                 }
 
                                 Text(
-                                    text = "Pressing the button below will immediately reset the entire app back to default settings: restores the Retro Circuit 90034 theme, sets the thousand separator to Indian (Lakh/Crore), turns on keystroke click audio and haptic vibrations, restores English language, and clears all custom style overrides.",
+                                    text = "Pressing the button below will immediately reset the entire app back to default settings: restores The Dark Knight default theme, sets the thousand separator to Indian (Lakh/Crore), turns on keystroke click audio and haptic vibrations, restores English language, and clears all custom style overrides.",
                                     color = activeTheme.screenExpressionColor,
                                     fontSize = 12.sp,
                                     lineHeight = 17.sp
@@ -1771,7 +1806,7 @@ fun SettingsSheet(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = "What's New in Version 9.0",
+                                        text = "What's New in Version 9.4",
                                         color = activeTheme.screenTextColor,
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold
@@ -1779,13 +1814,16 @@ fun SettingsSheet(
                                 }
 
                                 val featureHighlights = listOf(
-                                    "Dark Knight Vengeance Engine (Default Theme)" to "The Dark Knight theme is now the premier default theme, featuring zero-allocation GPU rendering for butter-smooth 60/120 FPS animations, illuminated Gotham Bat-Signal, billowing cape waves, and interactive Batarang flight physics.",
-                                    "Default Indian (Lakh / Crore) Numbering" to "Displays format numbers using the Indian numbering system by default (e.g. ₹ 12,34,567.89 instead of 1,234,567.89), making GST, budgeting, and everyday arithmetic effortless to read. International Million/Billion and space styles remain selectable.",
-                                    "Kinetic Hardware Studio Themes" to "Features custom studio themes: Batman Dark Knight, Iron Man Arc Reactor, Retro Circuit 90034, Nothing Dossier Mono, Swiss Bauhaus Dossier, and Terracotta Studio.",
-                                    "10 Specialized Computing Engines" to "Standard with real-time live preview; Casio MJ-120GST inspired GST & Tax engine with +GST / -GST and custom slabs; Scientific laboratory with trigonometry, logs, and rad/deg; Draggable Worksheet & Paper Tape with exportable receipts; Programmer mode with QWORD/DWORD/WORD/BYTE bitwise logic; Loan EMI Calculator; Unit Converter (12+ categories); Live Currency Converter; Live Age Chronometer; and Dining Tip & Bill Splitter.",
-                                    "Custom Display Precision & Notation" to "Choose from Auto, 2, 4, 6 decimals or Full Exact precision, plus Standard, Scientific (1.25e+6), and Engineering (1.25 × 10⁶) notations with authentic CRT scanline filters.",
-                                    "Sensory Audio & Dynamic Haptics" to "Bespoke synthesized mechanical switch click sounds and haptic vibration for tactile keystroke feedback, coupled with responsive spring bounce physics.",
-                                    "12+ Languages & 100% Offline" to "Full internationalization for English, Hindi, Gujarati, Spanish, French, German, Japanese, and Chinese. Zero analytics tracking, 100% offline privacy, and local Room database persistence."
+                                    "Android Auto Dashboard Companion" to "Integrated official Android Auto (CarAppService) support for vehicle infotainment displays. Access a safe, driver-optimized Quick Calculator with custom presets, real-time Currency & Forex rates, Fuel & Road Trip travel cost estimator, and GST arithmetic directly from your car's center console.",
+                                    "Butter-Smooth 120Hz Engine & Clean Header UI" to "Streamlined the top header bar by removing logo clutter for a clean studio aesthetic. Engineered zero-recomposition GPU draw-phase button physics, instant text scaling, and automatic background animation pausing when sheets open for lag-free 120 FPS performance.",
+                                    "Liquid Glass & Nothing OS (Dark & Light) Themes" to "Added the Liquid Glass theme with high-contrast readability in More & Settings, floating ambient orbs, and jelly-squish tactile keys, plus Nothing OS (Dark & Light) with pulsing Glyph LED strips and authentic NDot 5×7 dot-matrix typography.",
+                                    "Interactive Tap-to-Edit Home Screen Widgets" to "Added 4 live home-screen widgets (Quick Calculator, GST Tax, Loan EMI, and Percentage). Tap directly on any widget or use the in-app Widget Values editor in More Tools to customize base amounts, GST slabs, interest rates, and loan tenure on the fly.",
+                                    "Google Play Billing & Custom Developer Tipping" to "Integrated official Google Play Console Billing (com.android.vending.BILLING) in the Support the Developer tab with preset tiers (Coffee, Lunch, Champion), an open Custom Tip input with no minimum amount, and high-contrast black Tip / Donate action badges.",
+                                    "100% Offline Privacy (Cloud Config Removed)" to "Completely removed cloud remote config polling so every theme, preset, and calculation executes 100% locally on-device with zero network latency and total privacy.",
+                                    "AI Math Copilot, Custom Builder & Calculation Chains" to "Includes natural-language AI Math Copilot, Custom Formula Calculator Builder with live variables, and multi-step linked Calculation Chains for complex workflows.",
+                                    "Draggable Worksheet & Paper Tape Receipts" to "Interactive financial worksheet and paper tape with live linked row references, customizable templates, and high-resolution receipt image export.",
+                                    "Age & Vedic Horoscope Report + 14 Engines" to "Comprehensive Age Chronometer with AstroSage-style Vedic Horoscope & printable PDF report, alongside Casio MJ-120GST Tax (+GST / -GST), Scientific Lab, Loan EMI, Real-Time Currency Converter, BMI Health Analyzer, Programmer Bitwise, Engineering Suite, Unit Converter, and Tip & Bill Splitter.",
+                                    "Refined Developer Profile & Factory Restore" to "Updated About section with a concise professional bio for Parth Siddhpura, app development overview, Indian (Lakh/Crore) default numbering, and one-tap Factory Defaults restore."
                                 )
 
                                 featureHighlights.forEachIndexed { index, (title, description) ->
@@ -1865,6 +1903,7 @@ fun SettingsSheet(
                             modifier = Modifier
                                 .weight(1f)
                                 .clickable { selectedSection = sectionKey }
+                                .testTag("settings_tab_$sectionKey")
                         ) {
                             Row(
                                 modifier = Modifier.padding(vertical = 8.dp, horizontal = 2.dp),
@@ -1942,6 +1981,7 @@ fun SettingsSheet(
                                         modifier = Modifier
                                             .weight(1f)
                                             .clickable { selectedSection = sectionKey }
+                                            .testTag("settings_tab_$sectionKey")
                                     ) {
                                         Column(
                                             modifier = Modifier.padding(vertical = 6.dp, horizontal = 2.dp),
@@ -2107,28 +2147,23 @@ fun SettingsSheet(
                                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        androidx.compose.foundation.Image(
-                                            painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_app_logo),
-                                            contentDescription = "Official App Logo",
-                                            modifier = Modifier.size(36.dp)
-                                        )
                                         Column(
                                             verticalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
                                             Text(
-                                                text = "CALC + Ultra",
+                                                text = "CALC +",
                                                 color = activeTheme.screenTextColor,
                                                 fontSize = 15.sp,
                                                 fontWeight = FontWeight.Bold
                                             )
                                             Text(
-                                                text = "Version 9.0 (Smooth Performance)",
+                                                text = "Version 9.4 (Code 94 • 120Hz Butter-Smooth)",
                                                 color = activeTheme.accentColor,
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.SemiBold
                                             )
                                             Text(
-                                                text = "All calculation engines running at zero latency with butter-smooth 60fps animations.",
+                                                text = "All calculation engines running at zero latency with butter-smooth GPU draw-phase animations.",
                                                 color = activeTheme.screenExpressionColor,
                                                 fontSize = 11.sp
                                             )
@@ -2144,6 +2179,14 @@ fun SettingsSheet(
                 }
             }
         }
+    }
+
+    if (showSupportSheet) {
+        DeveloperSupportSheet(
+            theme = activeTheme,
+            sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            onDismiss = { showSupportSheet = false }
+        )
     }
 }
 

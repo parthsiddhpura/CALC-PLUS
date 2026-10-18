@@ -121,6 +121,7 @@ fun CalculatorDisplay(
     onOpenHistory: (() -> Unit)? = null,
     onOpenDecimalConverter: (() -> Unit)? = null,
     onToggleNotation: (() -> Unit)? = null,
+    isAnimationsPaused: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -146,12 +147,6 @@ fun CalculatorDisplay(
         ),
         label = "cursor_alpha"
     )
-
-    LaunchedEffect(expression) {
-        if (exprScrollState.maxValue > 0) {
-            exprScrollState.scrollTo(exprScrollState.maxValue)
-        }
-    }
 
     val fontFamily = DisplayFontHelper.getFontFamily(theme.displayFont)
     val fontLetterSpacing = DisplayFontHelper.getLetterSpacing(theme.displayFont)
@@ -266,33 +261,35 @@ fun CalculatorDisplay(
             }
         }
 
-        // Batman Display Overlay (Bat-Signal searchlight, insignia, and tactile responses)
-        if (theme.hasBatSignal) {
-            BatmanDisplayOverlay(modifier = Modifier.matchParentSize())
-        } else if (theme.hasArcReactor) {
-            IronManDisplayOverlay(
-                modifier = Modifier.matchParentSize(),
-                suitType = theme.ironManSuit ?: com.example.model.IronManSuitType.MARK_85_CLASSIC,
-                accentColor = theme.accentColor
-            )
-        } else if (theme.isOrtylMinimal) {
-            OrtylDisplayOverlay(modifier = Modifier.matchParentSize())
-        } else if (theme.isOledStealthVoid) {
-            OledStealthVoidDisplayOverlay(modifier = Modifier.matchParentSize())
-        } else if (theme.isStarryGotham) {
-            StarryGothamDisplayOverlay(modifier = Modifier.matchParentSize())
-        } else if (theme.isCosmicSingularity) {
-            CosmicSingularityDisplayOverlay(modifier = Modifier.matchParentSize())
-        } else if (theme.isHarryPotter) {
-            HarryPotterDisplayOverlay(modifier = Modifier.matchParentSize())
-        } else if (theme.isPearlescent3D) {
-            Pearlescent3DDisplayOverlay(modifier = Modifier.matchParentSize())
-        } else {
-            // Unique professional ambient display animation for all other theme categories
-            ThemeAmbientDisplayAnimation(
-                modifier = Modifier.matchParentSize(),
-                theme = theme
-            )
+        // Ambient & Hero Display Overlays (paused while modal bottom sheets are open for 120fps sheet scrolling)
+        if (!isAnimationsPaused) {
+            if (theme.hasBatSignal) {
+                BatmanDisplayOverlay(modifier = Modifier.matchParentSize())
+            } else if (theme.hasArcReactor) {
+                IronManDisplayOverlay(
+                    modifier = Modifier.matchParentSize(),
+                    suitType = theme.ironManSuit ?: com.example.model.IronManSuitType.MARK_85_CLASSIC,
+                    accentColor = theme.accentColor
+                )
+            } else if (theme.isOrtylMinimal) {
+                OrtylDisplayOverlay(modifier = Modifier.matchParentSize())
+            } else if (theme.isOledStealthVoid) {
+                OledStealthVoidDisplayOverlay(modifier = Modifier.matchParentSize())
+            } else if (theme.isStarryGotham) {
+                StarryGothamDisplayOverlay(modifier = Modifier.matchParentSize())
+            } else if (theme.isCosmicSingularity) {
+                CosmicSingularityDisplayOverlay(modifier = Modifier.matchParentSize())
+            } else if (theme.isHarryPotter) {
+                HarryPotterDisplayOverlay(modifier = Modifier.matchParentSize())
+            } else if (theme.isPearlescent3D) {
+                Pearlescent3DDisplayOverlay(modifier = Modifier.matchParentSize())
+            } else {
+                // Unique professional ambient display animation for all other theme categories
+                ThemeAmbientDisplayAnimation(
+                    modifier = Modifier.matchParentSize(),
+                    theme = theme
+                )
+            }
         }
 
         Column(
@@ -401,6 +398,43 @@ fun CalculatorDisplay(
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     modifier = Modifier.padding(horizontal = if (isCompact) 5.dp else 7.dp, vertical = 2.dp)
+                                )
+                            }
+                        } else if (theme.isNothingOs) {
+                            Surface(
+                                color = Color(0xFFD71920).copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(4.dp),
+                                border = androidx.compose.foundation.BorderStroke(0.8.dp, Color(0xFFD71920).copy(alpha = 0.5f))
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Surface(shape = CircleShape, color = Color(0xFFD71920), modifier = Modifier.size(5.dp)) {}
+                                    Text(
+                                        text = if (theme.isDark) "NOTHING (DARK)" else "NOTHING (LIGHT)",
+                                        color = Color(0xFFD71920),
+                                        fontSize = if (isCompact) 8.sp else 9.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        } else if (theme.isLiquidGlass) {
+                            Surface(
+                                color = Color(0xFF007AFF).copy(alpha = 0.18f),
+                                shape = RoundedCornerShape(12.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x80FFFFFF))
+                            ) {
+                                Text(
+                                    text = "LIQUID GLASS ⟡",
+                                    color = Color(0xFF007AFF),
+                                    fontSize = if (isCompact) 8.sp else 9.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                                 )
                             }
                         } else if (theme.isNekoMochi) {
@@ -649,9 +683,7 @@ fun CalculatorDisplay(
 
             // Expression Row (with horizontal scroll and interactive touch & drag cursor)
             if (formattedExpr.isNotEmpty() || !isVeryCompact) {
-                var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
-                var textCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-                var rowCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                val layoutRefs = remember { DisplayLayoutRefs() }
 
                 val effectiveCursorPos = if (cursorPosition >= 0) {
                     cursorPosition.coerceIn(0, expression.length)
@@ -664,7 +696,7 @@ fun CalculatorDisplay(
 
                 // Scroll expression horizontally to keep cursor visible
                 LaunchedEffect(expression, effectiveCursorPos, formattedCursorPos) {
-                    val layout = textLayoutResult
+                    val layout = layoutRefs.textLayoutResult
                     if (layout != null && formattedExpr.isNotEmpty()) {
                         val safeOffset = formattedCursorPos.coerceIn(0, formattedExpr.length)
                         val cursorRect = layout.getCursorRect(safeOffset)
@@ -672,9 +704,9 @@ fun CalculatorDisplay(
                         val viewportWidth = exprScrollState.viewportSize
                         if (viewportWidth > 0) {
                             if (cursorX < exprScrollState.value) {
-                                exprScrollState.animateScrollTo((cursorX - 40).coerceAtLeast(0))
+                                exprScrollState.scrollTo((cursorX - 40).coerceAtLeast(0))
                             } else if (cursorX > exprScrollState.value + viewportWidth) {
-                                exprScrollState.animateScrollTo(cursorX - viewportWidth + 40)
+                                exprScrollState.scrollTo(cursorX - viewportWidth + 40)
                             }
                         }
                     } else if (exprScrollState.maxValue > 0) {
@@ -684,9 +716,9 @@ fun CalculatorDisplay(
 
                 // Precision Touch & Drag cursor positioning function
                 fun updateCursorFromTouchOffset(touchOffsetInRow: Offset) {
-                    val layout = textLayoutResult ?: return
-                    val textCoords = textCoordinates ?: return
-                    val rowCoords = rowCoordinates ?: return
+                    val layout = layoutRefs.textLayoutResult ?: return
+                    val textCoords = layoutRefs.textCoordinates ?: return
+                    val rowCoords = layoutRefs.rowCoordinates ?: return
 
                     if (formattedExpr.isEmpty()) {
                         onCursorChange?.invoke(0)
@@ -734,7 +766,7 @@ fun CalculatorDisplay(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 38.dp)
-                        .onGloballyPositioned { rowCoordinates = it }
+                        .onGloballyPositioned { layoutRefs.rowCoordinates = it }
                         .pointerInput(formattedExpr, expression) {
                             awaitEachGesture {
                                 val down = awaitFirstDown(requireUnconsumed = false)
@@ -771,17 +803,17 @@ fun CalculatorDisplay(
                         maxLines = 1,
                         softWrap = false,
                         onTextLayout = { layoutResult ->
-                            textLayoutResult = layoutResult
+                            layoutRefs.textLayoutResult = layoutResult
                         },
                         modifier = Modifier
-                            .onGloballyPositioned { textCoordinates = it }
+                            .onGloballyPositioned { layoutRefs.textCoordinates = it }
                             .testTag("expression_text")
                             .drawWithContent {
                                 drawContent()
                                 val isCursorVisible = cursorBlinkAlpha.value > 0.5f
                                 // Interactive cursor line
                                 if (onCursorChange != null && isCursorVisible && !isPlaceholder) {
-                                    val layout = textLayoutResult
+                                    val layout = layoutRefs.textLayoutResult
                                     if (layout != null && formattedExpr.isNotEmpty()) {
                                         val safeOffset = formattedCursorPos.coerceIn(0, formattedExpr.length)
                                         val cursorRect = layout.getCursorRect(safeOffset)
@@ -885,12 +917,7 @@ fun CalculatorDisplay(
                     else -> 0.30f
                 }
                 val minResultSp = if (isScientific) 26f else 28f
-                val targetSp = (baseSp * dynamicScale).coerceIn(minResultSp, baseSp)
-                val animatedSp by animateFloatAsState(
-                    targetValue = targetSp,
-                    animationSpec = tween(durationMillis = 80, easing = FastOutSlowInEasing),
-                    label = "result_font_scale"
-                )
+                val animatedSp = (baseSp * dynamicScale).coerceIn(minResultSp, baseSp)
 
                 val resultScrollState = rememberScrollState()
                 LaunchedEffect(formattedResult) {
@@ -905,24 +932,39 @@ fun CalculatorDisplay(
                         .horizontalScroll(resultScrollState),
                     contentAlignment = Alignment.CenterEnd
                 ) {
-                    Text(
-                        text = formattedResult,
-                        color = theme.screenTextColor,
-                        fontSize = animatedSp.sp,
-                        lineHeight = animatedSp.sp,
-                        fontFamily = fontFamily,
-                        letterSpacing = fontLetterSpacing,
-                        fontWeight = fontResultWeight,
-                        textAlign = TextAlign.End,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Clip, // Never truncate with "..."!
-                        modifier = Modifier.testTag("main_result_text")
-                    )
+                    if (theme.displayFont == DisplayFontType.NOTHING_NDOT && formattedResult.all { NDotFontMatrix.GLYPHS.containsKey(it) }) {
+                        NothingDotText(
+                            text = formattedResult,
+                            dotColor = theme.screenTextColor,
+                            charHeight = animatedSp.dp,
+                            modifier = Modifier.testTag("main_result_text")
+                        )
+                    } else {
+                        Text(
+                            text = formattedResult,
+                            color = theme.screenTextColor,
+                            fontSize = animatedSp.sp,
+                            lineHeight = animatedSp.sp,
+                            fontFamily = fontFamily,
+                            letterSpacing = fontLetterSpacing,
+                            fontWeight = fontResultWeight,
+                            textAlign = TextAlign.End,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Clip, // Never truncate with "..."!
+                            modifier = Modifier.testTag("main_result_text")
+                        )
+                    }
                 }
             }
         }
     }
+}
+
+private class DisplayLayoutRefs {
+    var textLayoutResult: TextLayoutResult? = null
+    var textCoordinates: LayoutCoordinates? = null
+    var rowCoordinates: LayoutCoordinates? = null
 }
 
 /**

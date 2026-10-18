@@ -27,6 +27,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        com.example.billing.PlayBillingManager.initialize(this)
         pendingMode = intent?.getStringExtra(CalculatorAppWidgetProvider.EXTRA_MODE)
         pendingInitialExpr = intent?.getStringExtra(com.example.widget.WidgetActionReceiver.EXTRA_INITIAL_EXPR)
 

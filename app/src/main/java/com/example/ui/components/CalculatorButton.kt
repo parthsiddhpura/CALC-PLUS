@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -129,10 +130,10 @@ fun CalculatorButton(
         }
     } else resolvedBgColor
 
-    val currentBgColor by animateColorAsState(
+    val bgColorState = animateColorAsState(
         targetValue = targetBgColor,
         animationSpec = tween(
-            durationMillis = if (isPressed) 70 else 180,
+            durationMillis = if (isPressed) 60 else 150,
             easing = androidx.compose.animation.core.FastOutSlowInEasing
         ),
         label = "btn_bg_anim"
@@ -230,7 +231,7 @@ fun CalculatorButton(
                     if (backgroundBrush != null) {
                         Modifier.background(backgroundBrush)
                     } else {
-                        Modifier.background(currentBgColor)
+                        Modifier.drawBehind { drawRect(bgColorState.value) }
                     }
                 )
                 .then(
@@ -328,6 +329,29 @@ fun CalculatorButton(
                 }
             }
 
+            // Optical Liquid Glass Specular Refraction Overlay
+            if (theme.isLiquidGlass) {
+                Canvas(modifier = Modifier.matchParentSize()) {
+                    val w = size.width
+                    val h = size.height
+                    val cr = theme.cornerRadiusDp.toPx()
+                    drawRoundRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = if (isPressed) 0.32f else 0.22f),
+                                Color.White.copy(alpha = 0.05f),
+                                Color.Transparent,
+                                Color.White.copy(alpha = 0.08f)
+                            ),
+                            start = Offset(0f, 0f),
+                            end = Offset(w, h)
+                        ),
+                        size = Size(w, h),
+                        cornerRadius = CornerRadius(cr, cr)
+                    )
+                }
+            }
+
             // Kawaii Neko Cat Ears on top corners of the mochi button
             if (theme.isNekoMochi || theme.shapeType == ButtonShapeType.NEKO_EARS) {
                 val leftEarPath = remember { Path() }
@@ -347,7 +371,7 @@ fun CalculatorButton(
                     leftEarPath.lineTo(w * 0.20f, 1.dp.toPx())
                     leftEarPath.lineTo(w * 0.34f, earH * 0.90f)
                     leftEarPath.close()
-                    drawPath(leftEarPath, color = currentBgColor)
+                    drawPath(leftEarPath, color = bgColorState.value)
 
                     // Left Ear Inner Blush
                     leftInnerPath.reset()
@@ -366,7 +390,7 @@ fun CalculatorButton(
                     rightEarPath.lineTo(w * 0.80f, 1.dp.toPx())
                     rightEarPath.lineTo(w * 0.90f, earH)
                     rightEarPath.close()
-                    drawPath(rightEarPath, color = currentBgColor)
+                    drawPath(rightEarPath, color = bgColorState.value)
 
                     // Right Ear Inner Blush
                     rightInnerPath.reset()

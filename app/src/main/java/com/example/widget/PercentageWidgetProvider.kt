@@ -41,16 +41,15 @@ class PercentageWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.pct_equation_text, "${rate.toInt()}% of ${WidgetDataManager.formatCurrency(base)}")
             views.setTextViewText(R.id.pct_result_text, WidgetDataManager.formatCurrency(result))
 
-            val openIntent = Intent(context, MainActivity::class.java).apply {
+            val editIntent = Intent(context, WidgetValueEditorActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra(CalculatorAppWidgetProvider.EXTRA_MODE, "STANDARD")
-                putExtra(WidgetActionReceiver.EXTRA_INITIAL_EXPR, "$base × $rate%")
+                putExtra(WidgetValueEditorActivity.EXTRA_WIDGET_TYPE, "PERCENTAGE")
             }
-            val openPendingIntent = PendingIntent.getActivity(
-                context, 1001, openIntent,
+            val editPendingIntent = PendingIntent.getActivity(
+                context, 1001, editIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.btn_open_percent_calc, openPendingIntent)
+            views.setOnClickPendingIntent(R.id.btn_open_percent_calc, editPendingIntent)
 
             val rSubIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_PERCENT_ADJUST_RATE

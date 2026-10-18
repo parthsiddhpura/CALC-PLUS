@@ -78,7 +78,10 @@ enum class ThemeId {
     STARRY_NIGHT_GOTHAM,
     COSMIC_SINGULARITY,
     HARRY_POTTER_HOGWARTS,
-    PEARLESCENT_3D_OPAL
+    PEARLESCENT_3D_OPAL,
+    IOS_LIQUID_GLASS,
+    NOTHING_OS_DARK,
+    NOTHING_OS_LIGHT
 }
 
 enum class ButtonShapeType {
@@ -107,9 +110,11 @@ enum class DisplayFontType {
     DIGITAL_LCD,
     ROUNDED,
     PIXEL_8BIT,
-    KAWAII_CANDY
+    KAWAII_CANDY,
+    NOTHING_NDOT
 }
 
+@androidx.compose.runtime.Immutable
 data class ThemePalette(
     val id: ThemeId,
     val name: String,
@@ -189,6 +194,8 @@ data class ThemePalette(
     val isCosmicSingularity: Boolean = false,
     val isHarryPotter: Boolean = false,
     val isPearlescent3D: Boolean = false,
+    val isLiquidGlass: Boolean = false,
+    val isNothingOs: Boolean = false,
     val customKeyColors: Map<String, Color>? = null,
     val customKeyTextColors: Map<String, Color>? = null
 ) {
@@ -225,41 +232,45 @@ enum class IronManSuitType {
  */
 val ThemePalette.onSurfaceTextColor: Color
     get() = when {
+        isLiquidGlass -> Color(0xFFFFFFFF)
         isHarryPotter -> Color(0xFFF5E6C8)
         isPearlescent3D -> Color(0xFF181D33)
         isNekoMochi && !isDark -> Color(0xFF3B1A23)
         isGirlMath && !isDark -> Color(0xFF4A202D)
-        surfaceColor.luminance() > 0.45f -> Color(0xFF1E293B)
+        !isDark && surfaceColor.luminance() > 0.45f -> Color(0xFF1E293B)
         else -> screenTextColor
     }
 
 val ThemePalette.onSurfaceSubtextColor: Color
     get() = when {
+        isLiquidGlass -> Color(0xFFCBD5E1)
         isHarryPotter -> Color(0xFFD4AF37)
         isPearlescent3D -> Color(0xFF5E6585)
         isNekoMochi && !isDark -> Color(0xFF70404C)
         isGirlMath && !isDark -> Color(0xFF8A5563)
-        surfaceColor.luminance() > 0.45f -> Color(0xFF64748B)
+        !isDark && surfaceColor.luminance() > 0.45f -> Color(0xFF64748B)
         else -> screenExpressionColor
     }
 
 val ThemePalette.onCardColor: Color
     get() = when {
+        isLiquidGlass -> Color(0xFFFFFFFF)
         isHarryPotter -> Color(0xFFF5E6C8)
         isPearlescent3D -> Color(0xFF181D33)
         isNekoMochi && !isDark -> Color(0xFF3B1A23)
         isGirlMath && !isDark -> Color(0xFF4A202D)
-        cardBackground.luminance() > 0.45f -> Color(0xFF1E293B)
+        !isDark && cardBackground.luminance() > 0.45f -> Color(0xFF1E293B)
         else -> screenTextColor
     }
 
 val ThemePalette.onCardSubtextColor: Color
     get() = when {
+        isLiquidGlass -> Color(0xFF94A3B8)
         isHarryPotter -> Color(0xFFD4AF37)
         isPearlescent3D -> Color(0xFF5E6585)
         isNekoMochi && !isDark -> Color(0xFF70404C)
         isGirlMath && !isDark -> Color(0xFF8A5563)
-        cardBackground.luminance() > 0.45f -> Color(0xFF64748B)
+        !isDark && cardBackground.luminance() > 0.45f -> Color(0xFF64748B)
         else -> screenExpressionColor
     }
 

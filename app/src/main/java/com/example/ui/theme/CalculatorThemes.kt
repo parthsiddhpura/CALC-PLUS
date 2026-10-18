@@ -3229,8 +3229,150 @@ object CalculatorThemes {
         isPearlescent3D = true
     )
 
+    val IosLiquidGlass = ThemePalette(
+        id = ThemeId.IOS_LIQUID_GLASS,
+        name = "Liquid Glass",
+        subtitle = "Frosted translucent glass with dynamic chromatic sheen, floating ambient orbs & butter-smooth jelly squish",
+        category = "Luxury & Clean",
+        isDark = true,
+        backgroundBrush = Brush.verticalGradient(
+            listOf(Color(0xFF0B1120), Color(0xFF111827), Color(0xFF0F172A))
+        ),
+        backgroundColor = Color(0xFF0F172A),
+        surfaceColor = Color(0xF5111827),
+        cardBackground = Color(0xFF1E293B),
+        screenBackground = Color(0x2E1E293B),
+        screenBorderColor = Color(0x59FFFFFF),
+        screenTextColor = Color(0xFFFFFFFF),
+        screenExpressionColor = Color(0xCCFFFFFF),
+        screenPreviewColor = Color(0xFF38BDF8),
+        cursorColor = Color(0xFF007AFF),
+        displayFont = DisplayFontType.MODERN_SANS,
+        numberButtonBg = Color(0x24FFFFFF),
+        numberButtonText = Color(0xFFFFFFFF),
+        numberButtonBorder = Color(0x45FFFFFF),
+        operatorButtonBg = Color(0x52007AFF),
+        operatorButtonText = Color(0xFFFFFFFF),
+        operatorButtonBorder = Color(0x8838BDF8),
+        functionButtonBg = Color(0x33FFFFFF),
+        functionButtonText = Color(0xFFFFFFFF),
+        functionButtonBorder = Color(0x55FFFFFF),
+        equalsButtonBrush = Brush.linearGradient(
+            listOf(Color(0xFF007AFF), Color(0xFF5856D6))
+        ),
+        equalsButtonText = Color(0xFFFFFFFF),
+        equalsButtonBorder = Color(0x9938BDF8),
+        accentColor = Color(0xFF007AFF),
+        secondaryAccent = Color(0xFF38BDF8),
+        glowColor = Color(0x4D007AFF),
+        shapeType = ButtonShapeType.SQUIRCLE,
+        cornerRadiusDp = 22.dp,
+        borderWidthDp = 1.dp,
+        hasShadow = false,
+        shadowElevationDp = 0.dp,
+        pressAnimation = PressAnimationType.JELLY_SQUISH,
+        statusBarDarkIcons = false,
+        isLiquidGlass = true
+    )
+
+    val NothingOsDark = ThemePalette(
+        id = ThemeId.NOTHING_OS_DARK,
+        name = "Nothing OS (Dark)",
+        subtitle = "Pulsing Glyph LED lines, breathing red recording dot & authentic NDot dot-matrix typography",
+        category = "Futuristic",
+        isDark = true,
+        backgroundBrush = Brush.verticalGradient(
+            listOf(Color(0xFF000000), Color(0xFF050505), Color(0xFF0A0A0A))
+        ),
+        backgroundColor = Color(0xFF000000),
+        surfaceColor = Color(0xFF111111),
+        cardBackground = Color(0xFF161616),
+        screenBackground = Color(0xFF0A0A0A),
+        screenBorderColor = Color(0xFF282828),
+        screenTextColor = Color(0xFFFFFFFF),
+        screenExpressionColor = Color(0xFF888888),
+        screenPreviewColor = Color(0xFFD71920),
+        cursorColor = Color(0xFFD71920),
+        displayFont = DisplayFontType.NOTHING_NDOT,
+        numberButtonBg = Color(0xFF141414),
+        numberButtonText = Color(0xFFFFFFFF),
+        numberButtonBorder = Color(0xFF282828),
+        operatorButtonBg = Color(0xFF1F1F1F),
+        operatorButtonText = Color(0xFFFFFFFF),
+        operatorButtonBorder = Color(0xFF383838),
+        functionButtonBg = Color(0xFF242424),
+        functionButtonText = Color(0xFFFFFFFF),
+        functionButtonBorder = Color(0xFF404040),
+        equalsButtonBrush = Brush.linearGradient(
+            listOf(Color(0xFFD71920), Color(0xFFB01218))
+        ),
+        equalsButtonText = Color(0xFFFFFFFF),
+        equalsButtonBorder = Color(0xFFFF4D55),
+        accentColor = Color(0xFFD71920),
+        secondaryAccent = Color(0xFFFFFFFF),
+        glowColor = Color(0x66D71920),
+        shapeType = ButtonShapeType.CIRCLE,
+        cornerRadiusDp = 24.dp,
+        borderWidthDp = 1.dp,
+        hasShadow = false,
+        pressAnimation = PressAnimationType.BOUNCE,
+        statusBarDarkIcons = false,
+        isNothingOs = true
+    )
+
+    val NothingOsLight = ThemePalette(
+        id = ThemeId.NOTHING_OS_LIGHT,
+        name = "Nothing OS (Light)",
+        subtitle = "Industrial paper white with raw dot-matrix numerals, red recording dot & glowing glyph contours",
+        category = "Minimal & Aesthetic",
+        isDark = false,
+        backgroundBrush = Brush.verticalGradient(
+            listOf(Color(0xFFF3F3F3), Color(0xFFEEEEEE), Color(0xFFE8E8E8))
+        ),
+        backgroundColor = Color(0xFFF3F3F3),
+        surfaceColor = Color(0xFFE4E4E4),
+        cardBackground = Color(0xFFEAEAEA),
+        screenBackground = Color(0xFFFFFFFF),
+        screenBorderColor = Color(0xFFD0D0D0),
+        screenTextColor = Color(0xFF111111),
+        screenExpressionColor = Color(0xFF666666),
+        screenPreviewColor = Color(0xFFD71920),
+        cursorColor = Color(0xFFD71920),
+        displayFont = DisplayFontType.NOTHING_NDOT,
+        numberButtonBg = Color(0xFFFFFFFF),
+        numberButtonText = Color(0xFF111111),
+        numberButtonBorder = Color(0xFFE0E0E0),
+        operatorButtonBg = Color(0xFFE5E5E5),
+        operatorButtonText = Color(0xFF111111),
+        operatorButtonBorder = Color(0xFFD0D0D0),
+        functionButtonBg = Color(0xFFDCDCDC),
+        functionButtonText = Color(0xFF111111),
+        functionButtonBorder = Color(0xFFC8C8C8),
+        equalsButtonBrush = Brush.linearGradient(
+            listOf(Color(0xFFD71920), Color(0xFFB01218))
+        ),
+        equalsButtonText = Color(0xFFFFFFFF),
+        equalsButtonBorder = Color(0xFFD71920),
+        accentColor = Color(0xFFD71920),
+        secondaryAccent = Color(0xFF111111),
+        glowColor = Color(0x40D71920),
+        shapeType = ButtonShapeType.CIRCLE,
+        cornerRadiusDp = 24.dp,
+        borderWidthDp = 1.dp,
+        hasShadow = true,
+        shadowElevationDp = 2.dp,
+        pressAnimation = PressAnimationType.BOUNCE,
+        statusBarDarkIcons = true,
+        isNothingOs = true
+    )
+
     val allThemes: List<ThemePalette> = listOf(
-        // Default Premier Theme: The Dark Knight (Premier Top Theme)
+        // Premier Featured Themes
+        IosLiquidGlass,
+        NothingOsDark,
+        NothingOsLight,
+
+        // Default Premier Theme: The Dark Knight
         BatmanDarkKnight,
 
         // Featured Premier Themes from User Uploads

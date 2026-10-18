@@ -106,6 +106,14 @@ class WidgetActionReceiver : BroadcastReceiver() {
                     }
                 }
             }
+            ACTION_EDIT_WIDGET_VALUE -> {
+                val widgetType = intent.getStringExtra(EXTRA_WIDGET_TYPE) ?: "GST"
+                val editIntent = Intent(context, WidgetValueEditorActivity::class.java).apply {
+                    putExtra(WidgetValueEditorActivity.EXTRA_WIDGET_TYPE, widgetType)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                context.startActivity(editIntent)
+            }
         }
     }
 
@@ -123,11 +131,13 @@ class WidgetActionReceiver : BroadcastReceiver() {
         const val ACTION_FORMULA_CYCLE = "com.example.widget.ACTION_FORMULA_CYCLE"
         const val ACTION_CYCLE_THEME = "com.example.widget.ACTION_CYCLE_THEME"
         const val ACTION_CLIPBOARD_DO = "com.example.widget.ACTION_CLIPBOARD_DO"
+        const val ACTION_EDIT_WIDGET_VALUE = "com.example.widget.ACTION_EDIT_WIDGET_VALUE"
 
         const val EXTRA_KEY = "extra_key_char"
         const val EXTRA_DELTA = "extra_delta_double"
         const val EXTRA_DELTA_INT = "extra_delta_int"
         const val EXTRA_CLIPBOARD_TARGET = "extra_clipboard_target"
         const val EXTRA_INITIAL_EXPR = "extra_initial_expression"
+        const val EXTRA_WIDGET_TYPE = "extra_widget_type"
     }
 }

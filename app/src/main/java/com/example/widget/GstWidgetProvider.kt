@@ -44,16 +44,15 @@ class GstWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.gst_total_text, WidgetDataManager.formatCurrency(total))
             views.setTextViewText(R.id.btn_cycle_gst_rate, "${rate.toInt()}% ▾")
 
-            val openIntent = Intent(context, MainActivity::class.java).apply {
+            val editIntent = Intent(context, WidgetValueEditorActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra(CalculatorAppWidgetProvider.EXTRA_MODE, "GST_CALCULATOR")
-                putExtra(WidgetActionReceiver.EXTRA_INITIAL_EXPR, amount.toString())
+                putExtra(WidgetValueEditorActivity.EXTRA_WIDGET_TYPE, "GST")
             }
-            val openPendingIntent = PendingIntent.getActivity(
-                context, 501, openIntent,
+            val editPendingIntent = PendingIntent.getActivity(
+                context, 501, editIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.btn_open_gst_calc, openPendingIntent)
+            views.setOnClickPendingIntent(R.id.btn_open_gst_calc, editPendingIntent)
 
             val addIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_GST_TOGGLE_MODE

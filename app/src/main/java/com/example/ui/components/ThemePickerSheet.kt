@@ -87,11 +87,13 @@ fun ThemePickerSheet(
     var searchQuery by remember { mutableStateOf("") }
     var filterMode by remember { mutableStateOf("All") } // "All", "Dark Only", "Light Only"
 
-    val categories = listOf("All", "Kawaii & Cute", "Neumorphic & Glass", "Interactive Dark", "Retro", "Playful", "Minimal & Aesthetic", "Futuristic", "Modern Art", "Atmospheric", "Luxury & Clean")
+    val categories = listOf("All", "iOS & Nothing", "Neumorphic & Glass", "Kawaii & Cute", "Interactive Dark", "Retro", "Playful", "Minimal & Aesthetic", "Futuristic", "Modern Art", "Atmospheric", "Luxury & Clean")
 
     val filteredThemes = remember(selectedCategory, searchQuery, filterMode) {
         CalculatorThemes.allThemes.filter { theme ->
-            val matchesCategory = if (selectedCategory == "All") true else theme.category.contains(selectedCategory, ignoreCase = true)
+            val matchesCategory = if (selectedCategory == "All") true
+            else if (selectedCategory == "iOS & Nothing") theme.isLiquidGlass || theme.isNothingOs || theme.id == ThemeId.IOS_LIQUID_GLASS || theme.id == ThemeId.NOTHING_OS_DARK || theme.id == ThemeId.NOTHING_OS_LIGHT
+            else theme.category.contains(selectedCategory, ignoreCase = true)
             val matchesSearch = if (searchQuery.isBlank()) true else {
                 theme.name.contains(searchQuery, ignoreCase = true) ||
                 theme.subtitle.contains(searchQuery, ignoreCase = true) ||

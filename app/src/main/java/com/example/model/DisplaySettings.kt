@@ -31,6 +31,7 @@ enum class DisplayNotation(val displayName: String, val sample: String) {
     ENGINEERING("Engineering (3x)", "1.25 × 10⁶")
 }
 
+@androidx.compose.runtime.Immutable
 data class DisplayConfig(
     val separatorStyle: DisplaySeparatorStyle = DisplaySeparatorStyle.INDIAN,
     val precisionMode: DisplayPrecisionMode = DisplayPrecisionMode.AUTO,
@@ -44,13 +45,20 @@ data class DisplayConfig(
 
 object DisplayFormatter {
 
+    private val DIGIT_SPACE_REGEX = Regex("(?<=\\d)\\s+(?=\\d)")
+    private val OPERATOR_SPLIT_REGEX = Regex("([+\\-×÷*/%^()= ])")
+    private val SUPER_MAP = mapOf(
+        '0' to '⁰', '1' to '¹', '2' to '²', '3' to '³', '4' to '⁴',
+        '5' to '⁵', '6' to '⁶', '7' to '⁷', '8' to '⁸', '9' to '⁹', '-' to '⁻'
+    )
+
     fun formatNumber(
         valueStr: String,
         separatorStyle: DisplaySeparatorStyle = DisplaySeparatorStyle.INDIAN,
         precisionMode: DisplayPrecisionMode = DisplayPrecisionMode.AUTO,
         notation: DisplayNotation = DisplayNotation.STANDARD
     ): String {
-        val clean = valueStr.trim().replace(",", "").replace(Regex("(?<=\\d)\\s+(?=\\d)"), "")
+        val clean = valueStr.trim().replace(",", "").replace(DIGIT_SPACE_REGEX, "")
         if (clean.isEmpty() || clean == "Error" || clean == "NaN" || clean == "Infinity" || clean == "-Infinity") {
             return clean
         }
@@ -67,14 +75,12 @@ object DisplayFormatter {
             val exponent = (Math.floor(Math.log10(Math.abs(doubleVal)) / 3.0) * 3).toInt()
             val mantissa = doubleVal / Math.pow(10.0, exponent.toDouble())
             val df = DecimalFormat("#,##0.####", DecimalFormatSymbols(Locale.US))
-            val superMap = mapOf('0' to '⁰', '1' to '¹', '2' to '²', '3' to '³', '4' to '⁴', '5' to '⁵', '6' to '⁶', '7' to '⁷', '8' to '⁸', '9' to '⁹', '-' to '⁻')
-            val superExp = exponent.toString().map { superMap[it] ?: it }.joinToString("")
+            val superExp = exponent.toString().map { SUPER_MAP[it] ?: it }.joinToString("")
             return "${df.format(mantissa)} × 10$superExp"
         }
 
         // Handle Precision Mode
-        var workingNumberStr = clean
-        if (precisionMode.decimalPlaces != null) {
+        if (precisionMode.decimalPlaces != null && precisionMode.decimalPlaces >= 0) {
             val places = precisionMode.decimalPlaces
             val pattern = if (places == 0) "#,##0" else "#,##0." + "0".repeat(places)
             val df = DecimalFormat(pattern, DecimalFormatSymbols(Locale.US))
@@ -97,7 +103,7 @@ object DisplayFormatter {
             DisplaySeparatorStyle.INDIAN -> formatWithIndianGrouping(intPart)
         }
 
-        val result = StringBuilder()
+        val result = StringBuilder(formattedInt.length + (fracPart?.length ?: 0) + 2)
         if (isNegative) result.append("-")
         result.append(formattedInt)
         if (fracPart != null) {
@@ -126,7 +132,7 @@ object DisplayFormatter {
 
     private fun formatWithStandardGrouping(digits: String, separator: Char): String {
         if (digits.length <= 3) return digits
-        val sb = StringBuilder()
+        val sb = StringBuilder(digits.length + digits.length / 3)
         val len = digits.length
         for (i in digits.indices) {
             sb.append(digits[i])
@@ -147,7 +153,7 @@ object DisplayFormatter {
         val lastThree = num.substring(num.length - 3)
         val rest = num.substring(0, num.length - 3)
 
-        val sb = StringBuilder()
+        val sb = StringBuilder(digits.length + digits.length / 2)
         if (isNeg) sb.append("-")
 
         val restLen = rest.length
@@ -169,15 +175,14 @@ object DisplayFormatter {
         if (expression.isEmpty() || separatorStyle == DisplaySeparatorStyle.NONE) return expression
 
         // Split by standard operators keeping delimiters
-        val regex = Regex("([+\\-×÷*/%^()= ])")
-        val tokens = expression.split(regex)
-        val matches = regex.findAll(expression).map { it.value }.toList()
+        val tokens = expression.split(OPERATOR_SPLIT_REGEX)
+        val matches = OPERATOR_SPLIT_REGEX.findAll(expression).map { it.value }.toList()
 
-        val sb = StringBuilder()
+        val sb = StringBuilder(expression.length + 8)
         var matchIdx = 0
 
         for (token in tokens) {
-            val cleanToken = token.replace(",", "").replace(Regex("(?<=\\d)\\s+(?=\\d)"), "")
+            val cleanToken = token.replace(",", "").replace(DIGIT_SPACE_REGEX, "")
             if (cleanToken.isNotBlank() && cleanToken.all { it.isDigit() || it == '.' }) {
                 sb.append(formatNumber(cleanToken, separatorStyle, DisplayPrecisionMode.AUTO, DisplayNotation.STANDARD))
             } else {

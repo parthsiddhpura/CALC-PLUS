@@ -57,6 +57,8 @@ import androidx.compose.ui.unit.dp
 import com.example.ui.components.LandscapeDisplayPane
 import com.example.ui.components.LandscapeDualPaneView
 import com.example.ui.components.LandscapeScientificKeypad
+import com.example.ui.components.LiquidGlassBackground
+import com.example.ui.components.NothingGlyphBackground
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -155,11 +157,18 @@ fun CalculatorScreen(
                 .fillMaxSize()
                 .background(theme.backgroundBrush)
         ) {
+            val isAnySheetOpen = uiState.showSettingsSheet ||
+                    uiState.showMoreModesSheet ||
+                    uiState.showHistorySheet ||
+                    uiState.showDecimalConverterSheet ||
+                    uiState.editingNoteFor != null
+
             AnimatedContent(
                 targetState = theme,
+                contentKey = { it.id },
                 transitionSpec = {
-                    fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing)) togetherWith
-                            fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing))
+                    fadeIn(animationSpec = tween(250, easing = FastOutSlowInEasing)) togetherWith
+                            fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
                 },
                 label = "theme_bg_transition",
                 modifier = Modifier.fillMaxSize()
@@ -169,35 +178,41 @@ fun CalculatorScreen(
                         .fillMaxSize()
                         .background(currentTheme.backgroundBrush)
                 ) {
-                    if (currentTheme.hasBatSignal) {
-                        BatmanScreenBackground(modifier = Modifier.fillMaxSize())
-                    } else if (currentTheme.hasArcReactor) {
-                        IronManScreenBackground(
-                            modifier = Modifier.fillMaxSize(),
-                            suitType = currentTheme.ironManSuit ?: com.example.model.IronManSuitType.MARK_85_CLASSIC
-                        )
-                    } else if (currentTheme.isOrtylMinimal) {
-                        OrtylScreenBackground(modifier = Modifier.fillMaxSize())
-                    } else if (currentTheme.isOledStealthVoid) {
-                        OledStealthVoidScreenBackground(modifier = Modifier.fillMaxSize())
-                    } else if (currentTheme.isStarryGotham) {
-                        StarryGothamScreenBackground(modifier = Modifier.fillMaxSize())
-                    } else if (currentTheme.isCosmicSingularity) {
-                        CosmicSingularityScreenBackground(modifier = Modifier.fillMaxSize())
-                    } else if (currentTheme.isHarryPotter) {
-                        HarryPotterScreenBackground(modifier = Modifier.fillMaxSize())
-                    } else if (currentTheme.isPearlescent3D) {
-                        Pearlescent3DScreenBackground(modifier = Modifier.fillMaxSize())
-                    } else if (currentTheme.isGirlMath || currentTheme.isNekoMochi || currentTheme.isY2kGlossy || currentTheme.isPixelArt) {
-                        KawaiiScreenBackground(
-                            theme = currentTheme,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else if (currentTheme.isRetroCircuit || currentTheme.isNothingDossier || currentTheme.isBauhausDossier || currentTheme.isTerracottaStudio) {
-                        StudioScreenBackground(
-                            theme = currentTheme,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                    if (!isAnySheetOpen) {
+                        if (currentTheme.hasBatSignal) {
+                            BatmanScreenBackground(modifier = Modifier.fillMaxSize())
+                        } else if (currentTheme.hasArcReactor) {
+                            IronManScreenBackground(
+                                modifier = Modifier.fillMaxSize(),
+                                suitType = currentTheme.ironManSuit ?: com.example.model.IronManSuitType.MARK_85_CLASSIC
+                            )
+                        } else if (currentTheme.isOrtylMinimal) {
+                            OrtylScreenBackground(modifier = Modifier.fillMaxSize())
+                        } else if (currentTheme.isOledStealthVoid) {
+                            OledStealthVoidScreenBackground(modifier = Modifier.fillMaxSize())
+                        } else if (currentTheme.isStarryGotham) {
+                            StarryGothamScreenBackground(modifier = Modifier.fillMaxSize())
+                        } else if (currentTheme.isCosmicSingularity) {
+                            CosmicSingularityScreenBackground(modifier = Modifier.fillMaxSize())
+                        } else if (currentTheme.isHarryPotter) {
+                            HarryPotterScreenBackground(modifier = Modifier.fillMaxSize())
+                        } else if (currentTheme.isPearlescent3D) {
+                            Pearlescent3DScreenBackground(modifier = Modifier.fillMaxSize())
+                        } else if (currentTheme.isGirlMath || currentTheme.isNekoMochi || currentTheme.isY2kGlossy || currentTheme.isPixelArt) {
+                            KawaiiScreenBackground(
+                                theme = currentTheme,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else if (currentTheme.isLiquidGlass) {
+                            LiquidGlassBackground(modifier = Modifier.fillMaxSize()) {}
+                        } else if (currentTheme.isNothingOs) {
+                            NothingGlyphBackground(isDark = currentTheme.isDark, modifier = Modifier.fillMaxSize()) {}
+                        } else if (currentTheme.isRetroCircuit || currentTheme.isNothingDossier || currentTheme.isBauhausDossier || currentTheme.isTerracottaStudio) {
+                            StudioScreenBackground(
+                                theme = currentTheme,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
             }
@@ -249,8 +264,6 @@ fun CalculatorScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            TopBarBrandIcon(theme = theme)
-
                             Text(
                                 text = "CALC +",
                                 color = topBarTextColor,
@@ -420,8 +433,6 @@ fun CalculatorScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                TopBarBrandIcon(theme = theme)
-
                                 Text(
                                     text = "CALC +",
                                     color = topBarTextColor,
@@ -616,6 +627,7 @@ fun CalculatorScreen(
                                             onOpenHistory = { viewModel.setShowHistorySheet(true) },
                                             onOpenDecimalConverter = { viewModel.setShowDecimalConverterSheet(true) },
                                             onToggleNotation = { viewModel.toggleDisplayNotation(haptics) },
+                                            isAnimationsPaused = isAnySheetOpen,
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .padding(bottom = 8.dp)
@@ -690,6 +702,7 @@ fun CalculatorScreen(
                                             onOpenHistory = { viewModel.setShowHistorySheet(true) },
                                             onOpenDecimalConverter = { viewModel.setShowDecimalConverterSheet(true) },
                                             onToggleNotation = { viewModel.toggleDisplayNotation(haptics) },
+                                            isAnimationsPaused = isAnySheetOpen,
                                             modifier = Modifier
                                                 .weight(0.40f)
                                                 .padding(bottom = 6.dp)
@@ -811,6 +824,7 @@ fun CalculatorScreen(
                                         historyCount = historyList.size,
                                         onOpenHistory = { viewModel.setShowHistorySheet(true) },
                                         onOpenDecimalConverter = { viewModel.setShowDecimalConverterSheet(true) },
+                                        isAnimationsPaused = isAnySheetOpen,
                                         modifier = Modifier
                                             .weight(1f)
                                             .padding(bottom = 6.dp)
@@ -1014,73 +1028,5 @@ fun CalculatorScreen(
                 onDismiss = { viewModel.setEditingNoteFor(null) }
             )
         }
-    }
-}
-
-@Composable
-private fun TopBarBrandIcon(theme: ThemePalette) {
-    if (theme.hasBatSignal) {
-        BatmanLogoIcon(
-            modifier = Modifier.size(16.dp),
-            tint = theme.accentColor
-        )
-    } else if (theme.hasArcReactor) {
-        ArcReactorIcon(
-            modifier = Modifier.size(18.dp),
-            glowColor = theme.accentColor,
-            showOuterTabs = false
-        )
-    } else if (theme.isGirlMath) {
-        Text(
-            text = "♡",
-            color = theme.accentColor,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.ExtraBold
-        )
-    } else if (theme.isNekoMochi) {
-        Text(
-            text = "🐾",
-            fontSize = 15.sp
-        )
-    } else if (theme.isY2kGlossy) {
-        Text(
-            text = "✨",
-            fontSize = 15.sp
-        )
-    } else if (theme.isPixelArt) {
-        Text(
-            text = "👾",
-            fontSize = 15.sp
-        )
-    } else if (theme.isRetroCircuit) {
-        Text(
-            text = "⚡",
-            fontSize = 15.sp
-        )
-    } else if (theme.isNothingDossier) {
-        Text(
-            text = "▫",
-            color = theme.accentColor,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold
-        )
-    } else if (theme.isBauhausDossier) {
-        Text(
-            text = "▣",
-            color = theme.accentColor,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold
-        )
-    } else if (theme.isTerracottaStudio) {
-        Text(
-            text = "⚪",
-            fontSize = 14.sp
-        )
-    } else {
-        androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_app_logo),
-            contentDescription = "Official App Logo",
-            modifier = Modifier.size(17.dp)
-        )
     }
 }

@@ -1145,9 +1145,10 @@ object CustomCalculatorEngine {
      */
     private suspend fun callFirebaseGeminiForCalculator(prompt: String): CustomCalculator? {
         return try {
+            val modelName = "gemini-3-flash-preview"
             val model = com.google.firebase.Firebase.ai(
                 backend = com.google.firebase.ai.type.GenerativeBackend.googleAI()
-            ).generativeModel("gemini-3-flash-preview")
+            ).generativeModel(modelName)
             val response = model.generateContent("${buildGeminiSystemPrompt()}\n\nUser Request: $prompt")
             val text = response.text?.replace("```json", "")?.replace("```", "")?.trim() ?: return null
             parseJsonToCalculator(text, prompt, "Verified Gemini AI + Live Forex Engine")
