@@ -1,12 +1,6 @@
-# ProGuard / R8 Optimization Configuration for Google Play Console
-
-# Aggressive Optimization & Code Inlining
--allowaccessmodification
--repackageclasses ''
-
-# Preserve line numbers and file names for Play Console crash symbolication / deobfuscation
--keepattributes SourceFile,LineNumberTable
--renamesourcefileattribute SourceFile
+# ProGuard / R8 Shrinking Configuration for Google Play Console
+-dontobfuscate
+-dontoptimize
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
 # Keep Room entities, DAOs, and database
