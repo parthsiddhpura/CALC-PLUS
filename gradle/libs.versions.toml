@@ -43,7 +43,7 @@ googleServices = "4.5.0"
 credentials = "1.5.0"
 googleid = "1.1.1"
 carApp = "1.4.0"
-playBilling = "7.1.1"
+playBilling = "8.0.0"
 
 
 [libraries]
